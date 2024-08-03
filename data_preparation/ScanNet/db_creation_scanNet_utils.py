@@ -18,9 +18,6 @@ THREE_LETTERS_TO_SINGLE_AA_DICT = {'GLY': 'G', 'ALA': 'A', 'VAL': 'V', 'LEU': 'L
                                    'LYS': 'K', 'ARG': 'R', 'ASP': 'D', 'GLU': 'E',
                                    'ASN': 'N', 'GLN': 'Q'}
 UBIQ_SEQ = 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQRESTLHLVLRLRGG'
-UBIQ_RESIDUES_LIST = [THREE_LETTERS_TO_SINGLE_AA_DICT[str(aminoAcid.get_resname())] + str(aminoAcid.get_id()[1]) for
-                      aminoAcid
-                      in UBIQ_SEQ]
 
 INV_MAP = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 10, 9: 12, 10: 14,
            11: 24}  # key=index in Queen value = number of units in multimer
@@ -29,17 +26,6 @@ OPPOSITE_MAP = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 10: 8, 12: 9, 14
 
 parser = MMCIFParser()
 
-
-#
-# ubiq_path = os.path.join(paths.pdbs_path,'3by4.cif')
-# ubiq_structure = parser.get_structure('3BY4', ubiq_path)
-# ubiq_chain = ubiq_structure[0]['B']  # uni-prot = "UBIQ-HUMAN"
-# ubiq_seq = get_str_seq_of_chain(ubiq_chain)
-# ubiq_amino_acids = aaOutOfChain(ubiq_chain)
-# ubiq_atoms = getAtomsOfAminoAcids(ubiq_chain)
-# ubiqDiameter = calculateDiameter(ubiq_atoms)
-# ubiq_residues_list = [threeLetterToSinglelDict[str(aminoAcid.get_resname())] + str(aminoAcid.get_id()[1]) for aminoAcid
-# #                       in ubiq_amino_acids]
 
 def save_as_pickle(obj, file_path):
     """
@@ -333,7 +319,7 @@ def calculate_diameter_from_chain(chain):
     return diameter
 
 
-def get_corresponding_ubiq_residues(aaString):
+def get_corresponding_ubiq_residues(aaString,ubiq_residus_list):
     alignments = pairwise2.align.globalxx(aaString, UBIQ_SEQ)
     # ubiq_residue_list = [ubiq_residus_list[i] for i in range(len(ubiq_residus_list))]
     alignment1 = alignments[0].seqA
@@ -343,7 +329,7 @@ def get_corresponding_ubiq_residues(aaString):
     corresponding_ubiq_residue_list = [None for _ in range(len(aaString))]
     for i in range(len(UBIQ_SEQ)):
         if alignment2[i] != '-' and alignment1[i] != '-':
-            corresponding_ubiq_residue_list[index1] = UBIQ_RESIDUES_LIST[index2]
+            corresponding_ubiq_residue_list[index1] = ubiq_residus_list[index2]
         if alignment1[i] != '-':
             index1 += 1
         if alignment2[i] != '-':
@@ -945,7 +931,7 @@ def create_receptor_summary(candidate, model, ubiq_neighbors, ith_component_inde
     return ("//".join(boundResidueStringsFiltered), numUb)
 
 
-def create_data_base(tuple, ubiq_diameter):
+def create_data_base(tuple, ubiq_diameter,ubiq_residus_list):
     """
     :param valid_UBD_candidates: list of UBD_candidates
     :return:
@@ -982,7 +968,7 @@ def create_data_base(tuple, ubiq_diameter):
             np_ubiquitin_neighbors = np.array(ubiq_neighbors)
             num_components, components_labels, connection_index_list = connectivity_algorithm(np_ubiquitin_neighbors,
                                                                                           np_non_ubiq_neighbors)
-            ubiq_corresponding_lists = [get_corresponding_ubiq_residues(get_str_seq_of_chain(ubiqChain)) for ubiqChain in
+            ubiq_corresponding_lists = [get_corresponding_ubiq_residues(get_str_seq_of_chain(ubiqChain),ubiq_residus_list) for ubiqChain in
                                       model.ubiq_chains]
 
             for i in range(num_components):
