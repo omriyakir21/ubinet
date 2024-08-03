@@ -43,7 +43,7 @@ def create_save_list_of_entry_dicts():
     structures = [parser.get_structure(pdb_names_list[i], asymetric_paths[i]) for i in
                   range(len(pdb_names_list))]
     UBD_candidates_list = [db_utils.UBD_candidate(structure) for structure in structures]
-    valid_UBD_candidates, valid_PDB_names = db_utils.keep_valid_candidates(UBD_candidates_list, PDB_names_list)
+    valid_UBD_candidates, valid_PDB_names = db_utils.keep_valid_candidates(UBD_candidates_list, pdb_names_list)
     validAssemblyPathsLists = db_utils.keep_valid_assemblies(valid_PDB_names, assembly_paths_lists)
     list_of_entry_dicts = db_utils.create_list_of_entry_dicts(parser, valid_UBD_candidates, valid_PDB_names,
                                                               validAssemblyPathsLists)

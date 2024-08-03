@@ -147,7 +147,7 @@ def create_asymetric_paths_list(pdbs_path):
     return asymetric_paths, asymetric_names
 
 
-def orderPathsLists(pdbs_path, assembliesPath):
+def order_paths_lists(pdbs_path, assembliesPath):
     """
     :param asymetric_paths: list of the paths of the downloaded aymetric file of each pdb
     :param assembly_paths_lists: list of lists of the paths of downloaded assemblies for each pdb
