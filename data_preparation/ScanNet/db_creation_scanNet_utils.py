@@ -1,7 +1,8 @@
 import copy
 import os
 import pickle
-
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from Bio import pairwise2
 from Bio.PDB import PDBList
 from Bio.PDB.MMCIFParser import MMCIFParser
