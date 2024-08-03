@@ -36,12 +36,12 @@ def create_save_list_of_entry_dicts():
     :param listOfPDBNames: list of PDB names
     :return:
     '''
-    asymetric_paths, assembly_paths_lists, pdb_names_list = db_utils.orderPathsLists(paths.pdbs_path,
-                                                                                     paths.assemblies_path)
+    asymetric_paths, assembly_paths_lists, pdb_names_list = db_utils.order_paths_lists(paths.pdbs_path,
+                                                                                       paths.assemblies_path)
 
     parser = db_utils.parser  # create parser object
-    structures = [parser.get_structure(PDB_names_list[i], asymetric_paths[i]) for i in
-                  range(len(PDB_names_list))]
+    structures = [parser.get_structure(pdb_names_list[i], asymetric_paths[i]) for i in
+                  range(len(pdb_names_list))]
     UBD_candidates_list = [db_utils.UBD_candidate(structure) for structure in structures]
     valid_UBD_candidates, valid_PDB_names = db_utils.keep_valid_candidates(UBD_candidates_list, PDB_names_list)
     validAssemblyPathsLists = db_utils.keep_valid_assemblies(valid_PDB_names, assembly_paths_lists)
