@@ -364,7 +364,7 @@ def keep_valid_assemblies(valid_PDB_names, assembly_paths_lists):
     """
     valid_assembly_paths_lists = []
     for i in range(len(assembly_paths_lists)):
-        assembly_pdb_name = assembly_paths_lists[i][0].split("\\")[-2].lower()
+        assembly_pdb_name = assembly_paths_lists[i][0].split("/")[-2].lower()
         if assembly_pdb_name in valid_PDB_names:
             valid_assembly_paths_lists.append(assembly_paths_lists[i])
     return valid_assembly_paths_lists
@@ -940,7 +940,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     chosen_assemblies, index = tuple[0], tuple[1]
     index_string = str(index)
     # index_string = '0000'
-    assemblies_names = [chosen_assemblies[i].split("\\")[-2].lower() for i in range(len(chosen_assemblies))]
+    assemblies_names = [chosen_assemblies[i].split("/")[-2].lower() for i in range(len(chosen_assemblies))]
     structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in
                   range(len(chosen_assemblies))]
     # structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in range(len(chosen_assemblies)) if
