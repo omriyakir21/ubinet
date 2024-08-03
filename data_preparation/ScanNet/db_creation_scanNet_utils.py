@@ -949,8 +949,6 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     dirName = os.path.join(paths.ImerFiles_path, f"Batch{index_string}")
     asa_dir_name = os.path.join(paths.ASA_path, f"asaBatch{index_string}")
     print("\n\n\n creating dir")
-    # os.mkdir(dirName)
-    os.mkdir(asa_dir_name)
     files_list = create_imer_files(dirName)  # filesList[i] = file containing i-mers if created else None
     asa_files_list = create_imer_asa_files(asa_dir_name)
     summary_lines = []
