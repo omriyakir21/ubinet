@@ -319,7 +319,7 @@ def calculate_diameter_from_chain(chain):
     return diameter
 
 
-def get_corresponding_ubiq_residues(aaString,ubiq_residus_list):
+def get_corresponding_ubiq_residues(aaString, ubiq_residus_list):
     alignments = pairwise2.align.globalxx(aaString, UBIQ_SEQ)
     # ubiq_residue_list = [ubiq_residus_list[i] for i in range(len(ubiq_residus_list))]
     alignment1 = alignments[0].seqA
@@ -931,7 +931,7 @@ def create_receptor_summary(candidate, model, ubiq_neighbors, ith_component_inde
     return ("//".join(boundResidueStringsFiltered), numUb)
 
 
-def create_data_base(tuple, ubiq_diameter,ubiq_residus_list):
+def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     """
     :param valid_UBD_candidates: list of UBD_candidates
     :return:
@@ -941,19 +941,20 @@ def create_data_base(tuple, ubiq_diameter,ubiq_residus_list):
     index_string = str(index)
     # index_string = '0000'
     assemblies_names = [chosen_assemblies[i].split("\\")[-2].lower() for i in range(len(chosen_assemblies))]
-    structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in range(len(chosen_assemblies))]
+    structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in
+                  range(len(chosen_assemblies))]
     # structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in range(len(chosen_assemblies)) if
     #               '6oa9' in assemblies_names[i]]
     UBD_candidates = [UBD_candidate(structure) for structure in structures]
-    dirName = "Batch" + index_string
-    asa_dir_name = "asaBatch" + index_string
+    dirName = os.path.join(paths.ImerFiles_path, f"Batch{index_string}")
+    asa_dir_name = os.path.join(paths.ASA_path, f"asaBatch{index_string}")
     print("\n\n\n creating dir")
     # os.mkdir(dirName)
     os.mkdir(asa_dir_name)
-    # filesList = createImerFiles(dirName)  # filesList[i] = file containing i-mers if created else None
-    asaFilesList = create_imer_asa_files(asa_dir_name)
-    # summaryLines = []
-    # summaryFile = open(dirName + '/' + "summaryLog.txt", "w")
+    files_list = create_imer_files(dirName)  # filesList[i] = file containing i-mers if created else None
+    asa_files_list = create_imer_asa_files(asa_dir_name)
+    summary_lines = []
+    summary_file = open(os.path.join(dirName, "summaryLog.txt"), "w")
     for candidate in UBD_candidates:
         # if candidate.structure.get_id().lower() != '3k9o':
         #     continue
@@ -967,9 +968,10 @@ def create_data_base(tuple, ubiq_diameter,ubiq_residus_list):
             np_non_ubiq_neighbors = np.array(non_ubiq_neighbors)
             np_ubiquitin_neighbors = np.array(ubiq_neighbors)
             num_components, components_labels, connection_index_list = connectivity_algorithm(np_ubiquitin_neighbors,
-                                                                                          np_non_ubiq_neighbors)
-            ubiq_corresponding_lists = [get_corresponding_ubiq_residues(get_str_seq_of_chain(ubiqChain),ubiq_residus_list) for ubiqChain in
-                                      model.ubiq_chains]
+                                                                                              np_non_ubiq_neighbors)
+            ubiq_corresponding_lists = [
+                get_corresponding_ubiq_residues(get_str_seq_of_chain(ubiqChain), ubiq_residus_list) for ubiqChain in
+                model.ubiq_chains]
 
             for i in range(num_components):
                 ith_component_indexes = (components_labels == i).nonzero()[0]
@@ -978,30 +980,32 @@ def create_data_base(tuple, ubiq_diameter,ubiq_residus_list):
                     x = connection_index_list[val]
                     ith_component_indexes_converted.append(x)
 
-                # updateImersLabels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
+                update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
                 receptor_header = create_receptor_header(candidate, model, ith_component_indexes_converted)
-                write_asa_to_file(asaFilesList[len(ith_component_indexes_converted) - 1],
+                write_asa_to_file(asa_files_list[len(ith_component_indexes_converted) - 1],
                                   model_attributes_matrix, ith_component_indexes_converted, candidate, model, index,
                                   receptor_header, asa_list)
-                # ubiquitinBindingPatch, numberOfBoundUbiq= createReceptorSummary(candidate, model,
-                #                                                                                  ubiq_neighbors,
-                #                                                                                  ith_component_indexes_converted,
-                #                                                                                  ubiq_corresponding_lists,
-                #                                                                                  non_ubiq_diameters)
+                ubiquitin_binding_patch, number_of_bound_ubiq = create_receptor_summary(candidate, model,
+                                                                                        ubiq_neighbors,
+                                                                                        ith_component_indexes_converted,
+                                                                                        ubiq_corresponding_lists,
+                                                                                        non_ubiq_diameters)
                 number_of_receptors = len(ith_component_indexes_converted)
-                # summaryLines.append(
-                #     '$'.join([receptor_header, str(number_of_receptors), str(numberOfBoundUbiq), ubiquitinBindingPatch]))
-                # writeImerToFile(filesList[len(ith_component_indexes_converted) - 1],
-                #                 model_attributes_matrix, ith_component_indexes_converted, candidate, model, index,
-                #                 receptor_header)
+                summary_lines.append(
+                    '$'.join([receptor_header, str(number_of_receptors), str(number_of_bound_ubiq),
+                              ubiquitin_binding_patch]))
+                write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
+                                   model_attributes_matrix, ith_component_indexes_converted, candidate, model, index,
+                                   receptor_header)
 
-    # summaryString = "\n".join(summaryLines)
-    # assert (summaryFile.write(summaryString) > 0)
-    # summaryFile.close()
-    # for file in filesList:
-    #     file.close()
-    for file in asaFilesList:
+    summary_string = "\n".join(summary_lines)
+    assert (summary_file.write(summary_string) > 0)
+    summary_file.close()
+    for file in files_list:
         file.close()
+    for file in asa_files_list:
+        file.close()
+
 
 def split_list(original_list, num_sublists):
     sublist_size = len(original_list) // num_sublists
@@ -1017,4 +1021,3 @@ def split_list(original_list, num_sublists):
         index += sublist_length
 
     return result
-

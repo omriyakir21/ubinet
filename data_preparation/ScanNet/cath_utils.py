@@ -386,7 +386,7 @@ def divide_pssm(chain_dict, dir_path):
     create len(chainLists) txt files. the i txt file contains the chains in chainLists[i]
     """
     filesList = [open(os.path.join(dir_path, f"PSSM{str(i)}.txt"), 'w') for i in range(5)]
-    full_pssm_file_path = 'C:\\Users\\omriy\\UBDAndScanNet\\UBDModel\\FullPropagatedPssmWithAsa\\propagatedPssmWithAsaFile0_15.txt'
+    full_pssm_file_path = os.path.join(paths.PSSM_path, 'normalizedFullASAPssmContent.txt')
     pssm_file = open(full_pssm_file_path, 'r')
     lines = pssm_file.readlines()
     fillIndex = -1  # fillIndex = i -> we now write to PSSMi.txt
