@@ -8,7 +8,7 @@ data_preparation_path = os.path.join(current_dir, 'data_preparation')
 ScanNet_data_preparation_path = os.path.join(data_preparation_path, 'ScanNet')
 # datasets paths
 datasets_path = os.path.join(current_dir, 'datasets')
-datasets_scanNet_path = os.path.join(datasets_path, 'ScanNet')
+datasets_scanNet_path = os.path.join(datasets_path, 'scanNet')
 QUEEN_path = os.path.join(datasets_scanNet_path, 'QUEEN')
 scanNet_sources_path = os.path.join(datasets_scanNet_path, 'sources')
 blast_search_path = os.path.join(scanNet_sources_path, 'blast_search')
