@@ -53,9 +53,9 @@ def create_save_list_of_entry_dicts():
 
 if __name__ == "__main__":
     # retrive the list of PDB names
-
-    PDB_names_list = db_utils.read_PDB_names_from_file(UBIQ_LIST_PATH)
-    download_assemblies_and_assymetrics(PDB_names_list)
+    # PDB_names_list = db_utils.read_PDB_names_from_file(UBIQ_LIST_PATH)
+    # download the assemblies and assymetrics files
+    # download_assemblies_and_assymetrics(PDB_names_list)
     create_save_list_of_entry_dicts()
 
     # ubiq_path = '3by4.cif'
