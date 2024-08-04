@@ -539,26 +539,14 @@ def choose_assemblies(listOfEntryDicts, listOfProbabillities, ambiguousFile, not
     return chosenAssembliesList
 
 
-def from_pickle_to_choose_assemblies(Queen_predictions_path):
-    predictions_list = []
-    list_of_entry_dicts_lists = []
-    # all_lists_of_entry_dicts = []
-    all_predictions = []
+def from_pickle_to_choose_assemblies(entry_dicts_with_probabilities_path):
+    entry_dicts_with_probabilities = load_as_pickle(entry_dicts_with_probabilities_path)
+    all_probabilities = [entry['probabilities'] for entry in entry_dicts_with_probabilities]
     not_valid_file = open(os.path.join(paths.assemblies_path, "notValidAssembliesFileNew.txt"), "w")
     ambiguous_file = open(os.path.join(paths.assemblies_path, 'ambiguousFileNew.txt'), "w")
-    predictions = load_as_pickle(Queen_predictions_path)
-    predictions = predictions.tolist()
     all_lists_of_entry_dicts = [load_as_pickle(os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts.pkl'))]
-
-    # for i in range(6):
-    #     predictions = load_as_pickle(Queen_predictions_path + str(i))
-    #     predictions = predictions.tolist()
-    #     predictions_list.append(predictions)
-    #     all_predictions += predictions
-    #     listOfEntryDicts = load_as_pickle())
-    #     all_lists_of_entry_dicts += listOfEntryDicts
-    #     list_of_entry_dicts_lists.append(listOfEntryDicts)
-    chosen_assemblies = choose_assemblies(all_lists_of_entry_dicts, all_predictions, ambiguous_file, not_valid_file)
+    chosen_assemblies = choose_assemblies(all_lists_of_entry_dicts, all_probabilities, ambiguous_file, not_valid_file)
+    save_as_pickle(chosen_assemblies, os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
     not_valid_file.close()
     ambiguous_file.close()
     print(chosen_assemblies)
