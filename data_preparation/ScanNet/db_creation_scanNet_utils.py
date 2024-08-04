@@ -544,7 +544,7 @@ def from_pickle_to_choose_assemblies(entry_dicts_with_probabilities_path):
     all_probabilities = [entry['probabilities'] for entry in entry_dicts_with_probabilities]
     not_valid_file = open(os.path.join(paths.assemblies_path, "notValidAssembliesFileNew.txt"), "w")
     ambiguous_file = open(os.path.join(paths.assemblies_path, 'ambiguousFileNew.txt'), "w")
-    chosen_assemblies = choose_assemblies(all_lists_of_entry_dicts, all_probabilities, ambiguous_file, not_valid_file)
+    chosen_assemblies = choose_assemblies(entry_dicts_with_probabilities, all_probabilities, ambiguous_file, not_valid_file)
     save_as_pickle(chosen_assemblies, os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
     not_valid_file.close()
     ambiguous_file.close()
