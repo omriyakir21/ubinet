@@ -81,13 +81,15 @@ def get_evidence_util(path):
 
 
 def fetch_af_models(uniprotNamesDict, className, i, j):
-    uniprotIds = uniprotNamesDict[className]
-    apiKey = 'AIzaSyCeurAJz7ZGjPQUtEaerUkBZ3TaBkXrY94'
+    uniprot_ids = uniprotNamesDict[className]
+    numberOfExamples = len(uniprot_ids)
+    apiKey = load_as_pickle(os.path.join(paths.GO_source_patch_to_score_path, 'key.pkl'))
     cnt = 0
-    for uniprotId in uniprotIds[i:j]:
-        print('i = ', i, ', j= ', j, ', cnt = ', cnt)
+    for uniprot_id in uniprot_ids[i:j]:
+        if i % 100 == 0:
+            print(f"{i}/{numberOfExamples}")
         cnt += 1
-        api_url = f'https://alphafold.ebi.ac.uk/api/prediction/{uniprotId}?key={apiKey}'
+        api_url = f'https://alphafold.ebi.ac.uk/api/prediction/{uniprot_id}?key={apiKey}'
         # Make a GET request to the AlphaFold API
         response = requests.get(api_url)
         # Check if the request was successful (status code 200)
@@ -107,13 +109,13 @@ def fetch_af_models(uniprotNamesDict, className, i, j):
                     # check if directory exists
                     if not os.path.exists(dir_path):
                         os.makedirs(dir_path)
-                    with open(os.path.join(dir_path, f'{uniprotId}.cif'), 'wb') as cif_file:
+                    with open(os.path.join(dir_path, f'{uniprot_id}.cif'), 'wb') as cif_file:
                         cif_file.write(cif_response.content)
-                        print(f".cif file downloaded for {uniprotId}")
+                        print(f".cif file downloaded for {uniprot_id}")
                 else:
                     print(f"Error downloading .cif file: {cif_response.status_code}")
             else:
-                print(f"No .cif file available for {uniprotId}")
+                print(f"No .cif file available for {uniprot_id}")
         else:
             print(f"Error: {response.status_code} - {response.text}, {api_url}")
 
@@ -347,5 +349,3 @@ def update_csv_with_evidence(input_file, output_file):
         writer.writerows(processed_data)
 
     print("Processing complete. Output saved to", output_file)
-
-

@@ -70,9 +70,8 @@ def split_receptors_into_individual_chains(pssm_content_file_path, asa_pssm_cont
         chains_labels), chain_names, lines, chains_asa_values
 
 
-def cluster_sequences(list_sequences, seqid=0.95, coverage=0.8, covmode='0'):
+def cluster_sequences(list_sequences, path2mmseqstmp, seqid=0.95, coverage=0.8, covmode='0'):
     path2mmseqs = '/home/omriyakir21/MMseqs2/build/bin//mmseqs'
-    path2mmseqstmp = '/mnt/c/Users/omriy/UBDAndScanNet/UBDModel/mmseqs'
 
     rng = np.random.randint(0, high=int(1e6))
     tmp_input = os.path.join(path2mmseqstmp, 'tmp_input_file_%s.fasta' % rng)

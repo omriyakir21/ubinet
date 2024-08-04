@@ -6,6 +6,7 @@ import paths
 import protein_level_db_creation_utils as protein_db_utils
 from data_preparation.ScanNet.db_creation_scanNet_utils import THREE_LETTERS_TO_SINGLE_AA_DICT
 
+
 def create_uniprot_names_dict():
     uniprot_names_dict = dict()
     uniprot_names_dict['ubiquitinBinding'] = protein_db_utils.get_uniprot_ids_from_gpad_file(
@@ -15,7 +16,15 @@ def create_uniprot_names_dict():
     uniprot_names_dict['E3'] = protein_db_utils.get_uniprot_ids_util(os.path.join(paths.E3_path, 'E3_new.txt'))
     uniprot_names_dict['DUB'] = protein_db_utils.get_uniprot_ids_util(os.path.join(paths.DUB_path, 'DUB_new.txt'))
     protein_db_utils.save_as_pickle(uniprot_names_dict,
-                                    os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl')
+                                    os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl'))
+
+def fetch_af_models_from_user_args(uniprot_names_dict):
+    class_name = sys.argv[1]
+    i = int(sys.argv[2])
+    j = int(sys.argv[3])
+    protein_db_utils.fetch_af_models(uniprot_names_dict, class_name, i, j)
+
+
 
 def create_evidence_dict():
     evidence_dict = dict()
@@ -25,18 +34,29 @@ def create_evidence_dict():
     evidence_dict['E2'] = protein_db_utils.get_evidence_util(os.path.join(paths.E2_path, 'E2_new.txt'))
     evidence_dict['E3'] = protein_db_utils.get_evidence_util(os.path.join(paths.E3_path, 'E3_new.txt'))
     evidence_dict['DUB'] = protein_db_utils.get_evidence_util(os.path.join(paths.DUB_path, 'DUB_new.txt'))
-    protein_db_utils.save_as_pickle(evidence_dict, os.path.join(paths.GO_source_patch_to_score_path, 'evidence_dict'))
+    protein_db_utils.save_as_pickle(evidence_dict,
+                                    os.path.join(paths.GO_source_patch_to_score_path, 'evidence_dict.pkl'))
 
 
 if __name__ == "__main__":
     create_uniprot_names_dict()
     create_evidence_dict()
 
-    # evidence_dict = loadPickle(os.path.join(path.GoPath, 'evidence_dict.pkl'))
-    # uniprotNamesDict = loadPickle(os.path.join(path.GoPath, 'uniprotNamesDictNew.pkl'))
-    # uniprotNames_evidences_list = createUniprotId_EvidenceTuplesForExistingExamples(uniprotNamesDict, evidence_dict)
-    # saveAsPickle(uniprotNames_evidences_list,
-    #              r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\GO\uniprotNames_evidences_list')
+    evidence_dict = protein_db_utils.load_as_pickle(
+        os.path.join(paths.GO_source_patch_to_score_path, 'evidence_dict.pkl'))
+    uniprot_names_dict = protein_db_utils.load_as_pickle(
+        os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl'))
+
+    uniprotNames_evidences_list = protein_db_utils.create_uniprot_id_evidence_tuples_for_existing_examples(
+        uniprot_names_dict, evidence_dict)
+    protein_db_utils.save_as_pickle(uniprotNames_evidences_list,
+                                    os.path.join(paths.GO_source_patch_to_score_path,
+                                                 'uniprotNames_evidences_list.pkl'))
+    # fetch_af_models_from_user_args(uniprot_names_dict)
+    # protein_db_utils.fetch_af_models(uniprot_names_dict, 'E2')
+    # protein_db_utils.fetch_af_models(uniprot_names_dict, 'E3')
+    # protein_db_utils.fetch_af_models(uniprot_names_dict, 'DUB')
+    # protein_db_utils.fetch_af_models(uniprot_names_dict, 'ubiqutiinBinding')
     # uniprots = getAllUniprotsForTraining(
     #     os.path.join(path.aggregateFunctionMLPDir, os.path.join('dataForTraining2902', 'allInfoDicts.pkl')))
     #
@@ -44,7 +64,6 @@ if __name__ == "__main__":
     #
     # fetchAFModels(uniprotNamesDict, 'E2')
 
-# uniprotNamesDict = loadPickle(r'C:\Users\omriy\UBDAndScanNet\UBDModel\GO\uniprotNamesDict.pkl')
 # directory_path =r'C:\Users\omriy\UBDAndScanNet\UBDModel\GO\E3'
 # files = [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))]
 # file_count = len(files)

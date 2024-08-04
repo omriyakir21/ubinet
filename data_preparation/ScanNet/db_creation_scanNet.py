@@ -56,9 +56,10 @@ if __name__ == "__main__":
     # PDB_names_list = db_utils.read_PDB_names_from_file(UBIQ_LIST_PATH)
     # download the assemblies and assymetrics files
     # download_assemblies_and_assymetrics(PDB_names_list)
-    create_save_list_of_entry_dicts()
+    # create_save_list_of_entry_dicts()
 
-    # ubiq_path = '3by4.cif'
+
+    ubiq_path = '3by4.cif'
     # ubiq_structure = db_utils.parser.get_structure('3BY4', ubiq_path)
     # ubiq_chain = ubiq_structure[0]['B']  # uni-prot = "UBIQ-HUMAN"
     # ubiq_seq = db_utils.get_str_seq_of_chain(ubiq_chain)
