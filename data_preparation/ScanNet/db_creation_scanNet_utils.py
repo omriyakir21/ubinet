@@ -501,7 +501,7 @@ def choose_assembly(entry_assembly_dict, probabilities, ambiguous_file, not_vali
         not_valid_file.write(
             entry_assembly_dict['entry'] + ": There werent any valid assemblies.\n longestNonUbiqFromAsymetric: " +
             entry_assembly_dict[
-                'referenceSequence'] + "\n ,reference CopyNumber is : " + reference_copy_number_string + "\n")
+                'reference_sequence'] + "\n ,reference CopyNumber is : " + reference_copy_number_string + "\n")
         return None
 
     predictions = []
@@ -511,7 +511,7 @@ def choose_assembly(entry_assembly_dict, probabilities, ambiguous_file, not_vali
     if len(predictions) == 0:  # there werent any valid assemblies
         not_valid_file.write(
             entry_assembly_dict['entry'] + ": There werent any valid assemblies.\n longestNonUbiqFromAsymetric: " +
-            entry_assembly_dict['referenceSequence'] + "\n ,reference CopyNumber is : " + entry_assembly_dict[
+            entry_assembly_dict['reference_sequence'] + "\n ,reference CopyNumber is : " + entry_assembly_dict[
                 'referenceCopyNumber'] + "\n")
         return None
     if len(predictions) > 1:
