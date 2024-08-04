@@ -492,19 +492,6 @@ def choose_assembly(entry_assembly_dict, probabilities, ambiguous_file, not_vali
     :param probabilities: Queen algorithm predictions
     :return: The path of the most likelihood assembly
     """
-    # Debugging: Check the type of entry_assembly_dict
-    print(f"Type of entry_assembly_dict: {type(entry_assembly_dict)}")
-
-    # Debugging: Print the keys of entry_assembly_dict
-    if isinstance(entry_assembly_dict, dict):
-        print(f"Keys of entry_assembly_dict: {entry_assembly_dict.keys()}")
-
-    # Ensure entry_assembly_dict is a dictionary and access the 'referenceCopyNumber' key correctly
-    if isinstance(entry_assembly_dict, dict) and 'referenceCopyNumber' in entry_assembly_dict:
-        reference_copy_number_string = ' '.join(map(str, entry_assembly_dict['referenceCopyNumber']))
-    else:
-        raise ValueError("entry_assembly_dict is not a dictionary or does not contain the key 'referenceCopyNumber'")
-    print(entry_assembly_dict['referenceCopyNumber'])
     reference_copy_number_string = ' '.join(map(str, entry_assembly_dict['referenceCopyNumber']))
     assemblies_string = ' '.join(map(str, entry_assembly_dict['assemblies']))
     probabilities_string = ' '.join(["(" + str(INV_MAP[i]) + "," + str(probabilities[i]) + ")" for i in range(12)])
@@ -557,7 +544,6 @@ def from_pickle_to_choose_assemblies(entry_dicts_with_probabilities_path):
     all_probabilities = [entry['probabilities'] for entry in entry_dicts_with_probabilities]
     not_valid_file = open(os.path.join(paths.assemblies_path, "notValidAssembliesFileNew.txt"), "w")
     ambiguous_file = open(os.path.join(paths.assemblies_path, 'ambiguousFileNew.txt'), "w")
-    all_lists_of_entry_dicts = [load_as_pickle(os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts.pkl'))]
     chosen_assemblies = choose_assemblies(all_lists_of_entry_dicts, all_probabilities, ambiguous_file, not_valid_file)
     save_as_pickle(chosen_assemblies, os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
     not_valid_file.close()
