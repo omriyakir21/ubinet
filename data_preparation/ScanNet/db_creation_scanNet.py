@@ -75,7 +75,7 @@ if __name__ == "__main__":
     # Queen_predictions_path = db_utils.load_as_pickle(os.path.join(paths.QUEEN_path, 'predictions'))
 
     chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
-        os.path.join(paths.entry_dicts_path, 'entry_dicts_with_probabilities.pkl'))
+        os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
     # chosenAssembliesListOfSublists = db_utils.split_list(chosen_assemblies, 40)
     # items = [(chosenAssembliesListOfSublists[i], i) for i in range(40)]
     # createDataBase(items[14])
