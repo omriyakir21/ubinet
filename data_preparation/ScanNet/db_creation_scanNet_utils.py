@@ -753,14 +753,14 @@ def create_imer_files(dirName):
     :return: list of 24 files
     """
     dirName = dirName + '/'
-    return [open(dirName + f"Checkchains_{i}_mer.txt", "w") for i in range(1, 25)]
+    return [open(os.path.join(dirName,f"Checkchains_{i}_mer.txt"), "w") for i in range(1, 25)]
 
 
 def create_imer_asa_files(asa_dir_name):
     return [open(os.path.join(asa_dir_name, f"Checkchains_asa_{i}_mer.txt"), "w") for i in range(1, 25)]
 
 
-def write_imer_to_file(file, model_attributes_matrix, ith_component_indexes_converted, candidate, model, index,
+def write_imer_to_file(file, model_attributes_matrix, ith_component_indexes_converted, candidate, index,
                        receptor_header):
     """
     :param model_attributes_matrix[i] = a list of the chain's amino acid attributes in the following format -(chain_id, aa_id , aa_type, aa label)
@@ -914,7 +914,6 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
 
     chosen_assemblies, index = tuple[0], tuple[1]
     index_string = str(index)
-    # index_string = '0000'
     assemblies_names = [chosen_assemblies[i].split("/")[-2].lower() for i in range(len(chosen_assemblies))]
     structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in
                   range(len(chosen_assemblies))]
@@ -958,6 +957,9 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
                     ith_component_indexes_converted.append(x)
 
                 update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
+                write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
+                                   model_attributes_matrix, ith_component_indexes_converted, candidate, index,
+                                   receptor_header)
                 receptor_header = create_receptor_header(candidate, model, ith_component_indexes_converted)
                 write_asa_to_file(asa_files_list[len(ith_component_indexes_converted) - 1],
                                   model_attributes_matrix, ith_component_indexes_converted, candidate, model, index,
@@ -971,9 +973,6 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
                 summary_lines.append(
                     '$'.join([receptor_header, str(number_of_receptors), str(number_of_bound_ubiq),
                               ubiquitin_binding_patch]))
-                write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
-                                   model_attributes_matrix, ith_component_indexes_converted, candidate, model, index,
-                                   receptor_header)
 
     summary_string = "\n".join(summary_lines)
     assert (summary_file.write(summary_string) > 0)
