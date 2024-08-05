@@ -53,6 +53,8 @@ if __name__ == "__main__":
                                     os.path.join(paths.GO_source_patch_to_score_path,
                                                  'uniprotNames_evidences_list.pkl'))
     # fetch_af_models_from_user_args(uniprot_names_dict)
+
+    # fetch_af_models_from_user_args(uniprot_names_dict)
     # protein_db_utils.fetch_af_models(uniprot_names_dict, 'E2')
     # protein_db_utils.fetch_af_models(uniprot_names_dict, 'E3')
     # protein_db_utils.fetch_af_models(uniprot_names_dict, 'DUB')
