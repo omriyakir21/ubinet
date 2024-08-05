@@ -1,0 +1,3 @@
+[submodule "/home/iscb/wolfson/omriyakir/ubinet/models/ScanNet_Ub"]
+	path = /home/iscb/wolfson/omriyakir/ubinet/models/ScanNet_Ub
+	url = git@github.com:jertubiana/ScanNet_Ub.git
