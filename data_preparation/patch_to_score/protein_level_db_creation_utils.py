@@ -3,24 +3,13 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import paths
-import pickle
-import subprocess
-import shutil
-from builtins import classmethod
-
-import numpy as np
-import pandas as pd
-import requests
 from Bio.PDB import MMCIFParser
 import csv
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle, aa_out_of_chain, \
     get_str_seq_of_chain
-from pyparsing import unicode_set
-from tensorflow.python.tpu.tpu_embedding_v2 import extract_variable_info
-import requests, sys
+import requests
 import re
 
-import path as path
 
 
 def get_uniprot_ids_from_gpad_file(path):
