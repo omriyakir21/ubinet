@@ -574,7 +574,7 @@ def get_label_for_aa(aa, ubiq_atoms, threshold, diameter=50, diameter_aa=8.):
     :return: 1 if there exists an atom that is within 4 Angstrom to a ubiquitin atom else 0
     """
     for atom in aa.get_atoms():
-        dists = atom_dist(atom, ubiq_atoms)
+        dists = atom_dists(atom, ubiq_atoms)
         if dists.min() < threshold:
             return 1
         elif dists.max() > diameter + diameter_aa + threshold:
