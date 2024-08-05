@@ -68,16 +68,28 @@ def get_evidence_util(path):
     return evidence_list
 
 
+
+
+# Send the request to fetch the model
+response = requests.get(url)
+
+# Save the model to a file
+with open(f"{uniprot_id}_alphafold.pdb", "wb") as f:
+    f.write(response.content)
+
+print(f"AlphaFold model for {uniprot_id} downloaded successfully.")
+
 def fetch_af_models(uniprotNamesDict, className, i, j):
     uniprot_ids = uniprotNamesDict[className]
     numberOfExamples = len(uniprot_ids)
-    apiKey = load_as_pickle(os.path.join(paths.GO_source_patch_to_score_path, 'key.pkl'))
+    # apiKey = load_as_pickle(os.path.join(paths.GO_source_patch_to_score_path, 'key.pkl'))
     cnt = 0
     for uniprot_id in uniprot_ids[i:j]:
         if i % 100 == 0:
             print(f"{i}/{numberOfExamples}")
         cnt += 1
-        api_url = f'https://alphafold.ebi.ac.uk/api/prediction/{uniprot_id}?key={apiKey}'
+        api_url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
+
         # Make a GET request to the AlphaFold API
         response = requests.get(api_url)
         # Check if the request was successful (status code 200)
