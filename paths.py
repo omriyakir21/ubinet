@@ -54,6 +54,8 @@ assemblies_path = os.path.join(scanNet_sources_path, 'assemblies')
 # models
 models_path = os.path.join(current_dir, 'models')
 QUEEN_model_path = os.path.join(models_path, 'QUEEN')
+ScanNet_Ub_module_path = os.path.join(models_path, 'ScanNet_Ub')
 # results
 results_path = os.path.join(current_dir, 'results')
+ScanNet_results_path = os.path.join(results_path, 'ScanNet')
 
