@@ -544,7 +544,8 @@ def from_pickle_to_choose_assemblies(entry_dicts_with_probabilities_path):
     all_probabilities = [entry['probabilities'] for entry in entry_dicts_with_probabilities]
     not_valid_file = open(os.path.join(paths.assemblies_path, "notValidAssembliesFileNew.txt"), "w")
     ambiguous_file = open(os.path.join(paths.assemblies_path, 'ambiguousFileNew.txt'), "w")
-    chosen_assemblies = choose_assemblies(entry_dicts_with_probabilities, all_probabilities, ambiguous_file, not_valid_file)
+    chosen_assemblies = choose_assemblies(entry_dicts_with_probabilities, all_probabilities, ambiguous_file,
+                                          not_valid_file)
     save_as_pickle(chosen_assemblies, os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
     not_valid_file.close()
     ambiguous_file.close()
@@ -756,8 +757,7 @@ def create_imer_files(dirName):
 
 
 def create_imer_asa_files(asa_dir_name):
-    asa_dir_name = asa_dir_name + '/'
-    return [open(asa_dir_name + f"Checkchains__{i}_mer.txt", "w") for i in range(1, 25)]
+    return [open(os.path.join(asa_dir_name, f"Checkchains_asa_{i}_mer.txt"), "w") for i in range(1, 25)]
 
 
 def write_imer_to_file(file, model_attributes_matrix, ith_component_indexes_converted, candidate, model, index,
@@ -774,7 +774,7 @@ def write_imer_to_file(file, model_attributes_matrix, ith_component_indexes_conv
             lines.append(" ".join(aminoAcidAttributes))
     stringToFile = "\n".join(lines)
     assert (file.write(stringToFile + "\n") > 0)
-    logFile = open('logFiles/log' + str(index), "w")
+    logFile = open(os.path.join(paths.ImerFiles_path, 'logFiles', f'log{str(index)}'), "w")
     logFile.write("candidate = " + candidate.structure.get_id() + "\nin file:" + str(file.name))
     logFile.close()
 
@@ -807,9 +807,8 @@ def update_labels_for_chains_util(imer_attributes_matrix, imer_amino_acids, non_
                 imer_attributes_matrix[i][3] = '3'
 
 
-def update_labels_for_chain(imer_attributes_matrix, non_binding_attribute_matrix, imer_amino_acids,
-                            non_binding_amino_acids,
-                            imer_atoms, non_binding_atoms, non_binding_diameter):
+def update_labels_for_chain(imer_attributes_matrix, imer_amino_acids,
+                            non_binding_atoms, non_binding_diameter):
     """
     :param imer_attributes_matrix: a list of the first chain's amino acid attributes in the following format -(chain_id, aa_id , aa_type, aa label)
     :param non_binding_attribute_matrix: a list of the second chain's amino acid attributes in the following format -(chain_id, aa_id , aa_type, aa label)
@@ -826,22 +825,15 @@ def update_imers_labels(model_attributes_matrix, ith_component_indexes_converted
     aminoAcidsLists = [aa_out_of_chain(model.non_ubiq_chains[index]) for index in range(len(model.non_ubiq_chains))]
     atomsLists = [get_atoms_of_amino_acids(aminoAcids) for aminoAcids in aminoAcidsLists]
     for i in ith_component_indexes_converted:
-        # if i!=6:
-        #     continue
         for j in range(len(model.non_ubiq_chains)):
             if j not in ith_component_indexes_converted:  # one is binding non ubiquitin and one is a non-binding-non-ubiquitin
-                update_labels_for_chain(model_attributes_matrix[i], model_attributes_matrix[j]
+                update_labels_for_chain(model_attributes_matrix[i]
                                         , aminoAcidsLists[i],
-                                        aminoAcidsLists[j], atomsLists[i],
                                         atomsLists[j],
                                         non_ubiq_diameters[j])
 
 
 def convert_ubiq_binding_indexes_list(binding_indexes_list, ubiq_corresponding_list):
-    #    print(ubiqCorrespondingList)
-    #    print(len(ubiqCorrespondingList))
-    #    print(bindingIndexesList)
-    #    print(len(bindingIndexesList))
     l = []
     for i in binding_indexes_list:
         try:
@@ -867,12 +859,8 @@ def create_receptor_summary_util(model, ub_index, non_ub_index, bound_residue_se
     non_ub_amino_acids = aa_out_of_chain(model.non_ubiq_chains[non_ub_index])
     non_ub_atoms = get_atoms_of_amino_acids(non_ub_amino_acids)
     threshold = 4
-    # print(ubAminoAcids)
-    # print("index: ", nonUbIndex)
-    # print("diameter: ", nonUbiqDiameter)
     for i in range(len(ubAminoAcids)):
         if get_label_for_aa(ubAminoAcids[i], non_ub_atoms, threshold, non_ubiq_diameter):
-            # print(ubAminoAcids[i])
             bound_residue_set.add(i)
 
 
@@ -935,7 +923,11 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     UBD_candidates = [UBD_candidate(structure) for structure in structures]
     dirName = os.path.join(paths.ImerFiles_path, f"Batch{index_string}")
     asa_dir_name = os.path.join(paths.ASA_path, f"asaBatch{index_string}")
-    print("\n\n\n creating dir")
+    print("\n\n\n creating dirs")
+    if not os.path.exists(dirName):
+        os.makedirs(dirName)
+    if not os.path.exists(asa_dir_name):
+        os.makedirs(asa_dir_name)
     files_list = create_imer_files(dirName)  # filesList[i] = file containing i-mers if created else None
     asa_files_list = create_imer_asa_files(asa_dir_name)
     summary_lines = []
@@ -943,7 +935,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     for candidate in UBD_candidates:
         # if candidate.structure.get_id().lower() != '3k9o':
         #     continue
-        print(candidate.structure)
+        # print(candidate.structure)
         for model in candidate.models:
             print(model)
             non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in model.non_ubiq_chains]

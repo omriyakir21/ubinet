@@ -50,6 +50,12 @@ def create_save_list_of_entry_dicts():
                                                               validAssemblyPathsLists)
     db_utils.save_as_pickle(list_of_entry_dicts, os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts.pkl'))
 
+def run_create_db_with_user_argv(chosen_assemblies_path):
+    # retrive the list of PDB names
+    chosen_assemblies = db_utils.load_as_pickle(chosen_assemblies_path)
+    chosenAssembliesListOfSublists = db_utils.split_list(chosen_assemblies, 40)
+    items = [(chosenAssembliesListOfSublists[i], i) for i in range(40)]
+    db_utils.create_data_base(items[int(sys.argv[1])])    # download
 
 if __name__ == "__main__":
     # retrive the list of PDB names
@@ -58,24 +64,22 @@ if __name__ == "__main__":
     # download_assemblies_and_assymetrics(PDB_names_list)
     # create_save_list_of_entry_dicts()
 
-    ubiq_path = os.path.join(paths.pdbs_path, '3by4.cif')
-    ubiq_structure = db_utils.parser.get_structure('3BY4', ubiq_path)
-    ubiq_chain = ubiq_structure[0]['B']  # uni-prot = "UBIQ-HUMAN"
-    ubiq_seq = db_utils.get_str_seq_of_chain(ubiq_chain)
-    ubiq_amino_acids = db_utils.aa_out_of_chain(ubiq_chain)
-    ubiq_atoms = db_utils.get_atoms_of_amino_acids(ubiq_chain)
-    ubiqDiameter = db_utils.calculate_diameter(ubiq_atoms)
-    ubiq_residues_list = [
-        db_utils.THREE_LETTERS_TO_SINGLE_AA_DICT[str(aminoAcid.get_resname())] + str(aminoAcid.get_id()[1]) for
-        aminoAcid
-        in ubiq_amino_acids]
+    # ubiq_path = os.path.join(paths.pdbs_path, '3by4.cif')
+    # ubiq_structure = db_utils.parser.get_structure('3BY4', ubiq_path)
+    # ubiq_chain = ubiq_structure[0]['B']  # uni-prot = "UBIQ-HUMAN"
+    # ubiq_seq = db_utils.get_str_seq_of_chain(ubiq_chain)
+    # ubiq_amino_acids = db_utils.aa_out_of_chain(ubiq_chain)
+    # ubiq_atoms = db_utils.get_atoms_of_amino_acids(ubiq_chain)
+    # ubiqDiameter = db_utils.calculate_diameter(ubiq_atoms)
+    # ubiq_residues_list = [
+    #     db_utils.THREE_LETTERS_TO_SINGLE_AA_DICT[str(aminoAcid.get_resname())] + str(aminoAcid.get_id()[1]) for
+    #     aminoAcid
+    #     in ubiq_amino_acids]
 
-    # list_of_entry_dicts = db_utils.load_as_pickle(os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts.pkl'))
-    # db_utils.pickle_list_of_entry_dicts(list_of_entry_dicts, 852)
-    # Queen_predictions_path = db_utils.load_as_pickle(os.path.join(paths.QUEEN_path, 'predictions'))
+    # chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
+    #     os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
 
-    chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
-        os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
-    # chosenAssembliesListOfSublists = db_utils.split_list(chosen_assemblies, 40)
-    # items = [(chosenAssembliesListOfSublists[i], i) for i in range(40)]
-    # createDataBase(items[14])
+    run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
+
+
+
