@@ -25,8 +25,8 @@ patch_to_score_dataset_path = os.path.join(datasets_path, 'patch_to_score')
 patch_to_score_sources_path = os.path.join(patch_to_score_dataset_path, 'sources')
 #           GO
 GO_source_patch_to_score_path = os.path.join(patch_to_score_sources_path, 'GO')
-#               ubiquitin_binding
-ubiquitin_binding_path = os.path.join(GO_source_patch_to_score_path, 'ubiquitin_binding')
+#               ubiquitinBinding
+ubiquitin_binding_path = os.path.join(GO_source_patch_to_score_path, 'ubiquitinBinding')
 #               E1
 E1_path = os.path.join(GO_source_patch_to_score_path, 'E1')
 #               E2
