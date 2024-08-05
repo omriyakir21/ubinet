@@ -69,15 +69,37 @@ def get_evidence_util(path):
 
 
 
+def download_alphafold_model(uniprot_id):
+    # Construct the URL for the AlphaFold model
+    url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
 
-# Send the request to fetch the model
-response = requests.get(url)
+    try:
+        print(f"Attempting to download AlphaFold model for UniProt ID: {uniprot_id}")
 
-# Save the model to a file
-with open(f"{uniprot_id}_alphafold.pdb", "wb") as f:
-    f.write(response.content)
+        # Send the request to fetch the model
+        response = requests.get(url)
 
-print(f"AlphaFold model for {uniprot_id} downloaded successfully.")
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Save the model to a file
+            with open(f"{uniprot_id}_alphafold.pdb", "wb") as f:
+                f.write(response.content)
+            print(f"AlphaFold model for {uniprot_id} downloaded successfully.")
+        else:
+            print(f"Failed to download model. HTTP Status Code: {response.status_code}")
+            print("Please check if the UniProt ID is correct or if the model is available.")
+
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred while trying to download the model: {e}")
+
+
+def fetchAFModels(uniprotNamesDict, className, i, j):
+    uniprotIds = uniprotNamesDict[className]
+    # apiKey = 'AIzaSyCeurAJz7ZGjPQUtEaerUkBZ3TaBkXrY94'
+    cnt = 0
+    for uniprotId in uniprotIds[i:j]:
+        print('i = ', i, ', j= ', j, ', cnt = ', cnt)
+        cnt += 1
 
 def fetch_af_models(uniprotNamesDict, className, i, j):
     uniprot_ids = uniprotNamesDict[className]
@@ -88,37 +110,7 @@ def fetch_af_models(uniprotNamesDict, className, i, j):
         if i % 100 == 0:
             print(f"{i}/{numberOfExamples}")
         cnt += 1
-        api_url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
-
-        # Make a GET request to the AlphaFold API
-        response = requests.get(api_url)
-        # Check if the request was successful (status code 200)
-        if response.status_code == 200:
-            # Parse the JSON response
-            data = response.json()[0]
-            # Check if .cif file URL is available
-            if 'cifUrl' in data:
-                # Access the .cif file URL
-                cif_url = data['cifUrl']
-                # Make a GET request to the .cif file URL to download it
-                cif_response = requests.get(cif_url)
-                # Check if the .cif file request was successful
-                if cif_response.status_code == 200:
-                    # Save the .cif file to a local file
-                    dir_path = os.path.join(paths.GO_source_patch_to_score_path, className)
-                    # check if directory exists
-                    if not os.path.exists(dir_path):
-                        os.makedirs(dir_path)
-                    with open(os.path.join(dir_path, f'{uniprot_id}.cif'), 'wb') as cif_file:
-                        cif_file.write(cif_response.content)
-                        print(f".cif file downloaded for {uniprot_id}")
-                else:
-                    print(f"Error downloading .cif file: {cif_response.status_code}")
-            else:
-                print(f"No .cif file available for {uniprot_id}")
-        else:
-            print(f"Error: {response.status_code} - {response.text}, {api_url}")
-
+        download_alphafold_model(uniprot_id)
 
 def is_valid_af_prediction(pdb_file_path, name):
     parser = MMCIFParser()  # create parser object
