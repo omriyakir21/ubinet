@@ -69,7 +69,7 @@ def get_evidence_util(path):
 
 
 
-def download_alphafold_model(uniprot_id):
+def download_alphafold_model(uniprot_id,class_dir):
     # Construct the URL for the AlphaFold model
     url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
 
@@ -78,11 +78,11 @@ def download_alphafold_model(uniprot_id):
 
         # Send the request to fetch the model
         response = requests.get(url)
-
+        file_path = os.path.join(class_dir,"f{uniprot_id}.pdb")
         # Check if the request was successful
         if response.status_code == 200:
             # Save the model to a file
-            with open(f"{uniprot_id}_alphafold.pdb", "wb") as f:
+            with open(file_path, "wb") as f:
                 f.write(response.content)
             print(f"AlphaFold model for {uniprot_id} downloaded successfully.")
         else:
@@ -91,15 +91,6 @@ def download_alphafold_model(uniprot_id):
 
     except requests.exceptions.RequestException as e:
         print(f"An error occurred while trying to download the model: {e}")
-
-
-def fetchAFModels(uniprotNamesDict, className, i, j):
-    uniprotIds = uniprotNamesDict[className]
-    # apiKey = 'AIzaSyCeurAJz7ZGjPQUtEaerUkBZ3TaBkXrY94'
-    cnt = 0
-    for uniprotId in uniprotIds[i:j]:
-        print('i = ', i, ', j= ', j, ', cnt = ', cnt)
-        cnt += 1
 
 def fetch_af_models(uniprotNamesDict, className, i, j):
     uniprot_ids = uniprotNamesDict[className]
@@ -110,7 +101,8 @@ def fetch_af_models(uniprotNamesDict, className, i, j):
         if i % 100 == 0:
             print(f"{i}/{numberOfExamples}")
         cnt += 1
-        download_alphafold_model(uniprot_id)
+        class_dir = os.path.join(paths.GO_source_patch_to_score_path, className)
+        download_alphafold_model(uniprot_id,class_dir)
 
 def is_valid_af_prediction(pdb_file_path, name):
     parser = MMCIFParser()  # create parser object
