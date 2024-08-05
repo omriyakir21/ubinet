@@ -905,7 +905,7 @@ def create_receptor_summary(candidate, model, ubiq_neighbors, ith_component_inde
     boundResidueStringsFiltered = [s for s in boundResidueStrings if s != ""]
     return ("//".join(boundResidueStringsFiltered), numUb)
 
-
+import pdb
 def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     """
     :param valid_UBD_candidates: list of UBD_candidates
@@ -955,7 +955,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
                 for val in ith_component_indexes:
                     x = connection_index_list[val]
                     ith_component_indexes_converted.append(x)
-
+                pdb.set_trace()
                 update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
                 write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
                                    model_attributes_matrix, ith_component_indexes_converted, candidate, index,
