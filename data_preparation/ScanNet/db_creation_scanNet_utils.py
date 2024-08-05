@@ -774,7 +774,7 @@ def write_imer_to_file(file, model_attributes_matrix, ith_component_indexes_conv
             lines.append(" ".join(aminoAcidAttributes))
     stringToFile = "\n".join(lines)
     assert (file.write(stringToFile + "\n") > 0)
-    logFile = open(os.path.join(paths.ImerFiles_path, 'logFiles', f'log{str(index)}'), "w")
+    logFile = open(os.path.join(paths.ImerFiles_path, f'log{str(index)}'), "w")
     logFile.write("candidate = " + candidate.structure.get_id() + "\nin file:" + str(file.name))
     logFile.close()
 
