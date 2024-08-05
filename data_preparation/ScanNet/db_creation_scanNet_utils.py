@@ -955,12 +955,12 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
                 for val in ith_component_indexes:
                     x = connection_index_list[val]
                     ith_component_indexes_converted.append(x)
-                pdb.set_trace()
+                # pdb.set_trace()
+                receptor_header = create_receptor_header(candidate, model, ith_component_indexes_converted)
                 update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
                 write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
                                    model_attributes_matrix, ith_component_indexes_converted, candidate, index,
                                    receptor_header)
-                receptor_header = create_receptor_header(candidate, model, ith_component_indexes_converted)
                 write_asa_to_file(asa_files_list[len(ith_component_indexes_converted) - 1],
                                   model_attributes_matrix, ith_component_indexes_converted, candidate, model, index,
                                   receptor_header, asa_list)
