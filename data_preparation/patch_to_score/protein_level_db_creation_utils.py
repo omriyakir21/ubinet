@@ -15,7 +15,6 @@ from Bio.PDB import MMCIFParser
 import csv
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle, aa_out_of_chain, \
     get_str_seq_of_chain
-from data_preparation.ScanNet.LabelPropagationAlgorithm_utils import cluster_sequences
 from pyparsing import unicode_set
 from tensorflow.python.tpu.tpu_embedding_v2 import extract_variable_info
 import requests, sys
