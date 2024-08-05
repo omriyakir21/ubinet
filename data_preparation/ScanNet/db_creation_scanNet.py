@@ -50,7 +50,8 @@ def create_save_list_of_entry_dicts():
                                                               validAssemblyPathsLists)
     db_utils.save_as_pickle(list_of_entry_dicts, os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts.pkl'))
 
-def run_create_db_with_user_argv(chosen_assemblies_path):
+
+def run_create_db_with_user_argv(chosen_assemblies_path, num_sublists):
     # retrive the list of PDB names
     ubiq_path = os.path.join(paths.pdbs_path, '3by4.cif')
     ubiq_structure = db_utils.parser.get_structure('3BY4', ubiq_path)
@@ -63,9 +64,60 @@ def run_create_db_with_user_argv(chosen_assemblies_path):
         aminoAcid
         in ubiq_amino_acids]
     chosen_assemblies = db_utils.load_as_pickle(chosen_assemblies_path)
-    chosenAssembliesListOfSublists = db_utils.split_list(chosen_assemblies, 40)
-    items = [(chosenAssembliesListOfSublists[i], i) for i in range(40)]
-    db_utils.create_data_base(items[int(sys.argv[1])],ubiqDiameter,ubiq_residues_list)    # download
+    chosenAssembliesListOfSublists = db_utils.split_list(chosen_assemblies, num_sublists)
+    items = [(chosenAssembliesListOfSublists[i], i) for i in range(num_sublists)]
+    db_utils.create_data_base(items[int(sys.argv[1])], ubiqDiameter, ubiq_residues_list)  # download
+
+
+def integrate_checkchains_per_batch(batch_dir, prefix_batch, prefix_file, num_sublists):
+    for i in range(num_sublists):
+        batch_path = os.path.join(batch_dir, f"{prefix_batch}{i}")
+        integrated_content = ""
+        for j in range(1, 25):
+            file_path = os.path.join(batch_path, f"{prefix_file}_{j}_mer.txt")
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as file:
+                    integrated_content += file.read()
+        integrated_file_path = os.path.join(batch_path, f"Integrated_{prefix_file}_mer.txt")
+        with open(integrated_file_path, 'w') as integrated_file:
+            integrated_file.write(integrated_content)
+
+
+def integrate_all_batches_checkchains(batch_dir, output_file, prefix_batch, prefix_file, num_sublists):
+    integrated_content = ""
+    for i in range(num_sublists):
+        batch_path = os.path.join(batch_dir, f"{prefix_batch}{i}")
+        integrated_file_path = os.path.join(batch_path, f"Integrated_{prefix_file}_mer.txt")
+        if os.path.exists(integrated_file_path):
+            with open(integrated_file_path, 'r') as file:
+                integrated_content += file.read()
+    with open(output_file, 'w') as output:
+        output.write(integrated_content)
+
+
+def integrate_all_batches_summarylog(batch_dir, output_file, num_sublists):
+    integrated_content = ""
+    for i in range(num_sublists):
+        batch_path = os.path.join(batch_dir, f"Batch{i}")
+        summary_log_path = os.path.join(batch_path, "summaryLog.txt")
+        if os.path.exists(summary_log_path):
+            with open(summary_log_path, 'r') as file:
+                integrated_content += file.read()
+    with open(output_file, 'w') as output:
+        output.write(integrated_content)
+
+def integrate_all_files(num_sublists):
+    integrate_checkchains_per_batch(paths.ImerFiles_path, 'Batch', 'Checkchains', num_sublists)
+    integrate_checkchains_per_batch(paths.ASA_path, 'asaBatch', 'Checkchains_asa', num_sublists)
+    integrate_all_batches_checkchains(paths.ImerFiles_path,
+                                      os.path.join(paths.ImerFiles_path, 'Integrated_Checkchains_mer.txt'), 'Batch',
+                                      'Checkchains', num_sublists)
+    integrate_all_batches_checkchains(paths.ASA_path,
+                                      os.path.join(paths.ASA_path, 'Integrated_Checkchains_asa_mer.txt'), 'asaBatch',
+                                      'Checkchains_asa', num_sublists)
+    integrate_all_batches_summarylog(paths.ImerFiles_path, os.path.join(paths.ImerFiles_path, 'Integrated_summaryLog.txt'), num_sublists)
+
+
 
 if __name__ == "__main__":
     # retrive the list of PDB names
@@ -75,8 +127,6 @@ if __name__ == "__main__":
     # create_save_list_of_entry_dicts()
     # chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
     #     os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
-
-    run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
-
-
-
+    NUM_SUBLISTS = 40
+    # run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl', ), NUM_SUBLISTS)
+    integrate_all_files(NUM_SUBLISTS)

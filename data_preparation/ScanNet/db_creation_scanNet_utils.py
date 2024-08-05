@@ -706,12 +706,12 @@ def create_amino_acid_labels(model, ubiq_diameter):
     return (ubiq_neighbors, non_ubiq_neighbors, model_attributes_matrix)
 
 
-def compute_connected_components(twoDimList):
+def compute_connected_components(two_dim_list):
     """
-    :param twoDimList: A two dimensional list
+    :param two_dim_list: A two dimensional list
     :return: Tuple(numComponents , componentsLabels)
     """
-    np_non_ubiq_neighbors = np.array(twoDimList)
+    np_non_ubiq_neighbors = np.array(two_dim_list)
     return connected_components(csgraph=np_non_ubiq_neighbors, directed=False, return_labels=True)
 
 
@@ -752,8 +752,7 @@ def create_imer_files(dirName):
     """
     :return: list of 24 files
     """
-    dirName = dirName + '/'
-    return [open(os.path.join(dirName,f"Checkchains_{i}_mer.txt"), "w") for i in range(1, 25)]
+    return [open(os.path.join(dirName, f"Checkchains_{i}_mer.txt"), "w") for i in range(1, 25)]
 
 
 def create_imer_asa_files(asa_dir_name):
@@ -905,7 +904,10 @@ def create_receptor_summary(candidate, model, ubiq_neighbors, ith_component_inde
     boundResidueStringsFiltered = [s for s in boundResidueStrings if s != ""]
     return ("//".join(boundResidueStringsFiltered), numUb)
 
+
 import pdb
+
+
 def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     """
     :param valid_UBD_candidates: list of UBD_candidates
