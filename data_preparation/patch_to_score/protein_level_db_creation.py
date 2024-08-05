@@ -54,11 +54,6 @@ if __name__ == "__main__":
     #                                              'uniprotNames_evidences_list.pkl'))
     fetch_af_models_from_user_args(uniprot_names_dict)
 
-    # fetch_af_models_from_user_args(uniprot_names_dict)
-    # protein_db_utils.fetch_af_models(uniprot_names_dict, 'E2')
-    # protein_db_utils.fetch_af_models(uniprot_names_dict, 'E3')
-    # protein_db_utils.fetch_af_models(uniprot_names_dict, 'DUB')
-    # protein_db_utils.fetch_af_models(uniprot_names_dict, 'ubiqutiinBinding')
     # uniprots = getAllUniprotsForTraining(
     #     os.path.join(path.aggregateFunctionMLPDir, os.path.join('dataForTraining2902', 'allInfoDicts.pkl')))
     #
@@ -73,12 +68,6 @@ if __name__ == "__main__":
 # fetchAFModels(uniprotNamesDict, 'E3', 16000, 18582)
 # print(len(uniprotNamesDict['DUB']))
 # print(len(uniprotNamesDict['ubiquitinBinding']))
-# fetchAFModels(uniprotNamesDict, 'ubiquitinBinding', 72000, 831100)
-# fetchAFModels(uniprotNamesDict, 'DUB', 2000, 4000)
-# fetchAFModels(uniprotNamesDict, 'DUB', 8000, 8800)
-# fetchAFModels(uniprotNamesDict, 'E3', 12000, 14000)
-# fetchAFModels(uniprotNamesDict, 'E3', 14000, 16000)
-# fetchAFModels(uniprotNamesDict, 'E3', 16000, 18582)
 
 
 # pdbFilePath = r'C:\Users\omriy\UBDAndScanNet\UBDModel\GO\E1\A0A0A0KE12.cif'
