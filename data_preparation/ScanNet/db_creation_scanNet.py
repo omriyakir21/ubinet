@@ -63,8 +63,6 @@ def run_create_db_with_user_argv(chosen_assemblies_path, num_sublists):
         db_utils.THREE_LETTERS_TO_SINGLE_AA_DICT[str(aminoAcid.get_resname())] + str(aminoAcid.get_id()[1]) for
         aminoAcid
         in ubiq_amino_acids]
-    print(ubiq_residues_list)
-    print(len(ubiq_residues_list))
     chosen_assemblies = db_utils.load_as_pickle(chosen_assemblies_path)
     chosenAssembliesListOfSublists = db_utils.split_list(chosen_assemblies, num_sublists)
     items = [(chosenAssembliesListOfSublists[i], i) for i in range(num_sublists)]

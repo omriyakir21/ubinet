@@ -894,7 +894,6 @@ import pdb
 
 def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     chosen_assemblies, index = tuple[0], tuple[1]
-    log_file = open(os.path.join(paths.ImerFiles_path, f"Batch{str(index)}_log"), "w")
     try:
         index_string = str(index)
         assemblies_names = [chosen_assemblies[i].split("/")[-2].lower() for i in range(len(chosen_assemblies))]
@@ -967,12 +966,12 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
             file.close()
         for file in asa_files_list:
             file.close()
-        log_file.write("finished")
     except Exception as e:
+        log_file = open(os.path.join(paths.ImerFiles_path, f"Batch{str(index)}_log"), "w")
         log_file.write(f"An error occurred: {str(e)}\n")
         log_file.write(traceback.format_exc())
-    finally:
         log_file.close()
+
 
 
 def split_list(original_list, num_sublists):
