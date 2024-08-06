@@ -315,13 +315,14 @@ def calculate_diameter_from_chain(chain):
 
 
 def get_corresponding_ubiq_residues(aaString, ubiq_residus_list):
+    assert (len(ubiq_residus_list) == len(UBIQ_SEQ))
     alignments = pairwise2.align.globalxx(aaString, UBIQ_SEQ)
     alignment1 = alignments[0].seqA
     alignment2 = alignments[0].seqB
     index1 = 0
     index2 = 0
     corresponding_ubiq_residue_list = [None for _ in range(len(aaString))]
-    for i in range(len(UBIQ_SEQ)):
+    for i in range(len(alignment1)):
         if alignment2[i] != '-' and alignment1[i] != '-':
             corresponding_ubiq_residue_list[index1] = ubiq_residus_list[index2]
         if alignment1[i] != '-':
