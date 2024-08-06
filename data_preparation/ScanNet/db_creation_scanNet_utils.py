@@ -5,7 +5,6 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from Bio import pairwise2
-from Bio.PDB import PDBList
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.SASA import ShrakeRupley
 from scipy.sparse.csgraph import connected_components
@@ -147,16 +146,11 @@ def create_asymetric_paths_list(pdbs_path):
     return asymetric_paths, asymetric_names
 
 
-def order_paths_lists(pdbs_path, assembliesPath):
-    """
-    :param asymetric_paths: list of the paths of the downloaded aymetric file of each pdb
-    :param assembly_paths_lists: list of lists of the paths of downloaded assemblies for each pdb
-    :return: (ordered_asymmetric_paths,ordered_assembly_paths_lists,ordered_pdb_name_list)
-    """
+def order_paths_lists(pdbs_path, assemblies_path):
     ordered_asymmetric_paths = []
     ordered_assembly_paths_lists = []
     asymetric_paths, asymetric_names = create_asymetric_paths_list(pdbs_path)
-    assembly_paths_lists, assembly_names = create_assembly_paths_lists(assembliesPath)
+    assembly_paths_lists, assembly_names = create_assembly_paths_lists(assemblies_path)
     ordered_pdb_name_list = [name for name in asymetric_names if name in assembly_names]
     for i in range(len(ordered_pdb_name_list)):
         index = asymetric_names.index(ordered_pdb_name_list[i])
@@ -414,11 +408,6 @@ def find_number_of_copies_for_sequence(parser, assembly_path, pdb_name, referenc
 
 
 def create_entry_dict(parser, index, pdbName, assembly_paths_list, valid_ubd_candidate):
-    """
-    :param PDB_names_list:
-    :param assembly_paths_list:
-    :return:
-    """
     entryDict = {}
     entryDict['assemblyPathsList'] = assembly_paths_list
     entryDict['index'] = index
@@ -931,9 +920,8 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
         for candidate in UBD_candidates:
             print(candidate.structure.get_id().lower())
 
-            # if candidate.structure.get_id().lower() != '3k9o':
-            #     continue
-            # print(candidate.structure)
+            if candidate.structure.get_id().lower() != '2n13':
+                pdb.set_trace()
             for model in candidate.models:
                 non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in model.non_ubiq_chains]
                 asa_list = create_ASA_list(model)
@@ -952,7 +940,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
                     for val in ith_component_indexes:
                         x = connection_index_list[val]
                         ith_component_indexes_converted.append(x)
-                    # pdb.set_trace()
+
                     receptor_header = create_receptor_header(candidate, model, ith_component_indexes_converted)
                     update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
                     write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
