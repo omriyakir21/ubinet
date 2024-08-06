@@ -129,5 +129,6 @@ if __name__ == "__main__":
     #     os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
     NUM_SUBLISTS = 40
     chosen_assemblies = db_utils.load_as_pickle(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
+    print(len(chosen_assemblies))
     # run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'), NUM_SUBLISTS)
     # integrate_all_files(NUM_SUBLISTS)
