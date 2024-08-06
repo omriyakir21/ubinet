@@ -18,6 +18,7 @@ THREE_LETTERS_TO_SINGLE_AA_DICT = {'GLY': 'G', 'ALA': 'A', 'VAL': 'V', 'LEU': 'L
                                    'LYS': 'K', 'ARG': 'R', 'ASP': 'D', 'GLU': 'E',
                                    'ASN': 'N', 'GLN': 'Q'}
 UBIQ_SEQ = 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQRESTLHLVLRLRGG'
+print(len(UBIQ_SEQ))
 
 INV_MAP = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 10, 9: 12, 10: 14,
            11: 24}  # key=index in Queen value = number of units in multimer
