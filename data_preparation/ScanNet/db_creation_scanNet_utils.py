@@ -929,13 +929,13 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
         summary_lines = []
         summary_file = open(os.path.join(dirName, "summaryLog.txt"), "w")
         for candidate in UBD_candidates:
+            print(candidate.structure.get_id().lower())
+
             # if candidate.structure.get_id().lower() != '3k9o':
             #     continue
             # print(candidate.structure)
             for model in candidate.models:
-                print(model.id)
                 non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in model.non_ubiq_chains]
-                # print(non_ubiq_diameters)
                 asa_list = create_ASA_list(model)
                 ubiq_neighbors, non_ubiq_neighbors, model_attributes_matrix = create_amino_acid_labels(model, ubiq_diameter)
                 np_non_ubiq_neighbors = np.array(non_ubiq_neighbors)
@@ -979,7 +979,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
         for file in asa_files_list:
             file.close()
         log_file.write("finished")
-    except(Exception) as e:
+    except Exception as e:
         log_file.write(str(e))
         print('failed')
 
