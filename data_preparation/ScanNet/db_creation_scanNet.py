@@ -53,9 +53,9 @@ def create_save_list_of_entry_dicts():
 
 def run_create_db_with_user_argv(chosen_assemblies_path, num_sublists):
     # retrive the list of PDB names
-    ubiq_path = os.path.join(paths.pdbs_path, '3by4.cif')
-    ubiq_structure = db_utils.parser.get_structure('3BY4', ubiq_path)
-    ubiq_chain = ubiq_structure[0]['B']  # uni-prot = "UBIQ-HUMAN"
+    ubiq_path = os.path.join(paths.pdbs_path, '1fxt.cif')
+    ubiq_structure = db_utils.parser.get_structure('1FXT', ubiq_path)
+    ubiq_chain = ubiq_structure[0]['B']
     ubiq_amino_acids = db_utils.aa_out_of_chain(ubiq_chain)
     ubiq_atoms = db_utils.get_atoms_of_amino_acids(ubiq_chain)
     ubiqDiameter = db_utils.calculate_diameter(ubiq_atoms)
@@ -63,6 +63,7 @@ def run_create_db_with_user_argv(chosen_assemblies_path, num_sublists):
         db_utils.THREE_LETTERS_TO_SINGLE_AA_DICT[str(aminoAcid.get_resname())] + str(aminoAcid.get_id()[1]) for
         aminoAcid
         in ubiq_amino_acids]
+    print(ubiq_residues_list)
     chosen_assemblies = db_utils.load_as_pickle(chosen_assemblies_path)
     chosenAssembliesListOfSublists = db_utils.split_list(chosen_assemblies, num_sublists)
     items = [(chosenAssembliesListOfSublists[i], i) for i in range(num_sublists)]
