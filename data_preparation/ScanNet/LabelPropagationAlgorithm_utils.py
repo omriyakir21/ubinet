@@ -9,8 +9,8 @@ sys.path.append(os.path.join(paths.current_dir, '..'))
 
 import numpy as np
 import pandas as pd
-
-from ScanNet_Ub.preprocessing.sequence_utils import load_FASTA, num2seq
+from create_tables_and_weights import cluster_sequences
+from models.ScanNet_Ub.preprocessing.sequence_utils import load_FASTA, num2seq
 from db_creation_scanNet_utils import save_as_pickle, load_as_pickle
 
 
@@ -70,38 +70,6 @@ def split_receptors_into_individual_chains(pssm_content_file_path, asa_pssm_cont
         chains_labels), chain_names, lines, chains_asa_values
 
 
-def cluster_sequences(list_sequences, path2mmseqstmp, seqid=0.95, coverage=0.8, covmode='0'):
-    path2mmseqs = '/home/omriyakir21/MMseqs2/build/bin//mmseqs'
-
-    rng = np.random.randint(0, high=int(1e6))
-    tmp_input = os.path.join(path2mmseqstmp, 'tmp_input_file_%s.fasta' % rng)
-    tmp_output = os.path.join(path2mmseqstmp, 'tmp_output_file_%s' % rng)
-
-    with open(tmp_input, 'w') as f:
-        for k, sequence in enumerate(list_sequences):
-            f.write('>%s\n' % k)
-            f.write('%s\n' % sequence)
-
-    command = ('{mmseqs} easy-cluster {fasta} {result} {tmp} --min-seq-id %s -c %s --cov-mode %s' % (
-        seqid, coverage, covmode)).format(mmseqs=path2mmseqs, fasta=tmp_input, result=tmp_output, tmp=path2mmseqstmp)
-    subprocess.run(command.split(' '))
-
-    with open(tmp_output + '_rep_seq.fasta', 'r') as f:
-        representative_indices = [int(x[1:-1]) for x in f.readlines()[::2]]
-    cluster_indices = np.zeros(len(list_sequences), dtype=int)
-    table = pd.read_csv(tmp_output + '_cluster.tsv', sep='\t', header=None).to_numpy(dtype=int)
-    for i, j in table:
-        if i in representative_indices:
-            cluster_indices[j] = representative_indices.index(i)
-    for file in [tmp_output + '_rep_seq.fasta', tmp_output + '_all_seqs.fasta', tmp_output + '_cluster.tsv']:
-        os.remove(file)
-    save_as_pickle(cluster_indices, path2mmseqstmp + '/clusterIndices.pkl')
-    return np.array(cluster_indices), np.array(representative_indices)
-
-
-path2mafft = '/usr/bin/mafft'
-
-
 def create_cluster_participants_indexes(cluster_indexes):
     clusters_participants_list = []
     for i in range(np.max(cluster_indexes) + 1):
@@ -114,7 +82,7 @@ def aggragate_cluster_sequences(chains_sequences, clusters_participants_list, in
     return sequences
 
 
-def apply_mafft(sequences, mafft=path2mafft, go_penalty=1.53,
+def apply_mafft(sequences, mafft, go_penalty=1.53,
                 ge_penalty=0.0, name=None, numeric=False, return_index=True, high_accuracy=True):
     if name is None:
         name = '%.10f' % np.random.rand()
