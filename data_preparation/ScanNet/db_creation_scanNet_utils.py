@@ -759,7 +759,7 @@ def create_imer_asa_files(asa_dir_name):
     return [open(os.path.join(asa_dir_name, f"Checkchains_asa_{i}_mer.txt"), "w") for i in range(1, 25)]
 
 
-def write_imer_to_file(file, model_attributes_matrix, ith_component_indexes_converted, candidate, index,
+def write_imer_to_file(file, model_attributes_matrix, ith_component_indexes_converted,
                        receptor_header):
     """
     :param model_attributes_matrix[i] = a list of the chain's amino acid attributes in the following format -(chain_id, aa_id , aa_type, aa label)
@@ -773,12 +773,9 @@ def write_imer_to_file(file, model_attributes_matrix, ith_component_indexes_conv
             lines.append(" ".join(aminoAcidAttributes))
     stringToFile = "\n".join(lines)
     assert (file.write(stringToFile + "\n") > 0)
-    logFile = open(os.path.join(paths.ImerFiles_path, f'log{str(index)}'), "w")
-    logFile.write("candidate = " + candidate.structure.get_id() + "\nin file:" + str(file.name))
-    logFile.close()
 
 
-def write_asa_to_file(file, modelAttributesMatrix, ithComponentIndexesConverted, candidate, model, index,
+def write_asa_to_file(file, modelAttributesMatrix, ithComponentIndexesConverted,
                       receptorHeader,
                       ASAList):
     print(file.name)
@@ -790,9 +787,6 @@ def write_asa_to_file(file, modelAttributesMatrix, ithComponentIndexesConverted,
             lines.append(" ".join(modelAttributesMatrix[i][j]))
     stringToFile = "\n".join(lines)
     assert (file.write(stringToFile + "\n") > 0)
-    # logFile = open('logFiles/log' + str(index), "w")
-    # logFile.write("candidate = " + candidate.structure.get_id() + "\nin file:" + str(file.name))
-    # logFile.close()
 
 
 def update_labels_for_chains_util(imer_attributes_matrix, imer_amino_acids, non_binding_atoms, non_binding_diameter):
@@ -913,8 +907,8 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     :param valid_UBD_candidates: list of UBD_candidates
     :return:
     """
-
     chosen_assemblies, index = tuple[0], tuple[1]
+    log_file = open(os.path.join(paths.ImerFiles_path, f"Batch{str(index)}_log"), "w")
     index_string = str(index)
     assemblies_names = [chosen_assemblies[i].split("/")[-2].lower() for i in range(len(chosen_assemblies))]
     structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in
@@ -961,10 +955,10 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
                 receptor_header = create_receptor_header(candidate, model, ith_component_indexes_converted)
                 update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
                 write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
-                                   model_attributes_matrix, ith_component_indexes_converted, candidate, index,
+                                   model_attributes_matrix, ith_component_indexes_converted,
                                    receptor_header)
                 write_asa_to_file(asa_files_list[len(ith_component_indexes_converted) - 1],
-                                  model_attributes_matrix, ith_component_indexes_converted, candidate, model, index,
+                                  model_attributes_matrix, ith_component_indexes_converted,
                                   receptor_header, asa_list)
                 ubiquitin_binding_patch, number_of_bound_ubiq = create_receptor_summary(candidate, model,
                                                                                         ubiq_neighbors,
@@ -983,6 +977,9 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
         file.close()
     for file in asa_files_list:
         file.close()
+    log_file.write("finished")
+    log_file.close()
+
 
 
 def split_list(original_list, num_sublists):
