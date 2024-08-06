@@ -933,7 +933,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
             #     continue
             # print(candidate.structure)
             for model in candidate.models:
-                print(model)
+                print(model.id)
                 non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in model.non_ubiq_chains]
                 # print(non_ubiq_diameters)
                 asa_list = create_ASA_list(model)
