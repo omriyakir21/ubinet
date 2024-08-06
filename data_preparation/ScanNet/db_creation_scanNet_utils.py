@@ -315,7 +315,6 @@ def calculate_diameter_from_chain(chain):
 
 
 def get_corresponding_ubiq_residues(aaString, ubiq_residus_list):
-    pdb.set_trace()
     alignments = pairwise2.align.globalxx(aaString, UBIQ_SEQ)
     alignment1 = alignments[0].seqA
     alignment2 = alignments[0].seqB
@@ -921,8 +920,8 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
         for candidate in UBD_candidates:
             print(candidate.structure.get_id().lower())
 
-            if candidate.structure.get_id().lower() != '2n13':
-                continue
+            # if candidate.structure.get_id().lower() != '2n13':
+            #     continue
             for model in candidate.models:
                 non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in
                                       model.non_ubiq_chains]
