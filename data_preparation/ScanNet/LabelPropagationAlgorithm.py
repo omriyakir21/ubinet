@@ -1,9 +1,10 @@
 import sys
 import os
-import paths
-
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(os.path.join(paths.current_dir, '..'))
+
+import paths
+
 
 import LabelPropagationAlgorithm_utils as utils
 

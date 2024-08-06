@@ -1,11 +1,11 @@
 import os
-import pickle
-import subprocess
+
 import sys
-import paths
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.append(os.path.join(paths.current_dir, '..'))
+import pickle
+import subprocess
+import paths
 
 import numpy as np
 import pandas as pd
