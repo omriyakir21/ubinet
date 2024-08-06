@@ -909,77 +909,81 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
     """
     chosen_assemblies, index = tuple[0], tuple[1]
     log_file = open(os.path.join(paths.ImerFiles_path, f"Batch{str(index)}_log"), "w")
-    index_string = str(index)
-    assemblies_names = [chosen_assemblies[i].split("/")[-2].lower() for i in range(len(chosen_assemblies))]
-    structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in
-                  range(len(chosen_assemblies))]
-    # structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in range(len(chosen_assemblies)) if
-    #               '6oa9' in assemblies_names[i]]
-    UBD_candidates = [UBD_candidate(structure) for structure in structures]
-    dirName = os.path.join(paths.ImerFiles_path, f"Batch{index_string}")
-    asa_dir_name = os.path.join(paths.ASA_path, f"asaBatch{index_string}")
-    print("\n\n\n creating dirs")
-    if not os.path.exists(dirName):
-        os.makedirs(dirName)
-    if not os.path.exists(asa_dir_name):
-        os.makedirs(asa_dir_name)
-    files_list = create_imer_files(dirName)  # filesList[i] = file containing i-mers if created else None
-    asa_files_list = create_imer_asa_files(asa_dir_name)
-    summary_lines = []
-    summary_file = open(os.path.join(dirName, "summaryLog.txt"), "w")
-    for candidate in UBD_candidates:
-        # if candidate.structure.get_id().lower() != '3k9o':
-        #     continue
-        # print(candidate.structure)
-        for model in candidate.models:
-            print(model)
-            non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in model.non_ubiq_chains]
-            # print(non_ubiq_diameters)
-            asa_list = create_ASA_list(model)
-            ubiq_neighbors, non_ubiq_neighbors, model_attributes_matrix = create_amino_acid_labels(model, ubiq_diameter)
-            np_non_ubiq_neighbors = np.array(non_ubiq_neighbors)
-            np_ubiquitin_neighbors = np.array(ubiq_neighbors)
-            num_components, components_labels, connection_index_list = connectivity_algorithm(np_ubiquitin_neighbors,
-                                                                                              np_non_ubiq_neighbors)
-            ubiq_corresponding_lists = [
-                get_corresponding_ubiq_residues(get_str_seq_of_chain(ubiqChain), ubiq_residus_list) for ubiqChain in
-                model.ubiq_chains]
+    try:
+        index_string = str(index)
+        assemblies_names = [chosen_assemblies[i].split("/")[-2].lower() for i in range(len(chosen_assemblies))]
+        structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in
+                      range(len(chosen_assemblies))]
+        # structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in range(len(chosen_assemblies)) if
+        #               '6oa9' in assemblies_names[i]]
+        UBD_candidates = [UBD_candidate(structure) for structure in structures]
+        dirName = os.path.join(paths.ImerFiles_path, f"Batch{index_string}")
+        asa_dir_name = os.path.join(paths.ASA_path, f"asaBatch{index_string}")
+        print("\n\n\n creating dirs")
+        if not os.path.exists(dirName):
+            os.makedirs(dirName)
+        if not os.path.exists(asa_dir_name):
+            os.makedirs(asa_dir_name)
+        files_list = create_imer_files(dirName)  # filesList[i] = file containing i-mers if created else None
+        asa_files_list = create_imer_asa_files(asa_dir_name)
+        summary_lines = []
+        summary_file = open(os.path.join(dirName, "summaryLog.txt"), "w")
+        for candidate in UBD_candidates:
+            # if candidate.structure.get_id().lower() != '3k9o':
+            #     continue
+            # print(candidate.structure)
+            for model in candidate.models:
+                print(model)
+                non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in model.non_ubiq_chains]
+                # print(non_ubiq_diameters)
+                asa_list = create_ASA_list(model)
+                ubiq_neighbors, non_ubiq_neighbors, model_attributes_matrix = create_amino_acid_labels(model, ubiq_diameter)
+                np_non_ubiq_neighbors = np.array(non_ubiq_neighbors)
+                np_ubiquitin_neighbors = np.array(ubiq_neighbors)
+                num_components, components_labels, connection_index_list = connectivity_algorithm(np_ubiquitin_neighbors,
+                                                                                                  np_non_ubiq_neighbors)
+                ubiq_corresponding_lists = [
+                    get_corresponding_ubiq_residues(get_str_seq_of_chain(ubiqChain), ubiq_residus_list) for ubiqChain in
+                    model.ubiq_chains]
 
-            for i in range(num_components):
-                ith_component_indexes = (components_labels == i).nonzero()[0]
-                ith_component_indexes_converted = []
-                for val in ith_component_indexes:
-                    x = connection_index_list[val]
-                    ith_component_indexes_converted.append(x)
-                # pdb.set_trace()
-                receptor_header = create_receptor_header(candidate, model, ith_component_indexes_converted)
-                update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
-                write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
-                                   model_attributes_matrix, ith_component_indexes_converted,
-                                   receptor_header)
-                write_asa_to_file(asa_files_list[len(ith_component_indexes_converted) - 1],
-                                  model_attributes_matrix, ith_component_indexes_converted,
-                                  receptor_header, asa_list)
-                ubiquitin_binding_patch, number_of_bound_ubiq = create_receptor_summary(candidate, model,
-                                                                                        ubiq_neighbors,
-                                                                                        ith_component_indexes_converted,
-                                                                                        ubiq_corresponding_lists,
-                                                                                        non_ubiq_diameters)
-                number_of_receptors = len(ith_component_indexes_converted)
-                summary_lines.append(
-                    '$'.join([receptor_header, str(number_of_receptors), str(number_of_bound_ubiq),
-                              ubiquitin_binding_patch]))
+                for i in range(num_components):
+                    ith_component_indexes = (components_labels == i).nonzero()[0]
+                    ith_component_indexes_converted = []
+                    for val in ith_component_indexes:
+                        x = connection_index_list[val]
+                        ith_component_indexes_converted.append(x)
+                    # pdb.set_trace()
+                    receptor_header = create_receptor_header(candidate, model, ith_component_indexes_converted)
+                    update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
+                    write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
+                                       model_attributes_matrix, ith_component_indexes_converted,
+                                       receptor_header)
+                    write_asa_to_file(asa_files_list[len(ith_component_indexes_converted) - 1],
+                                      model_attributes_matrix, ith_component_indexes_converted,
+                                      receptor_header, asa_list)
+                    ubiquitin_binding_patch, number_of_bound_ubiq = create_receptor_summary(candidate, model,
+                                                                                            ubiq_neighbors,
+                                                                                            ith_component_indexes_converted,
+                                                                                            ubiq_corresponding_lists,
+                                                                                            non_ubiq_diameters)
+                    number_of_receptors = len(ith_component_indexes_converted)
+                    summary_lines.append(
+                        '$'.join([receptor_header, str(number_of_receptors), str(number_of_bound_ubiq),
+                                  ubiquitin_binding_patch]))
 
-    summary_string = "\n".join(summary_lines)
-    assert (summary_file.write(summary_string) > 0)
-    summary_file.close()
-    for file in files_list:
-        file.close()
-    for file in asa_files_list:
-        file.close()
-    log_file.write("finished")
+        summary_string = "\n".join(summary_lines)
+        assert (summary_file.write(summary_string) > 0)
+        summary_file.close()
+        for file in files_list:
+            file.close()
+        for file in asa_files_list:
+            file.close()
+        log_file.write("finished")
+    except(Exception) as e:
+        log_file.write(str(e))
+        print('failed')
+
     log_file.close()
-
 
 
 def split_list(original_list, num_sublists):
