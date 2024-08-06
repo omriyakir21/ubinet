@@ -971,7 +971,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
         log_file.write("finished")
     except Exception as e:
         log_file.write(str(e))
-        print(e.with_traceback())
+        print(e.with_traceback(e.__traceback__))
         print('failed')
 
     log_file.close()
