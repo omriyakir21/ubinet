@@ -18,7 +18,6 @@ THREE_LETTERS_TO_SINGLE_AA_DICT = {'GLY': 'G', 'ALA': 'A', 'VAL': 'V', 'LEU': 'L
                                    'LYS': 'K', 'ARG': 'R', 'ASP': 'D', 'GLU': 'E',
                                    'ASN': 'N', 'GLN': 'Q'}
 UBIQ_SEQ = 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQRESTLHLVLRLRGG'
-print(len(UBIQ_SEQ))
 
 INV_MAP = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 10, 9: 12, 10: 14,
            11: 24}  # key=index in Queen value = number of units in multimer
@@ -316,8 +315,6 @@ def calculate_diameter_from_chain(chain):
 
 
 def get_corresponding_ubiq_residues(aa_string, ubiq_residus_list):
-    print(len(UBIQ_SEQ))
-    print(len(ubiq_residus_list))
     assert (len(ubiq_residus_list) == len(UBIQ_SEQ))
     alignments = pairwise2.align.globalxx(aa_string, UBIQ_SEQ)
     alignment1 = alignments[0].seqA
