@@ -317,7 +317,6 @@ def calculate_diameter_from_chain(chain):
 def get_corresponding_ubiq_residues(aaString, ubiq_residus_list):
     pdb.set_trace()
     alignments = pairwise2.align.globalxx(aaString, UBIQ_SEQ)
-    # ubiq_residue_list = [ubiq_residus_list[i] for i in range(len(ubiq_residus_list))]
     alignment1 = alignments[0].seqA
     alignment2 = alignments[0].seqB
     index1 = 0
