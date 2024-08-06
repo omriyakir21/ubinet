@@ -925,13 +925,16 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
             if candidate.structure.get_id().lower() != '2n13':
                 continue
             for model in candidate.models:
-                non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in model.non_ubiq_chains]
+                non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in
+                                      model.non_ubiq_chains]
                 asa_list = create_ASA_list(model)
-                ubiq_neighbors, non_ubiq_neighbors, model_attributes_matrix = create_amino_acid_labels(model, ubiq_diameter)
+                ubiq_neighbors, non_ubiq_neighbors, model_attributes_matrix = create_amino_acid_labels(model,
+                                                                                                       ubiq_diameter)
                 np_non_ubiq_neighbors = np.array(non_ubiq_neighbors)
                 np_ubiquitin_neighbors = np.array(ubiq_neighbors)
-                num_components, components_labels, connection_index_list = connectivity_algorithm(np_ubiquitin_neighbors,
-                                                                                                  np_non_ubiq_neighbors)
+                num_components, components_labels, connection_index_list = connectivity_algorithm(
+                    np_ubiquitin_neighbors,
+                    np_non_ubiq_neighbors)
                 ubiq_corresponding_lists = [
                     get_corresponding_ubiq_residues(get_str_seq_of_chain(ubiqChain), ubiq_residus_list) for ubiqChain in
                     model.ubiq_chains]
@@ -944,7 +947,8 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
                         ith_component_indexes_converted.append(x)
 
                     receptor_header = create_receptor_header(candidate, model, ith_component_indexes_converted)
-                    update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model, non_ubiq_diameters)
+                    update_imers_labels(model_attributes_matrix, ith_component_indexes_converted, model,
+                                        non_ubiq_diameters)
                     write_imer_to_file(files_list[len(ith_component_indexes_converted) - 1],
                                        model_attributes_matrix, ith_component_indexes_converted,
                                        receptor_header)
@@ -974,8 +978,6 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
         log_file.write(traceback.format_exc())
     finally:
         log_file.close()
-
-
 
 
 def split_list(original_list, num_sublists):
