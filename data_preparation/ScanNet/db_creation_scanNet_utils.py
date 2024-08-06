@@ -920,7 +920,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
         for candidate in UBD_candidates:
             print(candidate.structure.get_id().lower())
 
-            if candidate.structure.get_id().lower() != '2n13':
+            if candidate.structure.get_id().lower() == '2n13':
                 pdb.set_trace()
             else:
                 continue
