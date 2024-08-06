@@ -9,6 +9,7 @@ from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.SASA import ShrakeRupley
 from scipy.sparse.csgraph import connected_components
 import numpy as np
+import traceback
 
 import paths
 
@@ -314,6 +315,7 @@ def calculate_diameter_from_chain(chain):
 
 
 def get_corresponding_ubiq_residues(aaString, ubiq_residus_list):
+    pdb.set_trace()
     alignments = pairwise2.align.globalxx(aaString, UBIQ_SEQ)
     # ubiq_residue_list = [ubiq_residus_list[i] for i in range(len(ubiq_residus_list))]
     alignment1 = alignments[0].seqA
@@ -920,9 +922,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
         for candidate in UBD_candidates:
             print(candidate.structure.get_id().lower())
 
-            if candidate.structure.get_id().lower() == '2n13':
-                pdb.set_trace()
-            else:
+            if candidate.structure.get_id().lower() != '2n13':
                 continue
             for model in candidate.models:
                 non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in model.non_ubiq_chains]
@@ -970,11 +970,12 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
             file.close()
         log_file.write("finished")
     except Exception as e:
-        log_file.write(str(e))
-        print(e.with_traceback(e.__traceback__))
-        print('failed')
+        log_file.write(f"An error occurred: {str(e)}\n")
+        log_file.write(traceback.format_exc())
+    finally:
+        log_file.close()
 
-    log_file.close()
+
 
 
 def split_list(original_list, num_sublists):
