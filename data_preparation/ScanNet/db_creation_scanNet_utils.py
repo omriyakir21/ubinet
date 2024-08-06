@@ -58,56 +58,56 @@ def read_PDB_names_from_file(path):
     :param path: path of a file containing a coma separated PDB ID's
     :return: list containing all PDB names from the txt file
     """
-    PDB_names_list = []
+    pdb_names_list = []
     PDB_text_file = open(path, "r")
     PDB_lines = PDB_text_file.readlines()
     for line in PDB_lines:
         for id in line.split(","):
-            PDB_names_list.append(id)
-    return PDB_names_list
+            pdb_names_list.append(id)
+    return pdb_names_list
 
 
-def download_assembly_files(PDB_names_list, pdbListObject, dirPath):
+def download_assembly_files(pdb_names_list, pdb_list_object, dir_path):
     """
-    :param PDB_names_list: list of pdb names
-    :param pdbListObject: pdbList Object
-    :param dirPath: directory path to add all assemblies
+    :param pdb_names_list: list of pdb names
+    :param pdb_list_object: pdbList Object
+    :param dir_path: directory path to add all assemblies
     :return: list of lists- for every pdb name all of the assembly file names
     """
-    assembly_paths_list = [[] for i in range(len(PDB_names_list))]
-    for i in range(len(PDB_names_list)):
-        pdbName = PDB_names_list[i]
-        newDirPath = dirPath + "/" + pdbName
-        if not os.path.exists(newDirPath):
-            os.mkdir(newDirPath)
+    assembly_paths_list = [[] for _ in range(len(pdb_names_list))]
+    for i in range(len(pdb_names_list)):
+        pdb_name = pdb_names_list[i]
+        new_dir_path = dir_path + "/" + pdb_name
+        if not os.path.exists(new_dir_path):
+            os.mkdir(new_dir_path)
         assembly_num = 1
         while True:
-            assemblyPath = pdbListObject.retrieve_assembly_file(pdbName, assembly_num=assembly_num, pdir=newDirPath,
-                                                                file_format="mmCif")
-            if os.path.exists(assemblyPath):
-                assembly_paths_list[i].append(assemblyPath)
+            assembly_path = pdb_list_object.retrieve_assembly_file(pdb_name, assembly_num=assembly_num, pdir=new_dir_path,
+                                                                  file_format="mmCif")
+            if os.path.exists(assembly_path):
+                assembly_paths_list[i].append(assembly_path)
                 assembly_num += 1
             else:
                 break
     return assembly_paths_list
 
 
-def download_asymetric_files(pdb_list_object, PDB_names_list, dirPath):
-    fileNames = pdb_list_object.download_pdb_files(pdb_codes=PDB_names_list, overwrite=True, file_format="mmCif",
-                                                   pdir=dirPath)
-    return fileNames
+def download_asymetric_files(pdb_list_object, pdb_names_list, dir_path):
+    file_names = pdb_list_object.download_pdb_files(pdb_codes=pdb_names_list, overwrite=True, file_format="mmCif",
+                                                   pdir=dir_path)
+    return file_names
 
 
 def redownload_failed_assemblies(PDB_names_list, pdb_list_object, dir_path):
     for i in range(len(PDB_names_list)):
-        pdbName = PDB_names_list[i]
-        newDirPath = dir_path + "/" + pdbName
-        num_files = len(os.listdir(newDirPath))
+        pdb_name = PDB_names_list[i]
+        new_dir_path = dir_path + "/" + pdb_name
+        num_files = len(os.listdir(new_dir_path))
         if num_files == 0:  # failed
             assembly_num = 1
             while True:
-                assemblyPath = pdb_list_object.retrieve_assembly_file(pdbName, assembly_num=assembly_num,
-                                                                      pdir=newDirPath,
+                assemblyPath = pdb_list_object.retrieve_assembly_file(pdb_name, assembly_num=assembly_num,
+                                                                      pdir=new_dir_path,
                                                                       file_format="mmCif")
                 if os.path.exists(assemblyPath):
                     assembly_num += 1
@@ -124,26 +124,26 @@ def create_assembly_paths_lists(assemblies_dir_path):
     assembly_names = []
     for pdbDir in os.listdir(assemblies_dir_path):
         assembly_names.append(pdbDir.lower())
-        assemblyPathsList = []
-        pdbDirPath = os.path.join(assemblies_dir_path, pdbDir)
-        for assemblyPath in os.listdir(pdbDirPath):
-            assemblyPath = os.path.join(pdbDirPath, assemblyPath)
-            assemblyPathsList.append(assemblyPath)
-        assembly_paths_lists.append(assemblyPathsList)
+        assembly_paths_list = []
+        pdb_dir_path = os.path.join(assemblies_dir_path, pdbDir)
+        for assembly_path in os.listdir(pdb_dir_path):
+            assembly_path = os.path.join(pdb_dir_path, assembly_path)
+            assembly_paths_list.append(assembly_path)
+        assembly_paths_lists.append(assembly_paths_list)
     return assembly_paths_lists, assembly_names
 
 
 def create_asymetric_paths_list(pdbs_path):
     """
     :param pdbs_path: path to the directory containing the asymetric files
-    :return:asymetric_paths - a list containing the paths pdb
+    :return:asymetric_paths - a list containing the paths pdb_path
     """
     asymetric_names = []
     asymetric_paths = []
-    for pdb in os.listdir(pdbs_path):
-        pdb_dir_path = os.path.join(pdbs_path, pdb)
+    for pdb_path in os.listdir(pdbs_path):
+        pdb_dir_path = os.path.join(pdbs_path, pdb_path)
         asymetric_paths.append(pdb_dir_path)
-        asymetric_names.append(pdb.split('.')[0])
+        asymetric_names.append(pdb_path.split('.')[0])
     return asymetric_paths, asymetric_names
 
 
@@ -184,21 +184,21 @@ def get_str_seq_of_chain(chain):
     return "".join([THREE_LETTERS_TO_SINGLE_AA_DICT[aa.get_resname()] for aa in listOfAminoAcids])
 
 
-def calculate_identity(seqA, seqB):
+def calculate_identity(seq_a, seq_b):
     """
-    :param seqA: The sequence of amino acid from chain A
-    :param seqB: The sequence of amino acid from chain B
+    :param seq_a: The sequence of amino acid from chain A
+    :param seq_b: The sequence of amino acid from chain B
     :return: percentage of identity between the sequences
     """
-    score = pairwise2.align.globalxx(seqA, seqB, one_alignment_only=True, score_only=True)
+    score = pairwise2.align.globalxx(seq_a, seq_b, one_alignment_only=True, score_only=True)
     # min_len = min(len(seqA), len(seqB))
     # identity = score / min_len
-    max_len = max(len(seqA), len(seqB))
+    max_len = max(len(seq_a), len(seq_b))
     identity = score / max_len
     return identity
 
 
-def is_ubiq(chain):
+def is_ubiquitin(chain):
     """
     :param chain: a chain
     :return: True iff its a Ubiquitin chain
@@ -218,10 +218,10 @@ class Model:
         chains to ubiquitin chains or non ubiquitin chains.
         """
         for chain in self.chains:
-            isUbiq = is_ubiq(chain)
-            if isUbiq is None:  # chain is invalid
+            is_ubiq = is_ubiquitin(chain)
+            if is_ubiq is None:  # chain is invalid
                 continue
-            if isUbiq:
+            if is_ubiq:
                 self.ubiq_chains.append(chain)
             else:
                 self.non_ubiq_chains.append(chain)
@@ -314,14 +314,16 @@ def calculate_diameter_from_chain(chain):
     return diameter
 
 
-def get_corresponding_ubiq_residues(aaString, ubiq_residus_list):
+def get_corresponding_ubiq_residues(aa_string, ubiq_residus_list):
+    print(len(UBIQ_SEQ))
+    print(len(ubiq_residus_list))
     assert (len(ubiq_residus_list) == len(UBIQ_SEQ))
-    alignments = pairwise2.align.globalxx(aaString, UBIQ_SEQ)
+    alignments = pairwise2.align.globalxx(aa_string, UBIQ_SEQ)
     alignment1 = alignments[0].seqA
     alignment2 = alignments[0].seqB
     index1 = 0
     index2 = 0
-    corresponding_ubiq_residue_list = [None for _ in range(len(aaString))]
+    corresponding_ubiq_residue_list = [None for _ in range(len(aa_string))]
     for i in range(len(alignment1)):
         if alignment2[i] != '-' and alignment1[i] != '-':
             corresponding_ubiq_residue_list[index1] = ubiq_residus_list[index2]
@@ -329,7 +331,7 @@ def get_corresponding_ubiq_residues(aaString, ubiq_residus_list):
             index1 += 1
         if alignment2[i] != '-':
             index2 += 1
-        if index1 == len(aaString) or index2 == len(UBIQ_SEQ):
+        if index1 == len(aa_string) or index2 == len(UBIQ_SEQ):
             break
     return corresponding_ubiq_residue_list
 
@@ -893,10 +895,6 @@ import pdb
 
 
 def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
-    """
-    :param valid_UBD_candidates: list of UBD_candidates
-    :return:
-    """
     chosen_assemblies, index = tuple[0], tuple[1]
     log_file = open(os.path.join(paths.ImerFiles_path, f"Batch{str(index)}_log"), "w")
     try:
