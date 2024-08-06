@@ -922,6 +922,8 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
 
             if candidate.structure.get_id().lower() != '2n13':
                 pdb.set_trace()
+            else:
+                continue
             for model in candidate.models:
                 non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in model.non_ubiq_chains]
                 asa_list = create_ASA_list(model)
