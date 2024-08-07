@@ -10,6 +10,9 @@ from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, l
 import requests
 import re
 
+NEGATIVE_DIRS = ['Arabidopsis', 'Celegans', 'Ecoli', 'Human', 'Yeast']
+POSITIVE_DIRS = ['ubiquitinBinding', 'E1', 'E2', 'E3', 'DUB']
+
 
 def get_uniprot_ids_from_gpad_file(path):
     uniprot_ids = []
@@ -104,7 +107,7 @@ def fetch_af_models(uniprotNamesDict, className, i, j):
         download_alphafold_model(uniprot_id, class_dir)
 
 
-def is_valid_af_prediction(pdb_file_path, name):
+def is_valid_af_prediction(pdb_file_path, name, plddt_threshold, number_of_residues_threshold, plddt_ratio_threshold):
     parser = MMCIFParser()  # create parser object
     structure = parser.get_structure(name, pdb_file_path)
     model = structure.child_list[0]
@@ -113,8 +116,9 @@ def is_valid_af_prediction(pdb_file_path, name):
         residues = aa_out_of_chain(chain)
         for residue in residues:
             plddtList.append(residue.child_list[0].bfactor)
-    above90_residues = [1 for i in range(len(plddtList)) if plddtList[i] > 90]
-    if len(above90_residues) > 100 or (len(above90_residues) / len(plddtList)) > 0.2:
+    above_threshold_residues = [1 for i in range(len(plddtList)) if plddtList[i] > plddt_threshold]
+    if len(above_threshold_residues) > number_of_residues_threshold or (
+            len(above_threshold_residues) / len(plddtList)) > plddt_ratio_threshold:
         return True
     return False
 
@@ -163,18 +167,27 @@ def uniprots_evidences_list_todict(uniprot_names_evidences_list):
     return uniprot_evidence_dict
 
 
-def get_all_valid_af_predictions_for_type(class_name):
-    folder_path = os.path.join(paths.GO_source_patch_to_score_path, class_name)
+def save_all_valid_af_predictions_for_type(class_name, plddt_threshold, number_of_residues_threshold,
+                                           plddt_ratio_threshold):
+    if class_name in POSITIVE_DIRS:
+        folder_path = os.path.join(paths.GO_source_patch_to_score_path, class_name)
+    elif class_name in NEGATIVE_DIRS:
+        folder_path = os.path.join(paths.AFDB_source_patch_to_score_path, class_name)
+    else:
+        raise ValueError("Invalid class name")
+
     valid_list = []
     l = len(os.listdir(folder_path))
     cnt = 0
     for name in os.listdir(folder_path):
+        if not name.endswith(".pdb"):
+            continue
         cnt += 1
         print('length of folder is: ', l, " cnt = ", cnt)
         filePath = os.path.join(folder_path, name)
-        if is_valid_af_prediction(filePath, name):
+        if is_valid_af_prediction(filePath, name, plddt_threshold, number_of_residues_threshold, plddt_ratio_threshold):
             valid_list.append(filePath)
-    save_as_pickle(valid_list, os.path.join(paths.GO_source_patch_to_score_path, f'allValidOf{class_name}.txt'))
+    save_as_pickle(valid_list, os.path.join(folder_path, f'allValidOf{class_name}.txt'))
 
 
 def get_uniprot_sequence_tuples_for_type(class_name):
