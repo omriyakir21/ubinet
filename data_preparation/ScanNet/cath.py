@@ -6,7 +6,7 @@ import cath_utils
 import paths
 
 if __name__ == "__main__":
-    cath_df = cath_utils.make_cath_df_new(os.path.join(paths.cath_path, "cath_b.20230204.txt"), 4)
+    cath_df = cath_utils.make_cath_df_new(os.path.join(paths.cath_path, "cath_b.20230204.txt"))
     names_list, sizes_list, sequence_list, full_names_list, pdb_names_with_chains_lists = cath_utils.list_creation(
         "propagatedFullPssmFile")
     structuresDicts = cath_utils.create_dictionaries(names_list, sizes_list, sequence_list, full_names_list,
