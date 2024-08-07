@@ -63,7 +63,7 @@ ScanNet_results_path = os.path.join(results_path, 'ScanNet')
 tmp_path = os.path.join(current_dir, 'tmp')
 
 # mafft exec
-mafft_exec_path = '/home/iscb/wolfson/omriyakir/anaconda3/envs/ubinet/bin/mmseqs'
+mafft_exec_path = '/home/iscb/wolfson/omriyakir/anaconda3/envs/ubinet/bin/mafft'
 
 # mmseqs exec
 mmseqs_exec_path = '/home/iscb/wolfson/omriyakir/anaconda3/envs/ubinet/bin/mmseqs'

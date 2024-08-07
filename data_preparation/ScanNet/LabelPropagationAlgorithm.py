@@ -31,7 +31,6 @@ if __name__ == "__main__":
     # utils.save_as_pickle(cluster_indices, os.path.join(paths.mmseqs_scanNet_path, 'clusterIndices.pkl'))
     cluster_indices = utils.load_as_pickle(os.path.join(paths.mmseqs_scanNet_path, 'clusterIndices.pkl'))
     clusters_participants_list = utils.create_cluster_participants_indexes(cluster_indices)
-    pdb.set_trace()
     clusters_dict = utils.apply_mafft_for_all_clusters(chains_sequences, clusters_participants_list,
                                                        paths.mafft_exec_path)
     utils.save_as_pickle(clusters_dict, os.path.join(paths.mafft_path, 'clustersDict.pkl'))

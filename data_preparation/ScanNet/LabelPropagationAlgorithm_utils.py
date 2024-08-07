@@ -106,7 +106,6 @@ def apply_mafft(sequences, mafft, go_penalty=1.53,
     alignment = load_FASTA(
         output_file, drop_duplicates=False)[0]
     if return_index:
-        pdb.set_trace()
         is_gap = alignment == 20
         index = np.cumsum(1 - is_gap, axis=1) - 1
         index[is_gap] = -1
@@ -127,19 +126,13 @@ def apply_mafft_for_all_clusters(chains_sequences, clusters_participants_list, p
     clusters_dict = dict()
     aligments = []
     indexes = []
-    lone_sequences = 0
     for i in range(len(clusters_participants_list)):
         sequences = aggregate_cluster_sequences(chains_sequences, clusters_participants_list, i)
-        if len(sequences) > 1:
-            aligment, index = apply_mafft(sequences, path_to_mafft_exec)
-        else:
-            lone_sequences +=1
-            aligment, index = sequences[0], np.arange(len(sequences[0]))
+        aligment, index = apply_mafft(sequences, path_to_mafft_exec)
         aligments.append(aligment)
         indexes.append(index)
     clusters_dict['aligments'] = aligments
     clusters_dict['indexes'] = indexes
-    print("lone_sequences = ", lone_sequences)
     return clusters_dict
 
 
