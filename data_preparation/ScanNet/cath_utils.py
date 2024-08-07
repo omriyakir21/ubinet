@@ -267,8 +267,8 @@ def is_similiar_chains(structure_dict1, structure_dict2):
         for l in range(len(structure_dict2['pdbNamesWithChainsList'])):
             if structure_dict1['in_or_not_in_cath_list'][k] and structure_dict2['in_or_not_in_cath_list'][
                 l]:  # both chains in cath
-                all_classifications1 = structure_dict1['classificationsLists'][k]
-                all_classifications2 = structure_dict2['classificationsLists'][l]
+                all_classifications1 = structure_dict1['classifications_lists'][k]
+                all_classifications2 = structure_dict2['classifications_lists'][l]
                 for c1 in all_classifications1:
                     for c2 in all_classifications2:
                         if comapre_classifications(c1, c2):
