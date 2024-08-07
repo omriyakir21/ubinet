@@ -5,6 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import paths
 import protein_level_db_creation_utils as protein_db_utils
 from data_preparation.ScanNet.db_creation_scanNet_utils import THREE_LETTERS_TO_SINGLE_AA_DICT
+import re
 
 
 def create_uniprot_names_dict():
@@ -38,40 +39,55 @@ def create_evidence_dict():
                                     os.path.join(paths.GO_source_patch_to_score_path, 'evidence_dict.pkl'))
 
 
+def rename_AFDB_files():
+    # Define the regex pattern to match the filenames
+    pattern = re.compile(r'AF-(\w+)-F1-model_v4\.(\w+)')
+
+    # Iterate over each subdirectory in the AFDB directory
+    for subdir in os.listdir(paths.AFDB_source_patch_to_score_path):
+        subdir_path = os.path.join(paths.AFDB_source_patch_to_score_path, subdir)
+
+        if os.path.isdir(subdir_path):
+            # Iterate over each file in the subdirectory
+            for filename in os.listdir(subdir_path):
+                match = pattern.match(filename)
+
+                if match:
+                    uniprot_id, file_type = match.groups()
+                    new_filename = f"{uniprot_id}.{file_type}"
+                    old_file_path = os.path.join(subdir_path, filename)
+                    new_file_path = os.path.join(subdir_path, new_filename)
+
+                    # Rename the file
+                    os.rename(old_file_path, new_file_path)
+                    print(f"Renamed: {old_file_path} to {new_file_path}")
+
+
 if __name__ == "__main__":
     # create_uniprot_names_dict()
     # create_evidence_dict()
 
     # evidence_dict = protein_db_utils.load_as_pickle(
     #     os.path.join(paths.GO_source_patch_to_score_path, 'evidence_dict.pkl'))
-    uniprot_names_dict = protein_db_utils.load_as_pickle(
-        os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl'))
+    # uniprot_names_dict = protein_db_utils.load_as_pickle(
+    #     os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl'))
 
     # uniprotNames_evidences_list = protein_db_utils.create_uniprot_id_evidence_tuples_for_existing_examples(
     #     uniprot_names_dict, evidence_dict)
     # protein_db_utils.save_as_pickle(uniprotNames_evidences_list,
     #                                 os.path.join(paths.GO_source_patch_to_score_path,
     #                                              'uniprotNames_evidences_list.pkl'))
-    fetch_af_models_from_user_args(uniprot_names_dict)
+    # fetch_af_models_from_user_args(uniprot_names_dict)
+    rename_AFDB_files()
+
+
+
 
     # uniprots = getAllUniprotsForTraining(
     #     os.path.join(path.aggregateFunctionMLPDir, os.path.join('dataForTraining2902', 'allInfoDicts.pkl')))
     #
     # uniprotEvidenceDict = uniprotsEvidencesListTodict(uniprotNames_evidences_list)
     #
-    # fetchAFModels(uniprotNamesDict, 'E2')
-
-# directory_path =r'C:\Users\omriy\UBDAndScanNet\UBDModel\GO\E3'
-# files = [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))]
-# file_count = len(files)
-# print(file_count)
-# fetchAFModels(uniprotNamesDict, 'E3', 16000, 18582)
-# print(len(uniprotNamesDict['DUB']))
-# print(len(uniprotNamesDict['ubiquitinBinding']))
-
-
-# pdbFilePath = r'C:\Users\omriy\UBDAndScanNet\UBDModel\GO\E1\A0A0A0KE12.cif'
-# name = 'A0A0A0KE12'
 
 
 # isValidAFPrediction(pdbFilePath,name)
