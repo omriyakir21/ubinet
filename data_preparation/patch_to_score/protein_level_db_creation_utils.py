@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import paths
-from Bio.PDB import MMCIFParser
+from Bio.PDB import PDBParser
 import csv
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle, aa_out_of_chain, \
     get_str_seq_of_chain
@@ -108,7 +108,7 @@ def fetch_af_models(uniprotNamesDict, className, i, j):
 
 
 def is_valid_af_prediction(pdb_file_path, name, plddt_threshold, number_of_residues_threshold, plddt_ratio_threshold):
-    parser = MMCIFParser()  # create parser object
+    parser = PDBParser()  # create parser object
     structure = parser.get_structure(name, pdb_file_path)
     model = structure.child_list[0]
     plddtList = []
@@ -180,7 +180,7 @@ def save_all_valid_af_predictions_for_type(class_name, plddt_threshold, number_o
     l = len(os.listdir(folder_path))
     cnt = 0
     for name in os.listdir(folder_path):
-        if not name.endswith(".cif"):
+        if not name.endswith(".pdb"):
             continue
         cnt += 1
         print('length of folder is: ', l, " cnt = ", cnt)
