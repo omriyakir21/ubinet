@@ -9,7 +9,7 @@ from create_tables_and_weights import cluster_sequences
 
 if __name__ == "__main__":
     utils.normalize_asa_data(os.path.join(paths.ASA_path, 'Integrated_Checkchains_asa_mer.txt'),
-                             os.path.join(paths.ASA_path, 'normalizedFullASAPssmContent'))
+                             os.path.join(paths.ASA_path, 'normalizedFullASAPssmContent.txt'))
     chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values = utils.split_receptors_into_individual_chains(
         os.path.join(paths.ImerFiles_path, 'Integrated_Checkchains_mer.txt'),
         os.path.join(os.path.join(paths.ASA_path, 'normalizedFullASAPssmContent')))

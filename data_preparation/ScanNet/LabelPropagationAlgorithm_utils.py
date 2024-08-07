@@ -11,9 +11,11 @@ import numpy as np
 import pandas as pd
 from models.ScanNet_Ub.preprocessing.sequence_utils import load_FASTA, num2seq
 from db_creation_scanNet_utils import save_as_pickle, load_as_pickle
+import pdb
 
 
 def split_receptors_into_individual_chains(pssm_content_file_path, asa_pssm_content_file_path):
+    pdb.set_trace()
     f = open(pssm_content_file_path, 'r')
     fAsa = open(asa_pssm_content_file_path, 'r')
     lines = f.readlines()
