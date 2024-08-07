@@ -180,7 +180,7 @@ def save_all_valid_af_predictions_for_type(class_name, plddt_threshold, number_o
     l = len(os.listdir(folder_path))
     cnt = 0
     for name in os.listdir(folder_path):
-        if not name.endswith(".pdb"):
+        if not name.endswith(".cif"):
             continue
         cnt += 1
         print('length of folder is: ', l, " cnt = ", cnt)
