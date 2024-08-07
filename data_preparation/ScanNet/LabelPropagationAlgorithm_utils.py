@@ -9,7 +9,6 @@ import paths
 
 import numpy as np
 import pandas as pd
-from create_tables_and_weights import cluster_sequences
 from models.ScanNet_Ub.preprocessing.sequence_utils import load_FASTA, num2seq
 from db_creation_scanNet_utils import save_as_pickle, load_as_pickle
 
@@ -179,7 +178,7 @@ def find_chain_names_for_clusters(clusters_participants_list, chain_names):
 
 
 def create_propagated_pssm_file(clusters_dict, chains_labels, clusters_participants_list,
-                                chains_sequences, chain_names, lines, chains_asa_values):
+                                chains_sequences, chain_names, lines, chains_asa_values, propagated_file_path):
     num_of_clusters = len(clusters_dict['indexes'])
     num_of_chains = len(chains_sequences)
     new_labels = [None for i in range(num_of_chains)]
@@ -191,7 +190,7 @@ def create_propagated_pssm_file(clusters_dict, chains_labels, clusters_participa
         for j in range(len(clusters_participants_list[i])):
             new_labels[clusters_participants_list[i][j]] = cluster_new_labels[j]
 
-    propagated_file = open(os.path.join(paths.PSSM_path, 'propagatedPssmWithAsaFile.txt'), 'w')
+    propagated_file = open(propagated_file_path, 'w')
     chain_index = -1
     chain_name = None
     for line in lines:
@@ -238,12 +237,12 @@ def normalize_value(current_val, quantile5, quantile95):
     return normalize_value
 
 
-def normalize_asa_data(full_asa_pssm_path):
+def normalize_asa_data(full_asa_pssm_path, normalized_asa_path):
     f = open(full_asa_pssm_path, 'r')
     lines = f.readlines()
     f.close()
     quentile_asa_amino_acid_dict = create_quantile_asa_dicts(lines)
-    normalize_asa_pssm_content_file = open(os.path.join(paths.PSSM_path, 'normalizedFullASAPssmContent'), 'w')
+    normalize_asa_pssm_content_file = open(normalized_asa_path, 'w')
     for line in lines:
         if line[0] == '>':
             normalize_asa_pssm_content_file.write(line)
