@@ -163,7 +163,7 @@ def add_classifications_for_dict(cath_df, structures_dicts, columns_Number):
         structure_dict = structures_dicts[key]
         classifications_lists = []
         for i in range(len(structure_dict['pdbNamesWithChainsList'])):
-            if structure_dict['inOrNotInCathList'][i]:
+            if structure_dict['in_or_not_in_cath_list'][i]:
                 classifications_lists.append(
                     get_all_cath_classifications_for_chain(cath_df, structure_dict['pdbNamesWithChainsList'][i],
                                                            columns_Number))
@@ -265,7 +265,7 @@ def is_similiar_chains(structure_dict1, structure_dict2):
     connected = False
     for k in range(len(structure_dict1['pdbNamesWithChainsList'])):
         for l in range(len(structure_dict2['pdbNamesWithChainsList'])):
-            if structure_dict1['inOrNotInCathList'][k] and structure_dict2['inOrNotInCathList'][
+            if structure_dict1['in_or_not_in_cath_list'][k] and structure_dict2['in_or_not_in_cath_list'][
                 l]:  # both chains in cath
                 all_classifications1 = structure_dict1['classificationsLists'][k]
                 all_classifications2 = structure_dict2['classificationsLists'][l]

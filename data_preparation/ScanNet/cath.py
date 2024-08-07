@@ -18,6 +18,7 @@ if __name__ == "__main__":
     print(inCath)
     print(notInCath)
     # print(cath_df)
+
     cath_utils.find_chains_in_cath(cath_df, structuresDicts)
     cath_utils.add_classifications_for_dict(cath_df, structuresDicts, 4)
     matHomologous = cath_utils.neighbor_mat_new(structuresDicts)
