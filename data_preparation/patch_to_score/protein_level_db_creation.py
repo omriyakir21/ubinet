@@ -76,9 +76,6 @@ def save_all_valid_af_predictions_for_all_classes(plddt_threshold, number_of_res
         )
 
 
-# Call the function
-save_all_valid_af_predictions_for_all_classes()
-
 if __name__ == "__main__":
     # create_uniprot_names_dict()
     # create_evidence_dict()
