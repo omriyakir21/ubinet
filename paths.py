@@ -59,3 +59,11 @@ ScanNet_Ub_module_path = os.path.join(models_path, 'ScanNet_Ub')
 results_path = os.path.join(current_dir, 'results')
 ScanNet_results_path = os.path.join(results_path, 'ScanNet')
 
+# tmp
+tmp_path = os.path.join(current_dir, 'tmp')
+
+# mafft exec
+mafft_exec_path = '/home/iscb/wolfson/omriyakir/anaconda3/envs/ubinet/bin/mmseqs'
+
+# mmseqs exec
+mmseqs_exec_path = '/home/iscb/wolfson/omriyakir/anaconda3/envs/ubinet/bin/mmseqs'
