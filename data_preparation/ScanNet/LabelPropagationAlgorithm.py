@@ -19,8 +19,9 @@ if __name__ == "__main__":
     # utils.save_as_pickle(splited_data, os.path.join(paths.mmseqs_scanNet_path, 'splitedData.pkl'))
     splited_data = utils.load_as_pickle(os.path.join(paths.mmseqs_scanNet_path, 'splitedData.pkl'))
     chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values = splited_data['chains_keys'], \
-    splited_data['chains_sequences'], splited_data['chains_labels'], splited_data['chain_names'], splited_data['lines'], \
-    splited_data['chains_asa_values']
+        splited_data['chains_sequences'], splited_data['chains_labels'], splited_data['chain_names'], splited_data[
+        'lines'], \
+        splited_data['chains_asa_values']
     #
     # cluster_indices, representative_indices = cluster_sequences(chains_sequences,
     #                                                             seqid=0.95,
@@ -35,6 +36,8 @@ if __name__ == "__main__":
                                                        paths.mafft_exec_path)
     utils.save_as_pickle(clusters_dict, os.path.join(paths.mafft_path, 'clustersDict.pkl'))
     clusters_dict = utils.load_as_pickle(os.path.join(paths.mafft_path, 'clustersDict.pkl'))
+    ASA_THRESHOLD_VALUE = 0.2
     utils.create_propagated_pssm_file(clusters_dict, chains_labels, clusters_participants_list, chains_sequences,
                                       chain_names, lines,
-                                      chains_asa_values, os.path.join(paths.PSSM_path, 'propagatedPssmWithAsaFile.txt'))
+                                      chains_asa_values, os.path.join(paths.PSSM_path, 'propagatedPssmWithAsaFile.txt'),
+                                      ASA_THRESHOLD_VALUE)
