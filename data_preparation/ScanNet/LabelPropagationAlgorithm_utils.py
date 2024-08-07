@@ -76,8 +76,8 @@ def create_cluster_participants_indexes(cluster_indexes):
     return clusters_participants_list
 
 
-def aggragate_cluster_sequences(chains_sequences, clusters_participants_list, index):
-    sequences = chains_sequences[clusters_participants_list[index]]
+def aggregate_cluster_sequences(chains_sequences, clusters_participants_list, index):
+    sequences = [chains_sequences[i] for i in clusters_participants_list[index]]
     return sequences
 
 
@@ -127,7 +127,7 @@ def apply_mafft_for_all_clusters(chains_sequences, clusters_participants_list, p
     aligments = []
     indexes = []
     for i in range(len(clusters_participants_list)):
-        sequences = aggragate_cluster_sequences(chains_sequences, clusters_participants_list, i)
+        sequences = aggregate_cluster_sequences(chains_sequences, clusters_participants_list, i)
         aligment, index = apply_mafft(sequences, path_to_mafft_exec)
         aligments.append(aligment)
         indexes.append(index)
