@@ -1,5 +1,6 @@
 import os
 import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import cath_utils
 import paths
@@ -9,7 +10,7 @@ if __name__ == "__main__":
     names_list, sizes_list, sequence_list, full_names_list, pdb_names_with_chains_lists = cath_utils.list_creation(
         "propagatedFullPssmFile")
     structuresDicts = cath_utils.create_dictionaries(names_list, sizes_list, sequence_list, full_names_list,
-                                          pdb_names_with_chains_lists)
+                                                     pdb_names_with_chains_lists)
     inCath, notInCath, cnt = cath_utils.count_in_cath(cath_df, structuresDicts)
 
     print(len(structuresDicts))
@@ -22,7 +23,7 @@ if __name__ == "__main__":
     matHomologous = cath_utils.neighbor_mat_new(structuresDicts)
     graphHomologous = cath_utils.csr_matrix(matHomologous)
     homologous_components, homologousLabels = cath_utils.connected_components(csgraph=graphHomologous, directed=False,
-                                                                   return_labels=True)
+                                                                              return_labels=True)
     print(names_list)
     print(sizes_list)
     print(sum(sizes_list))
@@ -45,4 +46,5 @@ if __name__ == "__main__":
     chainDict = cath_utils.chain_lists_to_chain_index_dict(chainLists)
     print(chainLists)
     print(chainDict)
-    cath_utils.divide_pssm(chainDict,paths.PSSM_path)
+    full_pssm_file_path = os.path.join(os.path.join(paths.PSSM_path, 'propagatedPssmWithAsaFile.txt'))
+    cath_utils.divide_pssm(chainDict, full_pssm_file_path)

@@ -136,7 +136,8 @@ def apply_mafft_for_all_clusters(chains_sequences, clusters_participants_list, p
     return clusters_dict
 
 
-def create_propagated_labels_for_cluster(index, chains_labels, cluster_participants_list, chains_asa_values):
+def create_propagated_labels_for_cluster(index, chains_labels, cluster_participants_list, chains_asa_values,
+                                         asa_threshold_value):
     number_of_participants = index.shape[0]
     msa_length = index.shape[1]
     assert (number_of_participants == len(cluster_participants_list))
@@ -153,7 +154,7 @@ def create_propagated_labels_for_cluster(index, chains_labels, cluster_participa
     for i in range(number_of_participants):
         chain_index = cluster_participants_list[i]
         indexs_of_parcipitant = index[i]
-        threshold = min(0.2, 0.75 * max(chains_asa_values[chain_index]))
+        threshold = min(asa_threshold_value, 0.75 * max(chains_asa_values[chain_index]))
         # print("i = ", i)
         for j in range(msa_length):
             # print("j = ", j)
@@ -178,7 +179,8 @@ def find_chain_names_for_clusters(clusters_participants_list, chain_names):
 
 
 def create_propagated_pssm_file(clusters_dict, chains_labels, clusters_participants_list,
-                                chains_sequences, chain_names, lines, chains_asa_values, propagated_file_path):
+                                chains_sequences, chain_names, lines, chains_asa_values, propagated_file_path,
+                                asa_threshold_value):
     num_of_clusters = len(clusters_dict['indexes'])
     num_of_chains = len(chains_sequences)
     new_labels = [None for i in range(num_of_chains)]
@@ -186,7 +188,8 @@ def create_propagated_pssm_file(clusters_dict, chains_labels, clusters_participa
     # clustersIndexes = [findIndexesForCluster(clusterChainNames) for clusterChainNames in clusters_chains_names]
     for i in range(num_of_clusters):
         cluster_new_labels = create_propagated_labels_for_cluster(clusters_dict['indexes'][i], chains_labels,
-                                                                  clusters_participants_list[i], chains_asa_values)
+                                                                  clusters_participants_list[i], chains_asa_values,
+                                                                  asa_threshold_value)
         for j in range(len(clusters_participants_list[i])):
             new_labels[clusters_participants_list[i][j]] = cluster_new_labels[j]
 
