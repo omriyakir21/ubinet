@@ -85,9 +85,9 @@ def apply_mafft(sequences, mafft, go_penalty=1.53,
                 ge_penalty=0.0, name=None, numeric=False, return_index=True, high_accuracy=True):
     if name is None:
         name = '%.10f' % np.random.rand()
-    input_file = 'tmp_%s_unaligned.fasta' % name
-    output_file = 'tmp_%s_aligned.fasta' % name
-    instruction_file = 'tmp_%s.sh' % name
+    input_file = os.path.join(paths.tmp_path, 'tmp_%s_unaligned.fasta' % name)
+    output_file = os.path.join(paths.tmp_path, 'tmp_%s_aligned.fasta' % name)
+    instruction_file = os.path.join(paths.tmp_path, 'tmp_%s.sh' % name)
     with open(input_file, 'w') as f:
         for k, sequence in enumerate(sequences):
             f.write('>%s\n' % k)
@@ -127,13 +127,19 @@ def apply_mafft_for_all_clusters(chains_sequences, clusters_participants_list, p
     clusters_dict = dict()
     aligments = []
     indexes = []
+    lone_sequences = 0
     for i in range(len(clusters_participants_list)):
         sequences = aggregate_cluster_sequences(chains_sequences, clusters_participants_list, i)
-        aligment, index = apply_mafft(sequences, path_to_mafft_exec)
+        if len(sequences) > 1:
+            aligment, index = apply_mafft(sequences, path_to_mafft_exec)
+        else:
+            lone_sequences +=1
+            aligment, index = sequences[0], np.arange(len(sequences[0]))
         aligments.append(aligment)
         indexes.append(index)
     clusters_dict['aligments'] = aligments
     clusters_dict['indexes'] = indexes
+    print("lone_sequences = ", lone_sequences)
     return clusters_dict
 
 
