@@ -136,7 +136,7 @@ def apply_mafft_for_all_clusters(chains_sequences, clusters_participants_list, p
     return clusters_dict
 
 
-def create_propagated_labels_for_cluster(index, chainns_labels, cluster_participants_list, chains_asa_values):
+def create_propagated_labels_for_cluster(index, chains_labels, cluster_participants_list, chains_asa_values):
     number_of_participants = index.shape[0]
     msa_length = index.shape[1]
     assert (number_of_participants == len(cluster_participants_list))
