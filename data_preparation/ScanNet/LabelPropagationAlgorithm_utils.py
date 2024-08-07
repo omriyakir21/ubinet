@@ -15,7 +15,6 @@ import pdb
 
 
 def split_receptors_into_individual_chains(pssm_content_file_path, asa_pssm_content_file_path):
-    pdb.set_trace()
     f = open(pssm_content_file_path, 'r')
     fAsa = open(asa_pssm_content_file_path, 'r')
     lines = f.readlines()
@@ -67,8 +66,7 @@ def split_receptors_into_individual_chains(pssm_content_file_path, asa_pssm_cont
     chains_asa_values.append(chain_asa_values)
     assert (len(chain_names) == len(chains_sequences) == len(chains_labels) == len(chains_asa_values))
     f.close()
-    return np.array(chains_keys), np.array(chains_sequences), np.array(
-        chains_labels), chain_names, lines, chains_asa_values
+    return chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values
 
 
 def create_cluster_participants_indexes(cluster_indexes):
