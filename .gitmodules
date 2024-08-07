@@ -1,3 +1,0 @@
-[submodule "models/ScanNet_Ub"]
-	path = models/ScanNet_Ub
-	url = git@github.com:jertubiana/ScanNet_Ub.git
