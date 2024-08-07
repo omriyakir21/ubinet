@@ -124,13 +124,13 @@ def make_cath_df(filename, columns_number):
     return df
 
 
-def make_cath_df_new(filename, columns_number):
+def make_cath_df_new(cath_path):
     """
     :param filename: cath-domain-list file
     :param columns_number: the number of columns to consider with the cath classification not include the cath domain name
     :return: dataframe of all the chains in the file and their cath classification divide to 4 different columns
     """
-    file = open("cath_b.20230204.txt", 'r')
+    file = open(cath_path, 'r')
     lines = file.readlines()
     structures_names = [line[0:5] for line in lines]
     structures_numbers = [line[5:7] for line in lines]
