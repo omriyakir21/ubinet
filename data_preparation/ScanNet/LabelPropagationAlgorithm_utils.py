@@ -106,6 +106,7 @@ def apply_mafft(sequences, mafft, go_penalty=1.53,
     alignment = load_FASTA(
         output_file, drop_duplicates=False)[0]
     if return_index:
+        pdb.set_trace()
         is_gap = alignment == 20
         index = np.cumsum(1 - is_gap, axis=1) - 1
         index[is_gap] = -1
