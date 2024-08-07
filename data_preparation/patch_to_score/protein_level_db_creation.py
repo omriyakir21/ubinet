@@ -19,12 +19,12 @@ def create_uniprot_names_dict():
     protein_db_utils.save_as_pickle(uniprot_names_dict,
                                     os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl'))
 
+
 def fetch_af_models_from_user_args(uniprot_names_dict):
     class_name = sys.argv[1]
     i = int(sys.argv[2])
     j = int(sys.argv[3])
     protein_db_utils.fetch_af_models(uniprot_names_dict, class_name, i, j)
-
 
 
 def create_evidence_dict():
@@ -63,6 +63,22 @@ def rename_AFDB_files():
                     print(f"Renamed: {old_file_path} to {new_file_path}")
 
 
+def save_all_valid_af_predictions_for_all_classes(plddt_threshold, number_of_residues_threshold,
+                                                  plddt_ratio_threshold):
+    # Define the class names from NEGATIVE and POSITIVE sources
+    class_names = protein_db_utils.NEGATIVE_DIRS + protein_db_utils.POSITIVE_DIRS
+
+    # Iterate over each class name and call the function
+    for class_name in class_names:
+        protein_db_utils.save_all_valid_af_predictions_for_type(
+            class_name, plddt_threshold, number_of_residues_threshold,
+                                                  plddt_ratio_threshold
+        )
+
+
+# Call the function
+save_all_valid_af_predictions_for_all_classes()
+
 if __name__ == "__main__":
     # create_uniprot_names_dict()
     # create_evidence_dict()
@@ -78,9 +94,12 @@ if __name__ == "__main__":
     #                                 os.path.join(paths.GO_source_patch_to_score_path,
     #                                              'uniprotNames_evidences_list.pkl'))
     # fetch_af_models_from_user_args(uniprot_names_dict)
-    rename_AFDB_files()
-
-
+    # rename_AFDB_files()
+    PLDDT_RATIO_THRESHOLD = 0.2
+    PLDDT_THRESHOLD = 90
+    NUMBER_OF_RESIDUES_THRESHOLD = 100
+    save_all_valid_af_predictions_for_all_classes(PLDDT_THRESHOLD, NUMBER_OF_RESIDUES_THRESHOLD,
+                                                  PLDDT_RATIO_THRESHOLD)
 
 
     # uniprots = getAllUniprotsForTraining(
@@ -89,8 +108,6 @@ if __name__ == "__main__":
     # uniprotEvidenceDict = uniprotsEvidencesListTodict(uniprotNames_evidences_list)
     #
 
-
-# isValidAFPrediction(pdbFilePath,name)
 
 
 # getAllValidAFPredictionsForType('ubiquitinBinding')
