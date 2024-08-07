@@ -1,6 +1,6 @@
 import sys
 import os
-
+import pdb
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import paths
 
@@ -12,7 +12,7 @@ if __name__ == "__main__":
                              os.path.join(paths.ASA_path, 'normalizedFullASAPssmContent.txt'))
     chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values = utils.split_receptors_into_individual_chains(
         os.path.join(paths.ImerFiles_path, 'Integrated_Checkchains_mer.txt'),
-        os.path.join(os.path.join(paths.ASA_path, 'normalizedFullASAPssmContent')))
+        os.path.join(os.path.join(paths.ASA_path, 'normalizedFullASAPssmContent.txt')))
     cluster_indices, representative_indices = cluster_sequences(chains_sequences,
                                                                 seqid=0.95,
                                                                 coverage=0.8, covmode='0',
