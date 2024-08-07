@@ -185,6 +185,7 @@ def save_all_valid_af_predictions_for_type(class_name, plddt_threshold, number_o
         cnt += 1
         print('length of folder is: ', l, " cnt = ", cnt)
         filePath = os.path.join(folder_path, name)
+        print(f'filePath is {filePath}')
         if is_valid_af_prediction(filePath, name, plddt_threshold, number_of_residues_threshold, plddt_ratio_threshold):
             valid_list.append(filePath)
     save_as_pickle(valid_list, os.path.join(folder_path, f'allValidOf{class_name}.txt'))
