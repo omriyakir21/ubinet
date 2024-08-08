@@ -28,9 +28,9 @@ def create_patches():
 if __name__ == "__main__":
     # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
     # create_patches()
-    # merged_dict = create_merged_protein_object_dict()
-    # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
-    merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
+    merged_dict = create_merged_protein_object_dict()
+    save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
+    # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
 
     # trainingDataDir = os.path.join(path.predictionsToDataSetDir, dirName)
     # gridSearchDir = os.path.join(path.aggregateFunctionMLPDir, 'MLP_MSA_val_AUC_stoppage_' + dirName)
