@@ -57,8 +57,9 @@ QUEEN_model_path = os.path.join(models_path, 'QUEEN')
 ScanNet_Ub_module_path = os.path.join(models_path, 'ScanNet_Ub')
 # results
 results_path = os.path.join(current_dir, 'results')
+#   ScanNet
 ScanNet_results_path = os.path.join(results_path, 'ScanNet')
-
+patches_dicts_path = os.path.join(ScanNet_results_path, 'patches_dicts')
 # tmp
 tmp_path = os.path.join(current_dir, 'tmp')
 
