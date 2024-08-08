@@ -10,7 +10,7 @@ import numpy as np
 
 def create_merged_protein_object_dict():
     merged_dict = {}
-    for i in range(len(dev_utils.indexes)):
+    for i in range(len(dev_utils.indexes)-1):
         d = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion' + str(i)))
         for key, value in d.items():
             merged_dict[key] = value
