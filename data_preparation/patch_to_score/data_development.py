@@ -8,16 +8,30 @@ from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, l
 import data_development_utils as dev_utils
 import numpy as np
 
+def create_merged_protein_object_dict(dict_list):
+    merged_dict = {}
+    for i in range(len(dev_utils.indexes)):
+        d = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion' + str(i)))
+        for key, value in d.items():
+            merged_dict[key] = value
+    return merged_dict
+
 
 def create_patches():
-    all_predictions = dev_utils.all_predictions
     i = int(sys.argv[1])
     PLDDT_THRESHOLD = 50
     dev_utils.create_patches_dict(i, paths.patches_dicts_path, PLDDT_THRESHOLD)
 
+# def get_uniprots_and_proteins_lists()
+
 
 if __name__ == "__main__":
+    # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
     create_patches()
+    merged_dict = create_merged_protein_object_dict()
+    save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
+    # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
+
     # trainingDataDir = os.path.join(path.predictionsToDataSetDir, dirName)
     # gridSearchDir = os.path.join(path.aggregateFunctionMLPDir, 'MLP_MSA_val_AUC_stoppage_' + dirName)
 
@@ -26,7 +40,7 @@ if __name__ == "__main__":
 
     # plotPlddtHistogramForPositivieAndProteome(allPredictions)
 
-    # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
+
     # patchesList(allPredictions, int(sys.argv[1]), trainingDataDir, plddtThreshold)
 
     # FROM HERE FOLLOWS IN ONE RUN
