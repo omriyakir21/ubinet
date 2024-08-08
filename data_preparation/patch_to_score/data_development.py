@@ -11,7 +11,7 @@ import numpy as np
 
 def create_patches():
     all_predictions = dev_utils.all_predictions
-    i = sys.argv[1]
+    i = int(sys.argv[1])
     PLDDT_THRESHOLD = 50
     dev_utils.create_patches_dict(i, paths.patches_dicts_path, PLDDT_THRESHOLD)
 
