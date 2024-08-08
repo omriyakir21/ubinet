@@ -18,7 +18,6 @@ from sklearn.metrics import accuracy_score, classification_report
 from matplotlib import pyplot as plt
 import pandas as pd
 from Bio.PDB import MMCIFParser
-import path
 import seaborn as sns
 from sklearn.metrics import auc
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle
@@ -337,6 +336,7 @@ def create_combined_csv(gridSearchDir, dirName, gridSearchDir2, dirName2, plddtT
                  "log10Kvalue_y": "log10Kvalue_" + str(plddtThreshold2)}, inplace=True)
 
     # Write the merged dataframe to a new CSV file
+    path = None
     merged_df.to_csv(
         os.path.join(path.aggregateFunctionMLPDir, "combined_csv_" + str(len(df1['Entry'])) + '.csv'), index=False)
 
