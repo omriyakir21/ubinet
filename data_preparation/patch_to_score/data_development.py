@@ -51,6 +51,7 @@ if __name__ == "__main__":
     sequences_length = [len(seq) for seq in all_sequences]
     print(f'shortest sequecne is {min(sequences_length)}')
     print(f'seq example = {all_sequences[15]}')
+    print(f'protein example residus{all_proteins[15].residues}')
     MAX_NUMBER_OF_COMPONENTS = 10
 
     # CREATE SCALERS
