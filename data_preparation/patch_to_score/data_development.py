@@ -43,18 +43,19 @@ if __name__ == "__main__":
     merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
     all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
     MAX_NUMBER_OF_COMPONENTS = 10
-    dev_utils.fit_protein_data(all_proteins, paths.scalers_path, MAX_NUMBER_OF_COMPONENTS)
+    # dev_utils.fit_protein_data(all_proteins, paths.scalers_path, MAX_NUMBER_OF_COMPONENTS)
     scaled_sizes, scaled_components_list, encoded_components_list = (
         dev_utils.transform_protein_data_list(all_proteins,
-                                              os.path.join(paths.scalers_path,'scaler_size.pkl'),
-                                              os.path.join(paths.scalers_path,'scaler_components.pkl'),
-                                              os.path.join(paths.scalers_path,'encoder.pkl'),
+                                              os.path.join(paths.scalers_path, 'scaler_size.pkl'),
+                                              os.path.join(paths.scalers_path, 'scaler_components.pkl'),
+                                              os.path.join(paths.scalers_path, 'encoder.pkl'),
                                               MAX_NUMBER_OF_COMPONENTS))
 
     save_as_pickle(scaled_sizes, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_sizes'))
-    save_as_pickle(scaled_components_list, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_components_list'))
-    save_as_pickle(encoded_components_list, os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list'))
-
+    save_as_pickle(scaled_components_list,
+                   os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_components_list'))
+    save_as_pickle(encoded_components_list,
+                   os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list'))
 
     # trainingDataDir = os.path.join(path.predictionsToDataSetDir, dirName)
     # gridSearchDir = os.path.join(path.aggregateFunctionMLPDir, 'MLP_MSA_val_AUC_stoppage_' + dirName)
