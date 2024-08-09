@@ -9,7 +9,6 @@ from plistlib import load
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle, \
     THREE_LETTERS_TO_SINGLE_AA_DICT, aa_out_of_chain
 import networkx as nx
-import numpy as np
 import os
 import networkx
 from sklearn.preprocessing import KBinsDiscretizer
@@ -22,6 +21,11 @@ import seaborn as sns
 from sklearn.metrics import auc
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle
 import paths
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+import pickle
+import numpy as np
+import torch
+
 
 NEGATIVE_SOURCES = set(
     ['Yeast proteome', 'Human proteome', 'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
@@ -36,9 +40,10 @@ percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
 server_PDBs = True
 DISTANCE_THRESHOLD = 10
 indexes = list(range(0, len(all_predictions['dict_resids']) + 1, 1500)) + [len(all_predictions['dict_resids'])]
-#to be removed
+# to be removed
 trainingDataDir = None
 ubdPath = None
+
 
 class SizeDifferentiationException(Exception):
     def __init__(self, uniprotName):
@@ -125,8 +130,8 @@ class Protein:
         for component_set in connected_components:
             average_ubiq, average_non_ubiq, average_plddt = self.calculate_average_predictions_for_component(
                 component_set)
-            length = len(component_set)
-            tuples.append((length, average_ubiq, average_non_ubiq, average_plddt, list(component_set)))
+            patch_size = len(component_set)
+            tuples.append((patch_size, average_ubiq, average_non_ubiq, average_plddt, list(component_set)))
         return tuples
 
     def calculate_average_predictions_for_component(self, indexSet):
@@ -522,4 +527,87 @@ def getNBiggestFP(labels, predictions, allComponentsFiltered, N):
                   range(N)]
     return NBiggestFP
 
+
 # NBiggestFP = getNBiggestFP(labels, finalOutputsFifty, allComponentsFiltered, 10)
+
+
+def extract_protein_data(proteins, max_number_of_components):
+    data_components = []
+    data_protein_size = []
+    data_number_of_components = []
+    for protein in proteins:
+        # Sort components by average_ubiq in descending order and take the top 10
+        top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
+                         :max_number_of_components]
+        for component in top_components:
+            patch_size, average_ubiq, average_non_ubiq, average_plddt = component[:4]
+            data_components.append([patch_size, average_ubiq, average_non_ubiq, average_plddt])
+        data_protein_size.append(protein.size)
+        data_number_of_components = len(top_components)
+    return np.array(data_components), np.array(data_protein_size), np.array(data_number_of_components)
+
+
+def fit_protein_data(proteins, dir_path, max_number_of_components):
+    data_components, data_protein_size, data_number_of_components = extract_protein_data(proteins)
+
+    # Fit the scalers
+    scaler_size = StandardScaler()
+    scaler_components = StandardScaler()
+    scaler_size.fit(data_protein_size.reshape(-1, 1))
+    scaler_components.fit(data_components)
+
+    # Fit the encoder
+    encoder = OneHotEncoder(sparse=False, categories=[range(max_number_of_components)])
+    encoder.fit(data_number_of_components.reshape(-1, 1))
+
+    # Save the scalers and encoder
+    save_as_pickle(scaler_size, os.path.join(dir_path, 'scaler_size.pkl'))
+    save_as_pickle(scaler_components, os.path.join(dir_path, 'scaler_components.pkl'))
+    save_as_pickle(encoder, os.path.join(dir_path, 'encoder.pkl'))
+
+def transform_protein_data(protein, scaler_size, scaler_components, encoder, max_number_of_components):
+    # Extract and scale the size
+    scaled_size = scaler_size.transform(np.array([protein.size]).reshape(-1, 1))
+
+    # Extract, scale, and pad the components
+    top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[:max_number_of_components]
+    protein_components = np.array([component[:4] for component in top_components])
+    protein_components_scaled = scaler_components.transform(protein_components)
+    if len(protein_components_scaled) < max_number_of_components:
+        padding = ((0, max_number_of_components - len(protein_components_scaled)), (0, 0))
+        protein_components_scaled = np.pad(protein_components_scaled, padding, mode='constant', constant_values=0)
+
+    # Encode the number of components
+    encoded_components = encoder.transform(np.array([len(top_components)]).reshape(-1, 1))
+
+    # Convert to tensors
+    scaled_size_tensor = torch.tensor(scaled_size)
+    scaled_components_tensor = torch.tensor(protein_components_scaled)
+    encoded_components_tensor = torch.tensor(encoded_components)
+
+    return scaled_size_tensor, scaled_components_tensor, encoded_components_tensor
+
+def transform_protein_data_list(proteins, scaler_size, scaler_components, encoder, max_number_of_components):
+    scaled_sizes = []
+    scaled_components_list = []
+    encoded_components_list = []
+
+    for protein in proteins:
+        scaled_size_tensor, scaled_components_tensor, encoded_components_tensor = transform_protein_data(
+            protein, scaler_size, scaler_components, encoder, max_number_of_components)
+
+        # Print shapes of individual tensors
+        print("scaled_size_tensor shape:", scaled_size_tensor.shape)
+        print("scaled_components_tensor shape:", scaled_components_tensor.shape)
+        print("encoded_components_tensor shape:", encoded_components_tensor.shape)
+
+        scaled_sizes.append(scaled_size_tensor)
+        scaled_components_list.append(scaled_components_tensor)
+        encoded_components_list.append(encoded_components_tensor)
+
+    # Print shapes of lists before stacking
+    print("scaled_sizes list shape:", len(scaled_sizes), scaled_sizes[0].shape if scaled_sizes else None)
+    print("scaled_components_list shape:", len(scaled_components_list), scaled_components_list[0].shape if scaled_components_list else None)
+    print("encoded_components_list shape:", len(encoded_components_list), encoded_components_list[0].shape if encoded_components_list else None)
+
+    return torch.stack(scaled_sizes), torch.stack(scaled_components_list), torch.stack(encoded_components_list)
