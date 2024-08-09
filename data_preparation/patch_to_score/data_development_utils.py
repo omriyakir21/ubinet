@@ -574,12 +574,14 @@ def transform_protein_data(protein, scaler_size, scaler_components, encoder, max
     top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
                      :max_number_of_components]
     protein_components = np.array([component[:4] for component in top_components])
-    print(f'protein_components.shape={protein_components.shape}')
-    protein_components_scaled = scaler_components.transform(protein_components)
+    if protein_components.size == 0:
+        protein_components_scaled = np.zeros((0, 4))
+    else:
+        protein_components_scaled = scaler_components.transform(protein_components)
     if len(protein_components_scaled) < max_number_of_components:
         padding = ((0, max_number_of_components - len(protein_components_scaled)), (0, 0))
         protein_components_scaled = np.pad(protein_components_scaled, padding, mode='constant', constant_values=0)
-    protein_components_scaled = protein_components_scaled.reshape(1,-1,4)
+    protein_components_scaled = protein_components_scaled.reshape(1, -1, 4)
 
     # Encode the number of components
     encoded_components = encoder.transform(np.array([len(top_components)]).reshape(-1, 1))
@@ -622,4 +624,3 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
           encoded_components_list[0].shape if encoded_components_list else None)
 
     return torch.stack(scaled_sizes), torch.stack(scaled_components_list), torch.stack(encoded_components_list)
-
