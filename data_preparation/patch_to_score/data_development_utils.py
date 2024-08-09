@@ -50,36 +50,20 @@ class SizeDifferentiationException(Exception):
 
 
 class Protein:
-    def __init__(self, uniprot_name, plddt_threshold):
+    def __init__(self, uniprot_name, plddt_threshold, all_predictions):
         self.uniprot_name = uniprot_name
         self.ubiq_predictions = all_predictions['dict_predictions_ubiquitin'][uniprot_name]
         self.non_ubiq_predictions = all_predictions['dict_predictions_interface'][uniprot_name]
         self.residues = all_predictions['dict_resids'][uniprot_name]
-        self.source = self.get_source(all_predictions['dict_sources'][uniprot_name])
+        self.source = all_predictions['dict_sources'][uniprot_name]
         self.plddt_values = self.get_plddt_values()
         self.size = None
         self.graph = nx.Graph()
         self.create_graph(plddt_threshold)
         self.connected_components_tuples = self.creat_connected_components_tuples()
 
-    def get_source(self, source):
-        if server_PDBs:
-            return source
-        if source == 'Human proteome':
-            return 'proteome'
-        else:
-            return source
-
     def get_structure(self):
-        if server_PDBs:
-            structurePath = all_predictions['dict_pdb_files'][self.uniprot_name]
-        else:
-            GoPath = path.GoPath
-            typePath = os.path.join(GoPath, self.source)
-            if self.source == 'proteome':
-                structurePath = os.path.join(typePath, 'AF-' + self.uniprot_name + '-F1-model_v4.cif')
-            else:
-                structurePath = os.path.join(typePath, self.uniprot_name + '.cif')
+        structurePath = all_predictions['dict_pdb_files'][self.uniprot_name]
         structure = parser.get_structure(self.uniprot_name, structurePath)
         return structure
 
@@ -152,18 +136,8 @@ def c_alpha_distance(atom1, atom2):
     return distance
 
 
-# # allPredictionsUbiq = {key: allPredictionsUbiq[key] for key in common_keys}
-# # dict_resids = {key: allPredictions['dict_resids'][key] for key in common_keys}
-# # dict_sequences = {key: allPredictions['dict_sequences'][key] for key in common_keys}
-# # dict_sources = {key: allPredictions['dict_sources'][key] for key in common_keys}
-# # allPredictions['dict_resids'] = dict_resids
-# # allPredictions['dict_sequences'] = dict_sequences
-# # allPredictions['dict_sources'] = dict_sources
-# # allPredictions['dict_predictions_ubiquitin'] = allPredictionsUbiq
-# # saveAsPickle(allPredictions,r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\Predictions\all_predictions_22_3')
 
-
-def create_patches_dict(i, dir_path, plddt_threshold):
+def create_patches_dict(i, dir_path, plddt_threshold,all_predictions):
     print(f'len indexes is : {len(indexes)}')
     patches_dict = {}
     all_keys = list(all_predictions['dict_resids'].keys())[indexes[i]:indexes[i + 1]]
@@ -172,7 +146,7 @@ def create_patches_dict(i, dir_path, plddt_threshold):
         print("i= ", i, " cnt = ", cnt, " key = ", key)
         cnt += 1
         try:
-            patches_dict[key] = Protein(key, plddt_threshold)
+            patches_dict[key] = Protein(key, plddt_threshold,all_predictions)
         except SizeDifferentiationException as e:
             print(e)
             continue
@@ -619,3 +593,30 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
           encoded_components_list[0].shape if encoded_components_list else None)
 
     return torch.stack(scaled_sizes), torch.stack(scaled_components_list), torch.stack(encoded_components_list)
+
+def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_list_path, encoded_components_list_path,all_uniprots_path):
+    folds_training_dicts = []
+    scaled_sizes = load_as_pickle(scaled_sizes_path)
+    scaled_components = load_as_pickle(scaled_components_list_path)
+    encoded_components = load_as_pickle(encoded_components_list_path)
+    uniprots = load_as_pickle(all_uniprots_path)
+    for i in range(5):
+        training_dict = {}
+        validation_indices = groups_indices[i]
+        test_indices = groups_indices[(i + 1) % 5]
+        training_indices = groups_indices[(i + 2) % 5] + groups_indices[(i + 3) % 5] + groups_indices[(i + 4) % 5]
+        training_dict['sizes_train'] = scaled_sizes[training_indices]
+        training_dict['components_train'] = scaled_components[training_indices]
+        training_dict['num_patches_train'] = encoded_components[training_indices]
+        training_indices['uniprots_train'] = [uniprots[i] for i in training_indices]
+        training_dict['sizes_validation'] = scaled_sizes[validation_indices]
+        training_dict['components_validation'] = scaled_components[validation_indices]
+        training_dict['num_patches_validation'] = encoded_components[validation_indices]
+        training_indices['uniprots_validation'] = [uniprots[i] for i in validation_indices]
+        training_dict['sizes_test'] = scaled_sizes[test_indices]
+        training_dict['components_test'] = scaled_components[test_indices]
+        training_dict['num_patches_test'] = encoded_components[test_indices]
+        training_indices['uniprots_test'] = [uniprots[i] for i in test_indices]
+        folds_training_dicts.append(training_dict)
+    return folds_training_dicts
+
