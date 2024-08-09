@@ -21,6 +21,8 @@ ImerFiles_path = os.path.join(ScanNet_data_preparation_path, 'ImerFiles')
 datasets_path = os.path.join(current_dir, 'datasets')
 #   patch_to_score
 patch_to_score_dataset_path = os.path.join(datasets_path, 'patch_to_score')
+#       data_for_training
+patch_to_score_data_for_training_path = os.path.join(patch_to_score_dataset_path, 'data_for_training')
 #       sources
 patch_to_score_sources_path = os.path.join(patch_to_score_dataset_path, 'sources')
 #           GO
@@ -55,6 +57,8 @@ assemblies_path = os.path.join(scanNet_sources_path, 'assemblies')
 models_path = os.path.join(current_dir, 'models')
 QUEEN_model_path = os.path.join(models_path, 'QUEEN')
 ScanNet_Ub_module_path = os.path.join(models_path, 'ScanNet_Ub')
+patch_to_score_model_path = os.path.join(models_path, 'patch_to_score')
+scalers_path = os.path.join(patch_to_score_model_path, 'scalers')
 # results
 results_path = os.path.join(current_dir, 'results')
 #   ScanNet
