@@ -7,6 +7,8 @@ from data_preparation.patch_to_score import data_development_utils as developmen
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle
 import data_development_utils as dev_utils
 import numpy as np
+import protein_level_data_partition_utils as partition_utils
+from data_preparation.ScanNet.create_tables_and_weights import cluster_sequences
 
 
 def create_merged_protein_object_dict():
@@ -38,24 +40,52 @@ def get_uniprots_sequences_and_proteins_lists(merged_dict):
 if __name__ == "__main__":
     # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
     # create_patches()
+
+    # AFTER CREATING PROTEIN OBJECTS MERGE THEM TO 1 DICT
     # merged_dict = create_merged_protein_object_dict()
     # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
     merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
+
     all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
     MAX_NUMBER_OF_COMPONENTS = 10
-    # dev_utils.fit_protein_data(all_proteins, paths.scalers_path, MAX_NUMBER_OF_COMPONENTS)
-    scaled_sizes, scaled_components_list, encoded_components_list = (
-        dev_utils.transform_protein_data_list(all_proteins,
-                                              os.path.join(paths.scalers_path, 'scaler_size.pkl'),
-                                              os.path.join(paths.scalers_path, 'scaler_components.pkl'),
-                                              os.path.join(paths.scalers_path, 'encoder.pkl'),
-                                              MAX_NUMBER_OF_COMPONENTS))
 
-    save_as_pickle(scaled_sizes, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_sizes'))
-    save_as_pickle(scaled_components_list,
-                   os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_components_list'))
-    save_as_pickle(encoded_components_list,
-                   os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list'))
+    # CREATE SCALERS
+    # dev_utils.fit_protein_data(all_proteins, paths.scalers_path, MAX_NUMBER_OF_COMPONENTS)
+
+    # CREATE SCALED DATA FOR TRAINING
+    # scaled_sizes, scaled_components_list, encoded_components_list = (
+    #     dev_utils.transform_protein_data_list(all_proteins,
+    #                                           os.path.join(paths.scalers_path, 'scaler_size.pkl'),
+    #                                           os.path.join(paths.scalers_path, 'scaler_components.pkl'),
+    #                                           os.path.join(paths.scalers_path, 'encoder.pkl'),
+    #                                           MAX_NUMBER_OF_COMPONENTS))
+    #
+    # save_as_pickle(scaled_sizes, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_sizes'))
+    # save_as_pickle(scaled_components_list,
+    #                os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_components_list'))
+    # save_as_pickle(encoded_components_list,
+    #                os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list'))
+    scaled_sizes = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_sizes'))
+    scaled_components_list = load_as_pickle(
+        os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_components_list'))
+    encoded_components_list = load_as_pickle(
+        os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list'))
+
+    # PARTIOTION THE DATA BY SEQUENCE LIKELIHOOD
+    cluster_indices, representative_indices = cluster_sequences(all_sequences, seqid=0.5, coverage=0.4,
+                                                                path2mmseqstmp=paths.tmp_path,
+                                                                path2mmseqs=paths.mmseqs_exec_path)
+    save_as_pickle(cluster_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'cluster_indices'))
+    load_as_pickle(cluster_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'cluster_indices'))
+    clusters_participants_list = partition_utils.create_cluster_participants_indices(cluster_indices)
+    cluster_sizes = [l.size for l in clusters_participants_list]
+    cluster_sizes_and_indices = [(i, cluster_sizes[i]) for i in range(len(cluster_sizes))]
+    sublists, sublists_sum = partition_utils.divide_clusters(cluster_sizes_and_indices)
+    print(f'sublists :{sublists}')
+    print(f'sublist sums :{sublists_sum}')
+
+
+
 
     # trainingDataDir = os.path.join(path.predictionsToDataSetDir, dirName)
     # gridSearchDir = os.path.join(path.aggregateFunctionMLPDir, 'MLP_MSA_val_AUC_stoppage_' + dirName)
@@ -64,8 +94,6 @@ if __name__ == "__main__":
     # trainingDictsDir = os.path.join(trainingDataDir, 'trainingDicts')
 
     # plotPlddtHistogramForPositivieAndProteome(allPredictions)
-
-    # patchesList(allPredictions, int(sys.argv[1]), trainingDataDir, plddtThreshold)
 
     # FROM HERE FOLLOWS IN ONE RUN
     # PKL ALL THE COMPONENTS TOGETHER AND CREATE LABELS FROM THE PATCHES LIST
