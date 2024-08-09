@@ -47,11 +47,8 @@ if __name__ == "__main__":
     merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
 
     all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
-    for i in range(len(all_uniprots)):
-        if len(all_sequences[i])<14:
-            print(f'uniprot is {all_uniprots[i]}')
-            print(f'len is {len(all_sequences[i])}')
-            raise Exception('short seq')
+    sequences_length = [len(seq) for seq in all_sequences]
+    print(f'shortest sequecne is {min(sequences_length)}')
     MAX_NUMBER_OF_COMPONENTS = 10
 
     # CREATE SCALERS
