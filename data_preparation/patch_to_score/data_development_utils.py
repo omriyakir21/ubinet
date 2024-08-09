@@ -33,6 +33,7 @@ POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
 
 parser = MMCIFParser()
 all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
+print(all_predictions['dict_resids'])
 all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
 all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
 percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
