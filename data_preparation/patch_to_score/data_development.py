@@ -44,7 +44,8 @@ def get_uniprots_sequences_and_proteins_lists(merged_dict):
 
 if __name__ == "__main__":
     # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
-    create_patches()
+    all_predictions = dev_utils.all_predictions
+    create_patches(all_predictions)
 
     # AFTER CREATING PROTEIN OBJECTS MERGE THEM TO 1 DICT
     # merged_dict = create_merged_protein_object_dict()
