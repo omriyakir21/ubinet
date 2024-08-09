@@ -30,7 +30,10 @@ def get_uniprots_sequences_and_proteins_lists(merged_dict):
     all_uniprots = []
     all_sequences = []
     all_proteins = []
+    cnt = 0
     for uniprot, protein in merged_dict.items():
+        cnt+=1
+        print(cnt)
         all_uniprots.append(uniprot)
         structure = protein.get_structure()
         model = structure.child_list[0]
@@ -50,12 +53,12 @@ if __name__ == "__main__":
     # AFTER CREATING PROTEIN OBJECTS MERGE THEM TO 1 DICT
     # merged_dict = create_merged_protein_object_dict()
     # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
-    # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
+    merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
 
-    # all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
-    # save_as_pickle(all_uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
-    # save_as_pickle(all_sequences, os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
-    # save_as_pickle(all_proteins, os.path.join(paths.patch_to_score_data_for_training_path, 'all_proteins.pkl'))
+    all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
+    save_as_pickle(all_uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
+    save_as_pickle(all_sequences, os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
+    save_as_pickle(all_proteins, os.path.join(paths.patch_to_score_data_for_training_path, 'all_proteins.pkl'))
     # all_uniprots = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
     # all_sequences = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
     # all_proteins = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_proteins.pkl'))
