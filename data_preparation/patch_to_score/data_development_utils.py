@@ -572,6 +572,7 @@ def transform_protein_data(protein, scaler_size, scaler_components, encoder, max
     # Extract, scale, and pad the components
     top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[:max_number_of_components]
     protein_components = np.array([component[:4] for component in top_components]).reshape(1, -1)
+    print(f'protein_components.shape={protein_components.shape}')
     protein_components_scaled = scaler_components.transform(protein_components)
     if len(protein_components_scaled) < max_number_of_components:
         padding = ((0, max_number_of_components - len(protein_components_scaled)), (0, 0))
