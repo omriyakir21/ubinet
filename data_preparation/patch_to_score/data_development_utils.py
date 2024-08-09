@@ -607,11 +607,6 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
         scaled_size_tensor, scaled_components_tensor, encoded_components_tensor = transform_protein_data(
             protein, scaler_size, scaler_components, encoder, max_number_of_components)
 
-        # Print shapes of individual tensors
-        print("scaled_size_tensor shape:", scaled_size_tensor.shape)
-        print("scaled_components_tensor shape:", scaled_components_tensor.shape)
-        print("encoded_components_tensor shape:", encoded_components_tensor.shape)
-
         scaled_sizes.append(scaled_size_tensor)
         scaled_components_list.append(scaled_components_tensor)
         encoded_components_list.append(encoded_components_tensor)
