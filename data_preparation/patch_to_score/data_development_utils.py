@@ -26,7 +26,6 @@ import pickle
 import numpy as np
 import torch
 
-
 NEGATIVE_SOURCES = set(
     ['Yeast proteome', 'Human proteome', 'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
 
@@ -548,7 +547,8 @@ def extract_protein_data(proteins, max_number_of_components):
 
 
 def fit_protein_data(proteins, dir_path, max_number_of_components):
-    data_components, data_protein_size, data_number_of_components = extract_protein_data(proteins,max_number_of_components)
+    data_components, data_protein_size, data_number_of_components = extract_protein_data(proteins,
+                                                                                         max_number_of_components)
 
     # Fit the scalers
     scaler_size = StandardScaler()
@@ -557,7 +557,7 @@ def fit_protein_data(proteins, dir_path, max_number_of_components):
     scaler_components.fit(data_components)
 
     # Fit the encoder
-    encoder = OneHotEncoder(sparse_output=False, categories=[range(max_number_of_components+1)])
+    encoder = OneHotEncoder(sparse_output=False, categories=[range(max_number_of_components + 1)])
     encoder.fit(data_number_of_components.reshape(-1, 1))
 
     # Save the scalers and encoder
@@ -565,15 +565,17 @@ def fit_protein_data(proteins, dir_path, max_number_of_components):
     save_as_pickle(scaler_components, os.path.join(dir_path, 'scaler_components.pkl'))
     save_as_pickle(encoder, os.path.join(dir_path, 'encoder.pkl'))
 
+
 def transform_protein_data(protein, scaler_size, scaler_components, encoder, max_number_of_components):
     # Extract and scale the size
     scaled_size = scaler_size.transform(np.array([protein.size]).reshape(-1, 1))
 
     # Extract, scale, and pad the components
-    top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[:max_number_of_components]
-    protein_components = np.array([component[:4] for component in top_components]).reshape(1, -1)
+    top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
+                     :max_number_of_components]
+    protein_components = np.array([component[:4] for component in top_components])
     print(f'protein_components.shape={protein_components.shape}')
-    protein_components_scaled = scaler_components.transform(protein_components)
+    protein_components_scaled = scaler_components.transform(protein_components).reshape(1, -1, 4)
     if len(protein_components_scaled) < max_number_of_components:
         padding = ((0, max_number_of_components - len(protein_components_scaled)), (0, 0))
         protein_components_scaled = np.pad(protein_components_scaled, padding, mode='constant', constant_values=0)
@@ -588,7 +590,9 @@ def transform_protein_data(protein, scaler_size, scaler_components, encoder, max
 
     return scaled_size_tensor, scaled_components_tensor, encoded_components_tensor
 
-def transform_protein_data_list(proteins, scaler_size_path, scaler_components_path, encoder_path, max_number_of_components):
+
+def transform_protein_data_list(proteins, scaler_size_path, scaler_components_path, encoder_path,
+                                max_number_of_components):
     scaler_size = load_as_pickle(scaler_size_path)
     scaler_components = load_as_pickle(scaler_components_path)
     encoder = load_as_pickle(encoder_path)
@@ -611,7 +615,9 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
 
     # Print shapes of lists before stacking
     print("scaled_sizes list shape:", len(scaled_sizes), scaled_sizes[0].shape if scaled_sizes else None)
-    print("scaled_components_list shape:", len(scaled_components_list), scaled_components_list[0].shape if scaled_components_list else None)
-    print("encoded_components_list shape:", len(encoded_components_list), encoded_components_list[0].shape if encoded_components_list else None)
+    print("scaled_components_list shape:", len(scaled_components_list),
+          scaled_components_list[0].shape if scaled_components_list else None)
+    print("encoded_components_list shape:", len(encoded_components_list),
+          encoded_components_list[0].shape if encoded_components_list else None)
 
     return torch.stack(scaled_sizes), torch.stack(scaled_components_list), torch.stack(encoded_components_list)
