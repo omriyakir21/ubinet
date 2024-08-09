@@ -557,7 +557,7 @@ def fit_protein_data(proteins, dir_path, max_number_of_components):
     scaler_components.fit(data_components)
 
     # Fit the encoder
-    encoder = OneHotEncoder(sparse=False, categories=[range(max_number_of_components)])
+    encoder = OneHotEncoder(sparse_output=False, categories=[range(max_number_of_components)])
     encoder.fit(data_number_of_components.reshape(-1, 1))
 
     # Save the scalers and encoder
