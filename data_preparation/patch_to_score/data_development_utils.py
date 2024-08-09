@@ -557,7 +557,7 @@ def fit_protein_data(proteins, dir_path, max_number_of_components):
     scaler_components.fit(data_components)
 
     # Fit the encoder
-    encoder = OneHotEncoder(sparse_output=False, categories=[range(max_number_of_components)])
+    encoder = OneHotEncoder(sparse_output=False, categories=[range(max_number_of_components+1)])
     encoder.fit(data_number_of_components.reshape(-1, 1))
 
     # Save the scalers and encoder
@@ -587,7 +587,10 @@ def transform_protein_data(protein, scaler_size, scaler_components, encoder, max
 
     return scaled_size_tensor, scaled_components_tensor, encoded_components_tensor
 
-def transform_protein_data_list(proteins, scaler_size, scaler_components, encoder, max_number_of_components):
+def transform_protein_data_list(proteins, scaler_size_path, scaler_components_path, encoder_path, max_number_of_components):
+    scaler_size = load_as_pickle(scaler_size_path)
+    scaler_components = load_as_pickle(scaler_components_path)
+    encoder = load_as_pickle(encoder_path)
     scaled_sizes = []
     scaled_components_list = []
     encoded_components_list = []
