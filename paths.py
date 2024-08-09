@@ -63,7 +63,10 @@ scalers_path = os.path.join(patch_to_score_model_path, 'scalers')
 results_path = os.path.join(current_dir, 'results')
 #   ScanNet
 ScanNet_results_path = os.path.join(results_path, 'ScanNet')
-patches_dicts_path = os.path.join(ScanNet_results_path, 'patches_dicts')
+#   patch_to_score
+patch_to_score_results_path = os.path.join(results_path, 'patch_to_score')
+patches_dicts_path = os.path.join(patch_to_score_results_path, 'patches_dicts')
+
 # tmp
 tmp_path = os.path.join(current_dir, 'tmp')
 
