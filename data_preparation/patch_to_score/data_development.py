@@ -32,7 +32,8 @@ def get_uniprots_sequences_and_proteins_lists(merged_dict):
     all_proteins = []
     for uniprot, protein in merged_dict.items():
         all_uniprots.append(uniprot)
-        all_sequences.append(protein.residues)
+        seq = ''.join(protein.residues)
+        all_sequences.append(seq)
         all_proteins.append(protein)
     return all_uniprots, all_sequences, all_proteins
 
