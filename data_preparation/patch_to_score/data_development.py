@@ -49,6 +49,7 @@ if __name__ == "__main__":
     all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
     sequences_length = [len(seq) for seq in all_sequences]
     print(f'shortest sequecne is {min(sequences_length)}')
+    print(f'seq example = {all_sequences[15]}')
     MAX_NUMBER_OF_COMPONENTS = 10
 
     # CREATE SCALERS
