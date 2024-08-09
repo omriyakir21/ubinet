@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
     sequences_length = [len(seq) for seq in all_sequences]
-    print(dev_utils.all_predictions['dict_resids'][16])
+    print(dev_utils.all_predictions['dict_resids'][all_uniprots[16]])
     print(f'shortest sequecne is {min(sequences_length)}')
     print(f'seq example = {all_sequences[16]}')
     print(f'protein example residus{all_proteins[16].residues}')
