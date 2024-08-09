@@ -548,7 +548,7 @@ def extract_protein_data(proteins, max_number_of_components):
 
 
 def fit_protein_data(proteins, dir_path, max_number_of_components):
-    data_components, data_protein_size, data_number_of_components = extract_protein_data(proteins)
+    data_components, data_protein_size, data_number_of_components = extract_protein_data(proteins,max_number_of_components)
 
     # Fit the scalers
     scaler_size = StandardScaler()
