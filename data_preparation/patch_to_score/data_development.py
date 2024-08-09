@@ -47,6 +47,11 @@ if __name__ == "__main__":
     merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
 
     all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
+    for i in range(len(all_uniprots)):
+        if len(all_sequences[i])<14:
+            print(f'uniprot is {all_uniprots[i]}')
+            print(f'len is {len(all_sequences[i])}')
+            raise Exception('short seq')
     MAX_NUMBER_OF_COMPONENTS = 10
 
     # CREATE SCALERS
@@ -83,9 +88,8 @@ if __name__ == "__main__":
     sublists, sublists_sum = partition_utils.divide_clusters(cluster_sizes_and_indices)
     print(f'sublists :{sublists}')
     print(f'sublist sums :{sublists_sum}')
-
-
-
+    fold_indices = [partition_utils.get_uniprot_indices_for_folds(cluster_indices, sublists, fold_num) for fold_num in
+                    range(5)]
 
     # trainingDataDir = os.path.join(path.predictionsToDataSetDir, dirName)
     # gridSearchDir = os.path.join(path.aggregateFunctionMLPDir, 'MLP_MSA_val_AUC_stoppage_' + dirName)
