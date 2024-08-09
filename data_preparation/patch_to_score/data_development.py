@@ -51,8 +51,8 @@ if __name__ == "__main__":
     # create_patches(all_predictions)
 
     # AFTER CREATING PROTEIN OBJECTS MERGE THEM TO 1 DICT
-    # merged_dict = create_merged_protein_object_dict()
-    # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
+    merged_dict = create_merged_protein_object_dict()
+    save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
     merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
 
     all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
