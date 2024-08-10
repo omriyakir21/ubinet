@@ -25,6 +25,7 @@ def create_data_relevant_for_training(max_number_of_components):
     cnt = 0
     all_uniprots = []
     all_sequences = []
+    all_sources = []
     all_protein_paths = []
     all_data_components_flattend = []
     all_data_components = []
@@ -38,6 +39,7 @@ def create_data_relevant_for_training(max_number_of_components):
         d = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion' + str(i)))
         proteins = [protein for _, protein in d.items()]
         sequences = [protein.get_sequence() for protein in proteins]
+        sources = [protein.source for protein in proteins]
         uniprots = [key for key, _ in d.items()]
         protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i)}') for _ in
                          range(len(uniprots))]
@@ -47,12 +49,15 @@ def create_data_relevant_for_training(max_number_of_components):
             max_number_of_components)
         all_uniprots.extend(uniprots)
         all_sequences.extend(sequences)
+        all_sources.extend(sources)
         all_protein_paths.extend(protein_paths)
         all_data_components_flattend.extend(data_components_flattend)
         all_data_components.extend(data_components)
         all_data_protein_size.extend(data_protein_size)
         all_data_number_of_components.extend(data_number_of_components)
-    return all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components
+    assert (len(all_uniprots) == len(all_sequences) == len(all_protein_paths) == len(
+        all_data_components) == all_data_protein_size == len(all_sources) == len(all_data_number_of_components))
+    return all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components, all_sources
 
 
 def create_patches(all_predictions):
@@ -80,7 +85,7 @@ if __name__ == "__main__":
 
     # AFTER CREATING PROTEIN OBJECTS MERGE THEM TO 1 DICT
     MAX_NUMBER_OF_COMPONENTS = 10
-    all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components = create_data_relevant_for_training(
+    all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components, all_sources = create_data_relevant_for_training(
         MAX_NUMBER_OF_COMPONENTS)
     save_as_pickle_big(all_uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
     save_as_pickle_big(all_sequences, os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
@@ -94,6 +99,8 @@ if __name__ == "__main__":
                        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_number_of_components.pkl'))
     save_as_pickle_big(all_data_components,
                        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components.pkl'))
+    save_as_pickle_big(all_sources, os.path.join(paths.patch_to_score_data_for_training_path, 'all_sources.pkl'))
+
 
     # all_uniprots = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
     # all_sequences = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
@@ -107,6 +114,8 @@ if __name__ == "__main__":
     #     os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_number_of_components.pkl'))
     # all_data_components = load_as_pickle(
     #     os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components.pkl'))
+    # all_sources = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_sources.pkl'))
+
 
     # CREATE SCALERS
     # dev_utils.fit_protein_data(all_data_components_flattend, all_data_protein_size, all_data_number_of_components,

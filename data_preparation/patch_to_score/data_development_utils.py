@@ -516,7 +516,7 @@ def extract_protein_data(proteins, max_number_of_components):
         # Sort components by average_ubiq in descending order and take the top 10
         top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
                          :max_number_of_components]
-        data_components.extend(top_components)
+        data_components.append(component[:4] for component in top_components )
         for component in top_components:
             patch_size, average_ubiq, average_non_ubiq, average_plddt = component[:4]
             data_components_flattend.append([patch_size, average_ubiq, average_non_ubiq, average_plddt])
