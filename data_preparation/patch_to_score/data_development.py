@@ -56,7 +56,7 @@ def create_data_relevant_for_training(max_number_of_components):
         all_data_protein_size.extend(data_protein_size)
         all_data_number_of_components.extend(data_number_of_components)
     assert (len(all_uniprots) == len(all_sequences) == len(all_protein_paths) == len(
-        all_data_components) == all_data_protein_size == len(all_sources) == len(all_data_number_of_components))
+        all_data_components) == len(all_data_protein_size) == len(all_sources) == len(all_data_number_of_components))
     return all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components, all_sources
 
 
@@ -83,7 +83,6 @@ if __name__ == "__main__":
     # all_predictions = dev_utils.all_predictions
     # create_patches(all_predictions)
 
-    # AFTER CREATING PROTEIN OBJECTS MERGE THEM TO 1 DICT
     MAX_NUMBER_OF_COMPONENTS = 10
     all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components, all_sources = create_data_relevant_for_training(
         MAX_NUMBER_OF_COMPONENTS)
