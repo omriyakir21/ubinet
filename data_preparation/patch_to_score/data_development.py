@@ -9,6 +9,7 @@ import data_development_utils as dev_utils
 import numpy as np
 import protein_level_data_partition_utils as partition_utils
 from data_preparation.ScanNet.create_tables_and_weights import cluster_sequences
+import pickle
 
 
 def create_merged_protein_object_dict():
@@ -60,6 +61,18 @@ def create_patches(all_predictions):
     dev_utils.create_patches_dict(i, paths.patches_dicts_path, PLDDT_THRESHOLD, all_predictions)
 
 
+def save_as_pickle_big(obj, file_path, protocol=4):
+    """
+    Saves an object to a file using pickle.
+
+    Parameters:
+    obj (any): The object to be saved.
+    file_path (str): The path to the file where the object should be saved.
+    """
+    with open(file_path, 'wb') as file:
+        pickle.dump(obj, file, protocol=protocol)
+
+
 if __name__ == "__main__":
     # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
     # all_predictions = dev_utils.all_predictions
@@ -69,18 +82,18 @@ if __name__ == "__main__":
     MAX_NUMBER_OF_COMPONENTS = 10
     all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components = create_data_relevant_for_training(
         MAX_NUMBER_OF_COMPONENTS)
-    save_as_pickle(all_uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
-    save_as_pickle(all_sequences, os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
-    save_as_pickle(all_protein_paths,
-                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_protein_paths.pkl'))
-    save_as_pickle(all_data_components_flattend,
-                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components_flattend.pkl'))
-    save_as_pickle(all_data_protein_size,
-                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_protein_size.pkl'))
-    save_as_pickle(all_data_number_of_components,
-                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_number_of_components.pkl'))
-    save_as_pickle(all_data_components,
-                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components.pkl'))
+    save_as_pickle_big(all_uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
+    save_as_pickle_big(all_sequences, os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
+    save_as_pickle_big(all_protein_paths,
+                       os.path.join(paths.patch_to_score_data_for_training_path, 'all_protein_paths.pkl'))
+    save_as_pickle_big(all_data_components_flattend,
+                       os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components_flattend.pkl'))
+    save_as_pickle_big(all_data_protein_size,
+                       os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_protein_size.pkl'))
+    save_as_pickle_big(all_data_number_of_components,
+                       os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_number_of_components.pkl'))
+    save_as_pickle_big(all_data_components,
+                       os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components.pkl'))
 
     # all_uniprots = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
     # all_sequences = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
