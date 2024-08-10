@@ -94,18 +94,22 @@ class Protein:
                     edges.append((nodes[i], nodes[j]))
         return edges
 
-    def create_graph(self, plddt_threshold):
+    def get_sequence(self):
         structure = self.get_structure()
         model = structure.child_list[0]
         assert (len(model) == 1)
         for chain in model:
-            residues = aa_out_of_chain(chain)
-            self.size = len(residues)
-            nodes = self.create_nodes_for_graph(residues, plddt_threshold)
-            valid_residues = [residues[i] for i in nodes]
-            edges = self.create_edges_for_graph(valid_residues, nodes)
-            self.graph.add_nodes_from(nodes)
-            self.graph.add_edges_from(edges)
+            seq = aa_out_of_chain(chain)
+        return seq
+
+    def create_graph(self, plddt_threshold):
+        seq = self.get_sequence()
+        self.size = len(seq)
+        nodes = self.create_nodes_for_graph(seq, plddt_threshold)
+        valid_residues = [seq[i] for i in nodes]
+        edges = self.create_edges_for_graph(valid_residues, nodes)
+        self.graph.add_nodes_from(nodes)
+        self.graph.add_edges_from(edges)
 
     def creat_connected_components_tuples(self):
         tuples = []
@@ -136,8 +140,7 @@ def c_alpha_distance(atom1, atom2):
     return distance
 
 
-
-def create_patches_dict(i, dir_path, plddt_threshold,all_predictions):
+def create_patches_dict(i, dir_path, plddt_threshold, all_predictions):
     print(f'len indexes is : {len(indexes)}')
     patches_dict = {}
     all_keys = list(all_predictions['dict_resids'].keys())[indexes[i]:indexes[i + 1]]
@@ -146,7 +149,7 @@ def create_patches_dict(i, dir_path, plddt_threshold,all_predictions):
         print("i= ", i, " cnt = ", cnt, " key = ", key)
         cnt += 1
         try:
-            patches_dict[key] = Protein(key, plddt_threshold,all_predictions)
+            patches_dict[key] = Protein(key, plddt_threshold, all_predictions)
         except SizeDifferentiationException as e:
             print(e)
             continue
@@ -505,34 +508,34 @@ def getNBiggestFP(labels, predictions, allComponentsFiltered, N):
 
 
 def extract_protein_data(proteins, max_number_of_components):
-    data_components = []
+    data_components_flattend = []
     data_protein_size = []
     data_number_of_components = []
+    data_components = []
     for protein in proteins:
         # Sort components by average_ubiq in descending order and take the top 10
         top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
                          :max_number_of_components]
+        data_components.extend(top_components)
         for component in top_components:
             patch_size, average_ubiq, average_non_ubiq, average_plddt = component[:4]
-            data_components.append([patch_size, average_ubiq, average_non_ubiq, average_plddt])
+            data_components_flattend.append([patch_size, average_ubiq, average_non_ubiq, average_plddt])
         data_protein_size.append(protein.size)
         data_number_of_components = len(top_components)
-    return np.array(data_components), np.array(data_protein_size), np.array(data_number_of_components)
+    return np.array(data_components_flattend), np.array(data_protein_size), np.array(data_number_of_components),data_components
 
 
-def fit_protein_data(proteins, dir_path, max_number_of_components):
-    data_components, data_protein_size, data_number_of_components = extract_protein_data(proteins,
-                                                                                         max_number_of_components)
-
+def fit_protein_data(all_data_components, all_data_protein_size, all_data_number_of_components, dir_path,
+                     max_number_of_components):
     # Fit the scalers
     scaler_size = StandardScaler()
     scaler_components = StandardScaler()
-    scaler_size.fit(data_protein_size.reshape(-1, 1))
-    scaler_components.fit(data_components)
+    scaler_size.fit(all_data_protein_size.reshape(-1, 1))
+    scaler_components.fit(all_data_components)
 
     # Fit the encoder
     encoder = OneHotEncoder(sparse_output=False, categories=[range(max_number_of_components + 1)])
-    encoder.fit(data_number_of_components.reshape(-1, 1))
+    encoder.fit(all_data_number_of_components.reshape(-1, 1))
 
     # Save the scalers and encoder
     save_as_pickle(scaler_size, os.path.join(dir_path, 'scaler_size.pkl'))
@@ -594,7 +597,9 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
 
     return torch.stack(scaled_sizes), torch.stack(scaled_components_list), torch.stack(encoded_components_list)
 
-def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_list_path, encoded_components_list_path,all_uniprots_path):
+
+def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_list_path, encoded_components_list_path,
+                          all_uniprots_path):
     folds_training_dicts = []
     scaled_sizes = load_as_pickle(scaled_sizes_path)
     scaled_components = load_as_pickle(scaled_components_list_path)
@@ -619,4 +624,3 @@ def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_l
         training_indices['uniprots_test'] = [uniprots[i] for i in test_indices]
         folds_training_dicts.append(training_dict)
     return folds_training_dicts
-

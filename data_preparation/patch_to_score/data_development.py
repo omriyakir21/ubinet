@@ -20,29 +20,44 @@ def create_merged_protein_object_dict():
     return merged_dict
 
 
+def create_data_relevant_for_training(max_number_of_components):
+    cnt = 0
+    all_uniprots = []
+    all_sequences = []
+    all_protein_paths = []
+    all_data_components_flattend = []
+    all_data_components = []
+    all_data_protein_size = []
+    all_data_number_of_components = []
+
+    for i in range(len(dev_utils.indexes) - 1):
+        if cnt % 1000 == 0:
+            print(cnt)
+        cnt += 1
+        d = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion' + str(i)))
+        proteins = [protein for _, protein in d.items()]
+        sequences = [protein.get_sequence() for protein in proteins]
+        uniprots = [key for key, _ in d.items()]
+        protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i)}') for _ in
+                         range(len(uniprots))]
+
+        data_components_flattend, data_protein_size, data_number_of_components, data_components = dev_utils.extract_protein_data(
+            proteins,
+            max_number_of_components)
+        all_uniprots.extend(uniprots)
+        all_sequences.extend(sequences)
+        all_protein_paths.extend(protein_paths)
+        all_data_components_flattend.extend(data_components_flattend)
+        all_data_components.extend(data_components)
+        all_data_protein_size.extend(data_protein_size)
+        all_data_number_of_components.extend(data_number_of_components)
+        return all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components
+
+
 def create_patches(all_predictions):
     i = int(sys.argv[1])
     PLDDT_THRESHOLD = 50
     dev_utils.create_patches_dict(i, paths.patches_dicts_path, PLDDT_THRESHOLD, all_predictions)
-
-
-def get_uniprots_sequences_and_proteins_lists(merged_dict):
-    all_uniprots = []
-    all_sequences = []
-    all_proteins = []
-    cnt = 0
-    for uniprot, protein in merged_dict.items():
-        cnt += 1
-        print(cnt)
-        all_uniprots.append(uniprot)
-        structure = protein.get_structure()
-        model = structure.child_list[0]
-        assert (len(model) == 1)
-        for chain in model:
-            seq = dev_utils.aa_out_of_chain(chain)
-        all_sequences.append(seq)
-        all_proteins.append(protein)
-    return all_uniprots, all_sequences, all_proteins
 
 
 if __name__ == "__main__":
@@ -51,22 +66,38 @@ if __name__ == "__main__":
     # create_patches(all_predictions)
 
     # AFTER CREATING PROTEIN OBJECTS MERGE THEM TO 1 DICT
-    # merged_dict = create_merged_protein_object_dict()
-    # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
-    merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
-
-    all_uniprots, all_sequences, all_proteins = get_uniprots_sequences_and_proteins_lists(merged_dict)
+    MAX_NUMBER_OF_COMPONENTS = 10
+    all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components = create_data_relevant_for_training(
+        MAX_NUMBER_OF_COMPONENTS)
     save_as_pickle(all_uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
     save_as_pickle(all_sequences, os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
-    save_as_pickle(all_proteins, os.path.join(paths.patch_to_score_data_for_training_path, 'all_proteins.pkl'))
-    # all_uniprots = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
-    # all_sequences = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
-    # all_proteins = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_proteins.pkl'))
+    save_as_pickle(all_protein_paths,
+                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_protein_paths.pkl'))
+    save_as_pickle(all_data_components_flattend,
+                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components_flattend.pkl'))
+    save_as_pickle(all_data_protein_size,
+                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_protein_size.pkl'))
+    save_as_pickle(all_data_number_of_components,
+                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_number_of_components.pkl'))
+    save_as_pickle(all_data_components,
+                   os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components.pkl'))
 
-    MAX_NUMBER_OF_COMPONENTS = 10
+    all_uniprots = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
+    all_sequences = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
+    all_protein_paths = load_as_pickle(
+        os.path.join(paths.patch_to_score_data_for_training_path, 'all_protein_paths.pkl'))
+    all_data_components_flattend = load_as_pickle(
+        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components_flattend.pkl'))
+    all_data_protein_size = load_as_pickle(
+        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_protein_size.pkl'))
+    all_data_number_of_components = load_as_pickle(
+        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_number_of_components.pkl'))
+    all_data_components = load_as_pickle(
+        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components.pkl'))
 
     # CREATE SCALERS
-    # dev_utils.fit_protein_data(all_proteins, paths.scalers_path, MAX_NUMBER_OF_COMPONENTS)
+    # dev_utils.fit_protein_data(all_data_components_flattend, all_data_protein_size, all_data_number_of_components,
+    #                            paths.scalers_path, MAX_NUMBER_OF_COMPONENTS)
 
     # CREATE SCALED DATA FOR TRAINING
     # scaled_sizes, scaled_components_list, encoded_components_list = (
