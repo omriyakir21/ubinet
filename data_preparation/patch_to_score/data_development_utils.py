@@ -521,8 +521,9 @@ def extract_protein_data(proteins, max_number_of_components):
             patch_size, average_ubiq, average_non_ubiq, average_plddt = component[:4]
             data_components_flattend.append([patch_size, average_ubiq, average_non_ubiq, average_plddt])
         data_protein_size.append(protein.size)
-        data_number_of_components = len(top_components)
-    return np.array(data_components_flattend), np.array(data_protein_size), np.array(data_number_of_components),data_components
+        data_number_of_components.append(len(top_components))
+    return np.array(data_components_flattend), np.array(data_protein_size), np.array(
+        data_number_of_components), data_components
 
 
 def fit_protein_data(all_data_components, all_data_protein_size, all_data_number_of_components, dir_path,
