@@ -30,7 +30,8 @@ def create_data_relevant_for_training(max_number_of_components):
     all_data_protein_size = []
     all_data_number_of_components = []
 
-    for i in range(len(dev_utils.indexes) - 1):
+    # for i in range(len(dev_utils.indexes) - 1):
+    for i in range(2):
         print(cnt)
         cnt += 1
         d = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion' + str(i)))
@@ -81,18 +82,18 @@ if __name__ == "__main__":
     save_as_pickle(all_data_components,
                    os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components.pkl'))
 
-    all_uniprots = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
-    all_sequences = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
-    all_protein_paths = load_as_pickle(
-        os.path.join(paths.patch_to_score_data_for_training_path, 'all_protein_paths.pkl'))
-    all_data_components_flattend = load_as_pickle(
-        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components_flattend.pkl'))
-    all_data_protein_size = load_as_pickle(
-        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_protein_size.pkl'))
-    all_data_number_of_components = load_as_pickle(
-        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_number_of_components.pkl'))
-    all_data_components = load_as_pickle(
-        os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components.pkl'))
+    # all_uniprots = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_uniprots.pkl'))
+    # all_sequences = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'all_sequences.pkl'))
+    # all_protein_paths = load_as_pickle(
+    #     os.path.join(paths.patch_to_score_data_for_training_path, 'all_protein_paths.pkl'))
+    # all_data_components_flattend = load_as_pickle(
+    #     os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components_flattend.pkl'))
+    # all_data_protein_size = load_as_pickle(
+    #     os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_protein_size.pkl'))
+    # all_data_number_of_components = load_as_pickle(
+    #     os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_number_of_components.pkl'))
+    # all_data_components = load_as_pickle(
+    #     os.path.join(paths.patch_to_score_data_for_training_path, 'all_data_components.pkl'))
 
     # CREATE SCALERS
     # dev_utils.fit_protein_data(all_data_components_flattend, all_data_protein_size, all_data_number_of_components,
