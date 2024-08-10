@@ -31,8 +31,7 @@ def create_data_relevant_for_training(max_number_of_components):
     all_data_number_of_components = []
 
     for i in range(len(dev_utils.indexes) - 1):
-        if cnt % 1000 == 0:
-            print(cnt)
+        print(cnt)
         cnt += 1
         d = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion' + str(i)))
         proteins = [protein for _, protein in d.items()]
@@ -51,7 +50,7 @@ def create_data_relevant_for_training(max_number_of_components):
         all_data_components.extend(data_components)
         all_data_protein_size.extend(data_protein_size)
         all_data_number_of_components.extend(data_number_of_components)
-        return all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components
+    return all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components
 
 
 def create_patches(all_predictions):
