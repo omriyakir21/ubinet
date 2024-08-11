@@ -405,47 +405,47 @@ def plot_dummy_prauc(allPredictions):
     create_dummy_pr_plot(trainingDataDir, predictions, labels, 'Highest Predicted Amino Acid Baseline')
 
 
-common_values = repeating_uniprots_to_filter()
-# existingUniprotNames = [obj.uniprotName for obj in concatenatedListOfProteins]
-for p in concatenatedListOfProteins:
-    if p.uniprotName in common_values:
-        p.source = 'proteome'
-
-# missingUniprotsNames = [key for key in allPredictionsUbiq.keys() if key not in uniprotNames]
-
-allComponents3d = [(protein.source, protein.uniprotName, protein.connectedComponentsTuples, protein.size,
-                    len(protein.connectedComponentsTuples)) for protein in concatenatedListOfProteins]
-# allComponents3dFiltered = [component for component in allComponents3d if component[1] not in common_values]
-
-saveAsPickle(allComponents3d,
-             os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3')))
-
-allComponents3d = loadPickle(
-    os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3.pkl')))
-labels = loadPickle(
-    os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d_23_3.pkl'))
-
-KBINS
-# n_bins_parameter = 30  # it will actualli be 30^(number of parameter which is 2 because of len(size,average)
-allComponents3dFiltered = loadPickle(
-    os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3.pkl')))
-labels = createLabelsForComponents(allComponents3dFiltered)
-saveAsPickle(labels, os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d'))
-
-print(sum(labels))
-kBinModel = trainKBinDescretizierModel(concatenated_tuples, n_bins_parameter)
-vectorizedData = createVectorizedData(kBinModel, allTuplesLists, n_bins_parameter)
-logisticRegressionModel = trainLogisticRegressionModel(vectorizedData, labels)
-logisticRegressionModelBalanced = trainLogisticRegressionModel(vectorizedData, labels, 'balanced')
-testLogisticRegressionModel(logisticRegressionModel, vectorizedData, labels)
-testLogisticRegressionModel(logisticRegressionModelBalanced, vectorizedData, labels)
-# plt.matshow(logisticRegressionModel.coef_.reshape([30,30]),vmin=-1.,vmax=1,cmap='jet'); plt.colorbar(); plt.show()
-trainingRatio = sum(labels) / len(allTuplesLists)
-ubProbabillits = np.array([row[1] for row in logisticRegressionModel.predict_proba(vectorizedData)])
-finalOutputsTen = [predictionFunctionUsingBayesFactorComputation(proba, 0.1, trainingRatio) for proba in ubProbabillits]
-finalOutputsFifty = [predictionFunctionUsingBayesFactorComputation(proba, 0.5, trainingRatio) for proba in
-                     ubProbabillits]
-KValues = [KComputation(proba, trainingRatio) for proba in ubProbabillits]
+# common_values = repeating_uniprots_to_filter()
+# # existingUniprotNames = [obj.uniprotName for obj in concatenatedListOfProteins]
+# for p in concatenatedListOfProteins:
+#     if p.uniprotName in common_values:
+#         p.source = 'proteome'
+#
+# # missingUniprotsNames = [key for key in allPredictionsUbiq.keys() if key not in uniprotNames]
+#
+# allComponents3d = [(protein.source, protein.uniprotName, protein.connectedComponentsTuples, protein.size,
+#                     len(protein.connectedComponentsTuples)) for protein in concatenatedListOfProteins]
+# # allComponents3dFiltered = [component for component in allComponents3d if component[1] not in common_values]
+#
+# saveAsPickle(allComponents3d,
+#              os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3')))
+#
+# allComponents3d = loadPickle(
+#     os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3.pkl')))
+# labels = loadPickle(
+#     os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d_23_3.pkl'))
+#
+# KBINS
+# # n_bins_parameter = 30  # it will actualli be 30^(number of parameter which is 2 because of len(size,average)
+# allComponents3dFiltered = loadPickle(
+#     os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3.pkl')))
+# labels = createLabelsForComponents(allComponents3dFiltered)
+# saveAsPickle(labels, os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d'))
+#
+# print(sum(labels))
+# kBinModel = trainKBinDescretizierModel(concatenated_tuples, n_bins_parameter)
+# vectorizedData = createVectorizedData(kBinModel, allTuplesLists, n_bins_parameter)
+# logisticRegressionModel = trainLogisticRegressionModel(vectorizedData, labels)
+# logisticRegressionModelBalanced = trainLogisticRegressionModel(vectorizedData, labels, 'balanced')
+# testLogisticRegressionModel(logisticRegressionModel, vectorizedData, labels)
+# testLogisticRegressionModel(logisticRegressionModelBalanced, vectorizedData, labels)
+# # plt.matshow(logisticRegressionModel.coef_.reshape([30,30]),vmin=-1.,vmax=1,cmap='jet'); plt.colorbar(); plt.show()
+# trainingRatio = sum(labels) / len(allTuplesLists)
+# ubProbabillits = np.array([row[1] for row in logisticRegressionModel.predict_proba(vectorizedData)])
+# finalOutputsTen = [predictionFunctionUsingBayesFactorComputation(proba, 0.1, trainingRatio) for proba in ubProbabillits]
+# finalOutputsFifty = [predictionFunctionUsingBayesFactorComputation(proba, 0.5, trainingRatio) for proba in
+#                      ubProbabillits]
+# KValues = [KComputation(proba, trainingRatio) for proba in ubProbabillits]
 
 
 # import csv
