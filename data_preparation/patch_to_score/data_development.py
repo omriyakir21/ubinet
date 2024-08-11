@@ -117,8 +117,10 @@ if __name__ == "__main__":
     save_as_pickle(cluster_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'cluster_indices'))
     # load_as_pickle(cluster_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'cluster_indices'))
     clusters_participants_list = partition_utils.create_cluster_participants_indices(cluster_indices)
+    print(clusters_participants_list)
     cluster_sizes = [l.size for l in clusters_participants_list]
     cluster_sizes_and_indices = [(i, cluster_sizes[i]) for i in range(len(cluster_sizes))]
+    print(cluster_sizes_and_indices)
     sublists, sublists_sum = partition_utils.divide_clusters(cluster_sizes_and_indices)
     print(f'sublists :{sublists}')
     print(f'sublist sums :{sublists_sum}')
