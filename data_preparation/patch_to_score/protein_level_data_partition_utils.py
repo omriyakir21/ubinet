@@ -44,7 +44,10 @@ def get_uniprot_indices_for_groups(cluster_indices, sublists, fold_num):
 
     uniprot_indices = []
     for cluster_index in sublists[fold_num]:
-        uniprot_indices.extend(list(cluster_indices[cluster_index]))
+        print(f'cluster index type is {type(cluster_index)}')
+        print(f'cluster_indices type is {type(cluster_indices)}')
+        fold_indices = list(cluster_indices[cluster_index])
+        uniprot_indices.extend(fold_indices)
     return uniprot_indices
 
 

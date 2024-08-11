@@ -114,13 +114,16 @@ if __name__ == "__main__":
     cluster_indices, representative_indices = cluster_sequences(sequences, seqid=0.5, coverage=0.4,
                                                                 path2mmseqstmp=paths.tmp_path,
                                                                 path2mmseqs=paths.mmseqs_exec_path)
+    print(sequences[:50])
+    print(cluster_indices)
+    print(type(cluster_indices))
     save_as_pickle(cluster_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'cluster_indices'))
     # load_as_pickle(cluster_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'cluster_indices'))
     clusters_participants_list = partition_utils.create_cluster_participants_indices(cluster_indices)
-    print(clusters_participants_list)
+    print(clusters_participants_list[0])
     cluster_sizes = [l.size for l in clusters_participants_list]
     cluster_sizes_and_indices = [(i, cluster_sizes[i]) for i in range(len(cluster_sizes))]
-    print(cluster_sizes_and_indices)
+    print(cluster_sizes_and_indices[0])
     sublists, sublists_sum = partition_utils.divide_clusters(cluster_sizes_and_indices)
     print(f'sublists :{sublists}')
     print(f'sublist sums :{sublists_sum}')
