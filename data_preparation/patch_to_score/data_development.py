@@ -80,7 +80,8 @@ if __name__ == "__main__":
     sequences = [protein.get_sequence() for protein in proteins]
     uniprots = [protein.uniprot_name for protein in proteins]
     sources = [protein.source for protein in proteins]
-    labels = np.array([0 if source in dev_utils.NegativeSources else 1 for source in sources])
+    print(set(sources))
+    labels = np.array([0 if source in dev_utils.NEGATIVE_SOURCES else 1 for source in sources])
     data_components_flattend, data_protein_size, data_number_of_components, data_components = dev_utils.extract_protein_data(
         proteins, MAX_NUMBER_OF_COMPONENTS)
     # CREATE SCALERS
