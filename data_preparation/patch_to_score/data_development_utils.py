@@ -405,50 +405,49 @@ def plot_dummy_prauc(allPredictions):
     create_dummy_pr_plot(trainingDataDir, predictions, labels, 'Highest Predicted Amino Acid Baseline')
 
 
-# common_values = repeatingUniprotsToFilter()
-# # existingUniprotNames = [obj.uniprotName for obj in concatenatedListOfProteins]
-# for p in concatenatedListOfProteins:
-#     if p.uniprotName in common_values:
-#         p.source = 'proteome'
-#
-#
-# # missingUniprotsNames = [key for key in allPredictionsUbiq.keys() if key not in uniprotNames]
-#
-# allComponents3d = [(protein.source, protein.uniprotName, protein.connectedComponentsTuples, protein.size,
-#                     len(protein.connectedComponentsTuples)) for protein in concatenatedListOfProteins]
-# # allComponents3dFiltered = [component for component in allComponents3d if component[1] not in common_values]
-#
-# saveAsPickle(allComponents3d,
-#              os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3')))
+common_values = repeating_uniprots_to_filter()
+# existingUniprotNames = [obj.uniprotName for obj in concatenatedListOfProteins]
+for p in concatenatedListOfProteins:
+    if p.uniprotName in common_values:
+        p.source = 'proteome'
 
-# allComponents3d = loadPickle(
-#     os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3.pkl')))
-# labels = loadPickle(
-#     os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d_23_3.pkl'))
+# missingUniprotsNames = [key for key in allPredictionsUbiq.keys() if key not in uniprotNames]
+
+allComponents3d = [(protein.source, protein.uniprotName, protein.connectedComponentsTuples, protein.size,
+                    len(protein.connectedComponentsTuples)) for protein in concatenatedListOfProteins]
+# allComponents3dFiltered = [component for component in allComponents3d if component[1] not in common_values]
+
+saveAsPickle(allComponents3d,
+             os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3')))
+
+allComponents3d = loadPickle(
+    os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3.pkl')))
+labels = loadPickle(
+    os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d_23_3.pkl'))
+
+KBINS
+# n_bins_parameter = 30  # it will actualli be 30^(number of parameter which is 2 because of len(size,average)
+allComponents3dFiltered = loadPickle(
+    os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3.pkl')))
+labels = createLabelsForComponents(allComponents3dFiltered)
+saveAsPickle(labels, os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d'))
+
+print(sum(labels))
+kBinModel = trainKBinDescretizierModel(concatenated_tuples, n_bins_parameter)
+vectorizedData = createVectorizedData(kBinModel, allTuplesLists, n_bins_parameter)
+logisticRegressionModel = trainLogisticRegressionModel(vectorizedData, labels)
+logisticRegressionModelBalanced = trainLogisticRegressionModel(vectorizedData, labels, 'balanced')
+testLogisticRegressionModel(logisticRegressionModel, vectorizedData, labels)
+testLogisticRegressionModel(logisticRegressionModelBalanced, vectorizedData, labels)
+# plt.matshow(logisticRegressionModel.coef_.reshape([30,30]),vmin=-1.,vmax=1,cmap='jet'); plt.colorbar(); plt.show()
+trainingRatio = sum(labels) / len(allTuplesLists)
+ubProbabillits = np.array([row[1] for row in logisticRegressionModel.predict_proba(vectorizedData)])
+finalOutputsTen = [predictionFunctionUsingBayesFactorComputation(proba, 0.1, trainingRatio) for proba in ubProbabillits]
+finalOutputsFifty = [predictionFunctionUsingBayesFactorComputation(proba, 0.5, trainingRatio) for proba in
+                     ubProbabillits]
+KValues = [KComputation(proba, trainingRatio) for proba in ubProbabillits]
 
 
-# KBINS
-# # n_bins_parameter = 30  # it will actualli be 30^(number of parameter which is 2 because of len(size,average)
-# allComponents3dFiltered = loadPickle(
-#     os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3.pkl')))
-# labels = createLabelsForComponents(allComponents3dFiltered)
-# saveAsPickle(labels, os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d'))
-
-
-# print(sum(labels))
-# kBinModel = trainKBinDescretizierModel(concatenated_tuples, n_bins_parameter)
-# vectorizedData = createVectorizedData(kBinModel, allTuplesLists, n_bins_parameter)
-# logisticRegressionModel = trainLogisticRegressionModel(vectorizedData, labels)
-# logisticRegressionModelBalanced = trainLogisticRegressionModel(vectorizedData, labels, 'balanced')
-# testLogisticRegressionModel(logisticRegressionModel, vectorizedData, labels)
-# testLogisticRegressionModel(logisticRegressionModelBalanced, vectorizedData, labels)
-# # plt.matshow(logisticRegressionModel.coef_.reshape([30,30]),vmin=-1.,vmax=1,cmap='jet'); plt.colorbar(); plt.show()
-# trainingRatio = sum(labels) / len(allTuplesLists)
-# ubProbabillits = np.array([row[1] for row in logisticRegressionModel.predict_proba(vectorizedData)])
-# finalOutputsTen = [predictionFunctionUsingBayesFactorComputation(proba, 0.1, trainingRatio) for proba in ubProbabillits]
-# finalOutputsFifty = [predictionFunctionUsingBayesFactorComputation(proba, 0.5, trainingRatio) for proba in
-#                      ubProbabillits]
-# KValues = [KComputation(proba, trainingRatio) for proba in ubProbabillits]
 # import csv
 
 def readDataFromUni(fileName):
@@ -516,7 +515,7 @@ def extract_protein_data(proteins, max_number_of_components):
         # Sort components by average_ubiq in descending order and take the top 10
         top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
                          :max_number_of_components]
-        data_components.append(component[:4] for component in top_components )
+        data_components.append(component[:4] for component in top_components)
         for component in top_components:
             patch_size, average_ubiq, average_non_ubiq, average_plddt = component[:4]
             data_components_flattend.append([patch_size, average_ubiq, average_non_ubiq, average_plddt])
@@ -599,12 +598,13 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
 
 
 def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_list_path, encoded_components_list_path,
-                          all_uniprots_path):
+                          all_uniprots_path, labels_path):
     folds_training_dicts = []
     scaled_sizes = load_as_pickle(scaled_sizes_path)
     scaled_components = load_as_pickle(scaled_components_list_path)
     encoded_components = load_as_pickle(encoded_components_list_path)
     uniprots = load_as_pickle(all_uniprots_path)
+    labels = load_as_pickle(labels_path)
     for i in range(5):
         training_dict = {}
         validation_indices = groups_indices[i]
@@ -613,14 +613,17 @@ def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_l
         training_dict['sizes_train'] = scaled_sizes[training_indices]
         training_dict['components_train'] = scaled_components[training_indices]
         training_dict['num_patches_train'] = encoded_components[training_indices]
-        training_indices['uniprots_train'] = [uniprots[i] for i in training_indices]
+        training_dict['uniprots_train'] = [uniprots[i] for i in training_indices]
+        training_dict['labels_train'] = labels[training_indices]
         training_dict['sizes_validation'] = scaled_sizes[validation_indices]
         training_dict['components_validation'] = scaled_components[validation_indices]
         training_dict['num_patches_validation'] = encoded_components[validation_indices]
-        training_indices['uniprots_validation'] = [uniprots[i] for i in validation_indices]
+        training_dict['uniprots_validation'] = [uniprots[i] for i in validation_indices]
+        training_dict['labels_validation'] = labels[validation_indices]
         training_dict['sizes_test'] = scaled_sizes[test_indices]
         training_dict['components_test'] = scaled_components[test_indices]
         training_dict['num_patches_test'] = encoded_components[test_indices]
-        training_indices['uniprots_test'] = [uniprots[i] for i in test_indices]
+        training_dict['uniprots_test'] = [uniprots[i] for i in test_indices]
+        training_dict['labels_test'] = labels[test_indices]
         folds_training_dicts.append(training_dict)
     return folds_training_dicts
