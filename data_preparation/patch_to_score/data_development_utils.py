@@ -7,7 +7,7 @@ import pickle
 from itertools import chain
 from plistlib import load
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle, \
-    THREE_LETTERS_TO_SINGLE_AA_DICT, aa_out_of_chain
+    THREE_LETTERS_TO_SINGLE_AA_DICT, aa_out_of_chain, get_str_seq_of_chain
 import networkx as nx
 import os
 import networkx
@@ -19,7 +19,6 @@ import pandas as pd
 from Bio.PDB import MMCIFParser
 import seaborn as sns
 from sklearn.metrics import auc
-from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle
 import paths
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import pickle
@@ -36,9 +35,11 @@ all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_p
 all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
 all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
 percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
+save_as_pickle(percentile_90, os.path.join(paths.patches_dicts_path, 'percentile_90.pkl'))
 server_PDBs = True
 DISTANCE_THRESHOLD = 10
 indexes = list(range(0, len(all_predictions['dict_resids']) + 1, 1500)) + [len(all_predictions['dict_resids'])]
+save_as_pickle(indexes, os.path.join(paths.patches_dicts_path, 'indexes'))
 # to be removed
 trainingDataDir = None
 ubdPath = None
@@ -99,7 +100,7 @@ class Protein:
         model = structure.child_list[0]
         assert (len(model) == 1)
         for chain in model:
-            seq = aa_out_of_chain(chain)
+            seq = get_str_seq_of_chain(chain)
         return seq
 
     def create_graph(self, plddt_threshold):

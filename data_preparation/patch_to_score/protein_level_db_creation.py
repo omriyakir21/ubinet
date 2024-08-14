@@ -4,7 +4,8 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import paths
 import protein_level_db_creation_utils as protein_db_utils
-from data_preparation.ScanNet.db_creation_scanNet_utils import THREE_LETTERS_TO_SINGLE_AA_DICT
+from data_preparation.ScanNet.db_creation_scanNet_utils import THREE_LETTERS_TO_SINGLE_AA_DICT, load_as_pickle, \
+    save_as_pickle
 import re
 
 
@@ -72,8 +73,20 @@ def save_all_valid_af_predictions_for_all_classes(plddt_threshold, number_of_res
     for class_name in class_names:
         protein_db_utils.save_all_valid_af_predictions_for_type(
             class_name, plddt_threshold, number_of_residues_threshold,
-                                                  plddt_ratio_threshold
+            plddt_ratio_threshold
         )
+
+
+def create_csv_file_with_uniprots_info():
+    uniprotsDict = dict()
+    for class_name in protein_db_utils.NEGATIVE_DIRS:
+        uniprotsDict[class_name] = load_as_pickle(
+            os.path.join(paths.AFDB_source_patch_to_score_path, class_name, f'allValidOf{class_name}.pkl'))
+    for class_name in protein_db_utils.POSITIVE_DIRS:
+        uniprotsDict[class_name] = load_as_pickle(
+            os.path.join(paths.GO_source_patch_to_score_path, class_name, f'allValidOf{class_name}.pkl'))
+    protein_db_utils.write_dict_to_csv(
+        os.path.join(paths.patch_to_score_dataset_path, "uniprots_names.csv."), uniprotsDict)
 
 
 if __name__ == "__main__":
@@ -98,14 +111,11 @@ if __name__ == "__main__":
     save_all_valid_af_predictions_for_all_classes(PLDDT_THRESHOLD, NUMBER_OF_RESIDUES_THRESHOLD,
                                                   PLDDT_RATIO_THRESHOLD)
 
-
     # uniprots = getAllUniprotsForTraining(
     #     os.path.join(path.aggregateFunctionMLPDir, os.path.join('dataForTraining2902', 'allInfoDicts.pkl')))
     #
     # uniprotEvidenceDict = uniprotsEvidencesListTodict(uniprotNames_evidences_list)
     #
-
-
 
 # getAllValidAFPredictionsForType('ubiquitinBinding')
 # f = loadPickle('GO/allValidOfE1.pkl')
@@ -215,18 +225,6 @@ if __name__ == "__main__":
 # lines_per_file = 700
 #
 # split_file(input_file, output_prefix, lines_per_file)
-
-
-# uniprotsDict = dict()
-# uniprotsDict['E1'] = GetAllValidUniprotIdsOfType('E1')
-# uniprotsDict['E2'] = GetAllValidUniprotIdsOfType('E2')
-# uniprotsDict['E3'] = GetAllValidUniprotIdsOfType('E3')
-# uniprotsDict['DUB'] = GetAllValidUniprotIdsOfType('DUB')
-# uniprotsDict['ubiquitinBinding'] = GetAllValidUniprotIdsOfType('ubiquitinBinding')
-# uniprotsDict['proteome'] = GetAllValidUniprotIdsOfType('proteome', True)
-
-
-# write_dict_to_csv(os.path.join(r'C:\Users\omriy\UBDAndScanNet\UBDModel\GO', "uniprotnamecsCSV.csv."), uniprotsDict)
 
 
 # proteomeUniprots = GetAllValidUniprotIdsOfType('proteome', True)
