@@ -27,7 +27,7 @@ def create_data_relevant_for_training(max_number_of_components, merged_dict):
     sequences = [protein.get_sequence() for protein in proteins]
     sources = [protein.source for protein in proteins]
     uniprots = [key for key, _ in merged_dict.items()]
-    protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i)}') for _ in
+    protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i // 1500)}') for i in
                      range(len(uniprots))]
 
     data_components_flattend, data_protein_size, data_number_of_components, data_components = dev_utils.extract_protein_data(
@@ -67,7 +67,8 @@ if __name__ == "__main__":
     # create_small_sample_dict(merged_dict)
     merge_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
     uniprots, sequences, protein_paths, data_components_flattend, data_protein_size, data_number_of_components, data_components, sources = create_data_relevant_for_training(
-        MAX_NUMBER_OF_COMPONENTS,merge_dict)
+        MAX_NUMBER_OF_COMPONENTS, merge_dict)
+    # print('hi')
     pdb.set_trace()
     # proteins = [protein for _, protein in merged_dict.items()]
     # sequences = [protein.get_sequence() for protein in proteins]
