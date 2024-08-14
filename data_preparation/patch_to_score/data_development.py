@@ -10,6 +10,7 @@ import numpy as np
 import protein_level_data_partition_utils as partition_utils
 from data_preparation.ScanNet.create_tables_and_weights import cluster_sequences
 import pickle
+import pdb
 
 
 def create_merged_protein_object_dict():
@@ -21,49 +22,49 @@ def create_merged_protein_object_dict():
     return merged_dict
 
 
-# def create_data_relevant_for_training(max_number_of_components):
-#     cnt = 0
-#     all_uniprots = []
-#     all_sequences = []
-#     all_sources = []
-#     all_protein_paths = []
-#     all_data_components_flattend = []
-#     all_data_components = []
-#     all_data_protein_size = []
-#     all_data_number_of_components = []
-#
-#     # for i in range(len(dev_utils.indexes) - 1):
-#     for i in range(2):
-#         print(cnt)
-#         cnt += 1
-#         d = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion' + str(i)))
-#         proteins = [protein for _, protein in d.items()]
-#         sequences = [protein.get_sequence() for protein in proteins]
-#         sources = [protein.source for protein in proteins]
-#         uniprots = [key for key, _ in d.items()]
-#         protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i)}') for _ in
-#                          range(len(uniprots))]
-#
-#         data_components_flattend, data_protein_size, data_number_of_components, data_components = dev_utils.extract_protein_data(
-#             proteins,
-#             max_number_of_components)
-#         all_uniprots.extend(uniprots)
-#         all_sequences.extend(sequences)
-#         all_sources.extend(sources)
-#         all_protein_paths.extend(protein_paths)
-#         all_data_components_flattend.extend(data_components_flattend)
-#         all_data_components.extend(data_components)
-#         all_data_protein_size.extend(data_protein_size)
-#         all_data_number_of_components.extend(data_number_of_components)
-#     assert (len(all_uniprots) == len(all_sequences) == len(all_protein_paths) == len(
-#         all_data_components) == len(all_data_protein_size) == len(all_sources) == len(all_data_number_of_components))
-#     return all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components, all_sources
-#
+def create_data_relevant_for_training(max_number_of_components, merged_dict):
+    cnt = 0
+    all_uniprots = []
+    all_sequences = []
+    all_sources = []
+    all_protein_paths = []
+    all_data_components_flattend = []
+    all_data_components = []
+    all_data_protein_size = []
+    all_data_number_of_components = []
+
+    # for i in range(len(dev_utils.indexes) - 1):
+    for i in range(2):
+        print(cnt)
+        cnt += 1
+        proteins = [protein for _, protein in merge_dict.items()]
+        sequences = [protein.get_sequence() for protein in proteins]
+        sources = [protein.source for protein in proteins]
+        uniprots = [key for key, _ in merge_dict.items()]
+        protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i)}') for _ in
+                         range(len(uniprots))]
+
+        data_components_flattend, data_protein_size, data_number_of_components, data_components = dev_utils.extract_protein_data(
+            proteins,
+            max_number_of_components)
+        all_uniprots.extend(uniprots)
+        all_sequences.extend(sequences)
+        all_sources.extend(sources)
+        all_protein_paths.extend(protein_paths)
+        all_data_components_flattend.extend(data_components_flattend)
+        all_data_components.extend(data_components)
+        all_data_protein_size.extend(data_protein_size)
+        all_data_number_of_components.extend(data_number_of_components)
+    assert (len(all_uniprots) == len(all_sequences) == len(all_protein_paths) == len(
+        all_data_components) == len(all_data_protein_size) == len(all_sources) == len(all_data_number_of_components))
+    return all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components, all_sources
+
 
 def create_patches(all_predictions):
     i = int(sys.argv[1])
     PLDDT_THRESHOLD = 50
     dev_utils.create_patches_dict(i, paths.patches_dicts_path, PLDDT_THRESHOLD, all_predictions)
+
 
 def create_small_sample_dict(merge_dict):
     small_dict = {}
@@ -72,6 +73,7 @@ def create_small_sample_dict(merge_dict):
             break
         small_dict[key] = value
     save_as_pickle(small_dict, os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
+
 
 if __name__ == "__main__":
     # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
@@ -82,8 +84,12 @@ if __name__ == "__main__":
     # merged_dict = create_merged_protein_object_dict()
     # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution')
     # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
-    merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion0'))
-    create_small_sample_dict(merged_dict)
+    # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion0'))
+    # create_small_sample_dict(merged_dict)
+    merge_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
+    uniprots, sequences, protein_paths, data_components_flattend, data_protein_size, data_number_of_components, data_components, sources = create_data_relevant_for_training(
+        MAX_NUMBER_OF_COMPONENTS,merge_dict)
+    pdb.set_trace()
     # proteins = [protein for _, protein in merged_dict.items()]
     # sequences = [protein.get_sequence() for protein in proteins]
     # uniprots = [protein.uniprot_name for protein in proteins]
