@@ -41,7 +41,7 @@ server_PDBs = True
 DISTANCE_THRESHOLD = 10
 # indexes = list(range(0, len(all_predictions['dict_resids']) + 1, 1500)) + [len(all_predictions['dict_resids'])]
 # save_as_pickle(indexes, os.path.join(paths.patches_dicts_path, 'indexes.pkl'))
-indexes  = load_as_pickle(os.path.join(paths.patches_dicts_path, 'indexes.pkl'))
+indexes = load_as_pickle(os.path.join(paths.patches_dicts_path, 'indexes.pkl'))
 # to be removed
 trainingDataDir = None
 ubdPath = None
@@ -65,8 +65,16 @@ class Protein:
         self.create_graph(plddt_threshold)
         self.connected_components_tuples = self.creat_connected_components_tuples()
 
-    def get_structure(self):
-        structurePath = self.uniprot_name
+    def get_structure(self, path=None):
+        if path is not None:
+            structurePath = path
+        else:
+            if self.source in NEGATIVE_SOURCES:
+                structurePath = os.path.join(paths.AFDB_source_patch_to_score_path, self.source.split(" ")[0],
+                                             self.uniprot_name + '.pdb')  # the name of the AFDB dirs doesnt end with proteome thats the reason of the split
+            else:
+                structurePath = os.path.join(paths.GO_source_patch_to_score_path, self.source,
+                                             self.uniprot_name + '.pdb')
         structure = parser.get_structure(self.uniprot_name, structurePath)
         return structure
 
