@@ -37,10 +37,10 @@ def create_data_relevant_for_training(max_number_of_components, merged_dict):
     for i in range(2):
         print(cnt)
         cnt += 1
-        proteins = [protein for _, protein in merge_dict.items()]
+        proteins = [protein for _, protein in merged_dict.items()]
         sequences = [protein.get_sequence() for protein in proteins]
         sources = [protein.source for protein in proteins]
-        uniprots = [key for key, _ in merge_dict.items()]
+        uniprots = [key for key, _ in merged_dict.items()]
         protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i)}') for _ in
                          range(len(uniprots))]
 
