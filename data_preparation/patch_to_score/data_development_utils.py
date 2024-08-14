@@ -31,15 +31,17 @@ NEGATIVE_SOURCES = set(
 POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
 
 parser = MMCIFParser()
-all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
-all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
-all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
-percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
-save_as_pickle(percentile_90, os.path.join(paths.patches_dicts_path, 'percentile_90.pkl'))
+# all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
+# all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
+# all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
+# percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
+# save_as_pickle(percentile_90, os.path.join(paths.patches_dicts_path, 'percentile_90.pkl'))
+percentile_90 = load_as_pickle(os.path.join(paths.patches_dicts_path, 'percentile_90.pkl'))
 server_PDBs = True
 DISTANCE_THRESHOLD = 10
-indexes = list(range(0, len(all_predictions['dict_resids']) + 1, 1500)) + [len(all_predictions['dict_resids'])]
-save_as_pickle(indexes, os.path.join(paths.patches_dicts_path, 'indexes'))
+# indexes = list(range(0, len(all_predictions['dict_resids']) + 1, 1500)) + [len(all_predictions['dict_resids'])]
+# save_as_pickle(indexes, os.path.join(paths.patches_dicts_path, 'indexes.pkl'))
+indexes  = load_as_pickle(os.path.join(paths.patches_dicts_path, 'indexes.pkl'))
 # to be removed
 trainingDataDir = None
 ubdPath = None
@@ -64,7 +66,7 @@ class Protein:
         self.connected_components_tuples = self.creat_connected_components_tuples()
 
     def get_structure(self):
-        structurePath = all_predictions['dict_pdb_files'][self.uniprot_name]
+        structurePath = self.uniprot_name
         structure = parser.get_structure(self.uniprot_name, structurePath)
         return structure
 
