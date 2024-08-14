@@ -75,6 +75,7 @@ class Protein:
             else:
                 structurePath = os.path.join(paths.GO_source_patch_to_score_path, self.source,
                                              self.uniprot_name + '.pdb')
+        print(structurePath)
         structure = parser.get_structure(self.uniprot_name, structurePath)
         return structure
 
