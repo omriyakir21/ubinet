@@ -23,41 +23,20 @@ def create_merged_protein_object_dict():
 
 
 def create_data_relevant_for_training(max_number_of_components, merged_dict):
-    cnt = 0
-    all_uniprots = []
-    all_sequences = []
-    all_sources = []
-    all_protein_paths = []
-    all_data_components_flattend = []
-    all_data_components = []
-    all_data_protein_size = []
-    all_data_number_of_components = []
+    proteins = [protein for _, protein in merged_dict.items()]
+    sequences = [protein.get_sequence() for protein in proteins]
+    sources = [protein.source for protein in proteins]
+    uniprots = [key for key, _ in merged_dict.items()]
+    protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i)}') for _ in
+                     range(len(uniprots))]
 
-    # for i in range(len(dev_utils.indexes) - 1):
-    for i in range(2):
-        print(cnt)
-        cnt += 1
-        proteins = [protein for _, protein in merged_dict.items()]
-        sequences = [protein.get_sequence() for protein in proteins]
-        sources = [protein.source for protein in proteins]
-        uniprots = [key for key, _ in merged_dict.items()]
-        protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i)}') for _ in
-                         range(len(uniprots))]
+    data_components_flattend, data_protein_size, data_number_of_components, data_components = dev_utils.extract_protein_data(
+        proteins,
+        max_number_of_components)
 
-        data_components_flattend, data_protein_size, data_number_of_components, data_components = dev_utils.extract_protein_data(
-            proteins,
-            max_number_of_components)
-        all_uniprots.extend(uniprots)
-        all_sequences.extend(sequences)
-        all_sources.extend(sources)
-        all_protein_paths.extend(protein_paths)
-        all_data_components_flattend.extend(data_components_flattend)
-        all_data_components.extend(data_components)
-        all_data_protein_size.extend(data_protein_size)
-        all_data_number_of_components.extend(data_number_of_components)
-    assert (len(all_uniprots) == len(all_sequences) == len(all_protein_paths) == len(
-        all_data_components) == len(all_data_protein_size) == len(all_sources) == len(all_data_number_of_components))
-    return all_uniprots, all_sequences, all_protein_paths, all_data_components_flattend, all_data_protein_size, all_data_number_of_components, all_data_components, all_sources
+    assert (len(uniprots) == len(sequences) == len(protein_paths) == len(
+        data_components) == len(data_protein_size) == len(sources) == len(data_number_of_components))
+    return uniprots, sequences, protein_paths, data_components_flattend, data_protein_size, data_number_of_components, data_components, sources
 
 
 def create_patches(all_predictions):
