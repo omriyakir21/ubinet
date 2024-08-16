@@ -609,39 +609,49 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
 
     return tf.convert_to_tensor(scaled_sizes), tf.convert_to_tensor(scaled_components_list), tf.convert_to_tensor(encoded_components_list)
 
+def save_as_tensor(data, path):
+    tensor = tf.convert_to_tensor(data)
+    serialized_tensor = tf.io.serialize_tensor(tensor)
+    tf.io.write_file(path, serialized_tensor)
+
+def load_as_tensor(path,out_type=tf.double):
+    serialized_tensor = tf.io.read_file(path)
+    tensor = tf.io.parse_tensor(serialized_tensor,out_type=out_type)  # Adjust `out_type` as needed
+    return tensor
 
 def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_list_path, encoded_components_list_path,
                           all_uniprots_path, labels_path):
     folds_training_dicts = []
-    scaled_sizes = load_as_pickle(scaled_sizes_path)
-    scaled_components = load_as_pickle(scaled_components_list_path)
-    encoded_components = load_as_pickle(encoded_components_list_path)
+    scaled_sizes = load_as_tensor(scaled_sizes_path)
+    scaled_components = load_as_tensor(scaled_components_list_path)
+    encoded_components = load_as_tensor(encoded_components_list_path)
+    labels = load_as_tensor(labels_path,tf.int32)
     uniprots = load_as_pickle(all_uniprots_path)
-    labels = load_as_pickle(labels_path)
+
     for i in range(5):
         training_dict = {}
-        validation_indices = groups_indices[i]
-        test_indices = groups_indices[(i + 1) % 5]
-        training_indices = groups_indices[(i + 2) % 5] + groups_indices[(i + 3) % 5] + groups_indices[(i + 4) % 5]
-        training_dict['sizes_train'] = scaled_sizes[training_indices]
-        training_dict['components_train'] = scaled_components[training_indices]
-        training_dict['num_patches_train'] = encoded_components[training_indices]
-        training_dict['uniprots_train'] = [uniprots[i] for i in training_indices]
-        training_dict['labels_train'] = labels[training_indices]
-        training_dict['sizes_validation'] = scaled_sizes[validation_indices]
-        training_dict['components_validation'] = scaled_components[validation_indices]
-        training_dict['num_patches_validation'] = encoded_components[validation_indices]
-        training_dict['uniprots_validation'] = [uniprots[i] for i in validation_indices]
-        training_dict['labels_validation'] = labels[validation_indices]
-        training_dict['sizes_test'] = scaled_sizes[test_indices]
-        training_dict['components_test'] = scaled_components[test_indices]
-        training_dict['num_patches_test'] = encoded_components[test_indices]
-        training_dict['uniprots_test'] = [uniprots[i] for i in test_indices]
-        training_dict['labels_test'] = labels[test_indices]
+
+        training_indices = tf.constant(np.concatenate((groups_indices[(i + 2) % 5] , groups_indices[(i + 3) % 5] , groups_indices[(i + 4) % 5])))
+        validation_indices = tf.constant(groups_indices[i])
+        test_indices = tf.constant(groups_indices[(i + 1) % 5])
+
+        # When using these indices to index tensors
+        training_dict['sizes_train'] = tf.gather(scaled_sizes, training_indices)
+        training_dict['components_train'] = tf.gather(scaled_components, training_indices)
+        training_dict['num_patches_train'] = tf.gather(encoded_components, training_indices)
+        training_dict['uniprots_train'] = [uniprots[i] for i in training_indices.numpy()]  # Assuming uniprots is a list and not a tensor
+        training_dict['labels_train'] = tf.gather(labels, training_indices)
+        training_dict['sizes_validation'] = tf.gather(scaled_sizes, validation_indices)
+        training_dict['components_validation'] = tf.gather(scaled_components, validation_indices)
+        training_dict['num_patches_validation'] = tf.gather(encoded_components, validation_indices)
+        training_dict['uniprots_validation'] = [uniprots[i] for i in validation_indices.numpy()]  # Assuming uniprots is a list and not a tensor
+        training_dict['labels_validation'] = tf.gather(labels, validation_indices)
+        training_dict['sizes_test'] = tf.gather(scaled_sizes, test_indices)
+        training_dict['components_test'] = tf.gather(scaled_components, test_indices)
+        training_dict['num_patches_test'] = tf.gather(encoded_components, test_indices)
+        training_dict['uniprots_test'] = [uniprots[i] for i in test_indices.numpy()]  # Assuming uniprots is a list and not a tensor
+        training_dict['labels_test'] = tf.gather(labels, test_indices)
+ 
         folds_training_dicts.append(training_dict)
     return folds_training_dicts
 
-    def save_as_tensor(data, path):
-        tensor = tf.convert_to_tensor(data)
-        serialized_tensor = tf.io.serialize_tensor(tensor)
-        tf.io.write_file(path, serialized_tensor)
