@@ -16,7 +16,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 from matplotlib import pyplot as plt
 import pandas as pd
-from Bio.PDB import MMCIFParser
+from Bio.PDB import MMCIFParser, PDBParser
 import seaborn as sns
 from sklearn.metrics import auc
 import paths
@@ -30,7 +30,7 @@ NEGATIVE_SOURCES = set(
 
 POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
 
-parser = MMCIFParser()
+parser = PDBParser()
 # all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
 # all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
 # all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]

@@ -302,8 +302,6 @@ def calculate_diameter(atoms):
     for atom in atoms:
         maxDistance = atom_dists(atom, atoms).max()
         if maxDistance > globalMaxDistance:
-            # print(maxDistance)
-            # globalMaxDistance = maxDistance
             globalMaxDistance = copy.copy(maxDistance)
     return globalMaxDistance
 
