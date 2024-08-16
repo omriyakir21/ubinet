@@ -23,7 +23,8 @@ import paths
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import pickle
 import numpy as np
-import torch
+import tensorflow as tf
+
 
 NEGATIVE_SOURCES = set(
     ['Yeast proteome', 'Human proteome', 'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
@@ -527,7 +528,7 @@ def extract_protein_data(proteins, max_number_of_components):
         # Sort components by average_ubiq in descending order and take the top 10
         top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
                          :max_number_of_components]
-        data_components.append(component[:4] for component in top_components)
+        data_components.append([component[:4] for component in top_components])
         for component in top_components:
             patch_size, average_ubiq, average_non_ubiq, average_plddt = component[:4]
             data_components_flattend.append([patch_size, average_ubiq, average_non_ubiq, average_plddt])
@@ -569,15 +570,15 @@ def transform_protein_data(protein, scaler_size, scaler_components, encoder, max
     if len(protein_components_scaled) < max_number_of_components:
         padding = ((0, max_number_of_components - len(protein_components_scaled)), (0, 0))
         protein_components_scaled = np.pad(protein_components_scaled, padding, mode='constant', constant_values=0)
-    protein_components_scaled = protein_components_scaled.reshape(1, -1, 4)
+    # protein_components_scaled = protein_components_scaled.reshape(1, -1, 4)
 
     # Encode the number of components
     encoded_components = encoder.transform(np.array([len(top_components)]).reshape(-1, 1))
 
     # Convert to tensors
-    scaled_size_tensor = torch.tensor(scaled_size)
-    scaled_components_tensor = torch.tensor(protein_components_scaled)
-    encoded_components_tensor = torch.tensor(encoded_components)
+    scaled_size_tensor = tf.convert_to_tensor(scaled_size)
+    scaled_components_tensor = tf.convert_to_tensor(protein_components_scaled)
+    encoded_components_tensor = tf.convert_to_tensor(encoded_components)
 
     return scaled_size_tensor, scaled_components_tensor, encoded_components_tensor
 
@@ -606,7 +607,7 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
     print("encoded_components_list shape:", len(encoded_components_list),
           encoded_components_list[0].shape if encoded_components_list else None)
 
-    return torch.stack(scaled_sizes), torch.stack(scaled_components_list), torch.stack(encoded_components_list)
+    return tf.convert_to_tensor(scaled_sizes), tf.convert_to_tensor(scaled_components_list), tf.convert_to_tensor(encoded_components_list)
 
 
 def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_list_path, encoded_components_list_path,
@@ -639,3 +640,8 @@ def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_l
         training_dict['labels_test'] = labels[test_indices]
         folds_training_dicts.append(training_dict)
     return folds_training_dicts
+
+    def save_as_tensor(data, path):
+        tensor = tf.convert_to_tensor(data)
+        serialized_tensor = tf.io.serialize_tensor(tensor)
+        tf.io.write_file(path, serialized_tensor)

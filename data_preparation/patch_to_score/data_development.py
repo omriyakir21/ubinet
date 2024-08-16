@@ -12,6 +12,25 @@ from data_preparation.ScanNet.create_tables_and_weights import cluster_sequences
 import pickle
 import pdb
 
+def save_data_for_training(uniprots,labels,sources,protein_paths):
+    scaled_sizes, scaled_components_list, encoded_components_list = (
+    dev_utils.transform_protein_data_list(proteins,
+                                              os.path.join(paths.scalers_path, 'scaler_size.pkl'),
+                                              os.path.join(paths.scalers_path, 'scaler_components.pkl'),
+                                              os.path.join(paths.scalers_path, 'encoder.pkl'),
+                                              MAX_NUMBER_OF_COMPONENTS))
+
+    save_as_pickle(scaled_sizes, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_sizes.pkl'))
+    save_as_pickle(scaled_components_list,
+                   os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_components_list.pkl'))
+    save_as_pickle(encoded_components_list,
+                   os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list.pkl'))
+    save_as_pickle(uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots.pkl'))
+    save_as_pickle(labels, os.path.join(paths.patch_to_score_data_for_training_path, 'labels.pkl'))
+    save_as_pickle(sources,os.path.join(paths.patch_to_score_data_for_training_path, 'sources.pkl'))
+    save_as_pickle(protein_paths,os.path.join(paths.patch_to_score_data_for_training_path, 'protein_paths.pkl'))
+
+
 
 def create_merged_protein_object_dict():
     merged_dict = {}
@@ -48,7 +67,7 @@ def create_patches(all_predictions):
 def create_small_sample_dict(merge_dict):
     small_dict = {}
     for i, (key, value) in enumerate(merge_dict.items()):
-        if i == 100:
+        if i == 10:
             break
         small_dict[key] = value
     save_as_pickle(small_dict, os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
@@ -65,38 +84,18 @@ if __name__ == "__main__":
     # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
     # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion0'))
     # create_small_sample_dict(merged_dict)
-    merge_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
+    merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
     uniprots, sequences, protein_paths, data_components_flattend, data_protein_size, data_number_of_components, data_components, sources = create_data_relevant_for_training(
-        MAX_NUMBER_OF_COMPONENTS, merge_dict)
-    # print('hi')
-    pdb.set_trace()
-    # proteins = [protein for _, protein in merged_dict.items()]
-    # sequences = [protein.get_sequence() for protein in proteins]
-    # uniprots = [protein.uniprot_name for protein in proteins]
-    # sources = [protein.source for protein in proteins]
-    # print(set(sources))
-    # labels = np.array([0 if source in dev_utils.NEGATIVE_SOURCES else 1 for source in sources])
-    # data_components_flattend, data_protein_size, data_number_of_components, data_components = dev_utils.extract_protein_data(
-    #     proteins, MAX_NUMBER_OF_COMPONENTS)
+        MAX_NUMBER_OF_COMPONENTS, merged_dict)
+    proteins = [protein for _, protein in merged_dict.items()]
+    labels = np.array([0 if source in dev_utils.NEGATIVE_SOURCES else 1 for source in sources])
     # CREATE SCALERS
-    # dev_utils.fit_protein_data(np.array(data_components_flattend), np.array(data_protein_size),  np.array(data_number_of_components),
-    #                            paths.scalers_path, MAX_NUMBER_OF_COMPONENTS)
+   
+    dev_utils.fit_protein_data(np.array(data_components_flattend), np.array(data_protein_size),  np.array(data_number_of_components),
+                               paths.scalers_path, MAX_NUMBER_OF_COMPONENTS)
 
     # CREATE SCALED DATA FOR TRAINING
-    # scaled_sizes, scaled_components_list, encoded_components_list = (
-    #     dev_utils.transform_protein_data_list(proteins,
-    #                                           os.path.join(paths.scalers_path, 'scaler_size.pkl'),
-    #                                           os.path.join(paths.scalers_path, 'scaler_components.pkl'),
-    #                                           os.path.join(paths.scalers_path, 'encoder.pkl'),
-    #                                           MAX_NUMBER_OF_COMPONENTS))
-
-    # save_as_pickle(scaled_sizes, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_sizes'))
-    # save_as_pickle(scaled_components_list,
-    #                os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_components_list'))
-    # save_as_pickle(encoded_components_list,
-    #                os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list'))
-    # save_as_pickle(uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots'))
-    # save_as_pickle(labels, os.path.join(paths.patch_to_score_data_for_training_path, 'labels'))
+    save_data_for_training(uniprots,labels,sources,protein_paths)
 
     # scaled_sizes = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_sizes'))
     # scaled_components_list = load_as_pickle(
@@ -105,9 +104,9 @@ if __name__ == "__main__":
     #     os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list'))
     #
     # PARTIOTION THE DATA BY SEQUENCE LIKELIHOOD
-    # cluster_indices, representative_indices = cluster_sequences(sequences, seqid=0.5, coverage=0.4,
-    #                                                             path2mmseqstmp=paths.tmp_path,
-    #                                                             path2mmseqs=paths.mmseqs_exec_path)
+    cluster_indices, representative_indices = cluster_sequences(sequences, seqid=0.5, coverage=0.4,
+                                                                path2mmseqstmp=paths.tmp_path,
+                                                                path2mmseqs=paths.mmseqs_exec_path)
     # print(sequences[:50])
     # print(cluster_indices)
     # print(type(cluster_indices))
