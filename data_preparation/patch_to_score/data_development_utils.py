@@ -24,6 +24,9 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import pickle
 import numpy as np
 import tensorflow as tf
+from Bio.PDB.MMCIFParser import MMCIFParser
+from Bio.PDB.PDBIO import PDBIO
+
 
 
 NEGATIVE_SOURCES = set(
@@ -32,7 +35,8 @@ NEGATIVE_SOURCES = set(
 POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
 
 parser = PDBParser()
-# all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
+parserMMcif = MMCIFParser()
+all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
 # all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
 # all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
 # percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
@@ -77,7 +81,13 @@ class Protein:
                 structurePath = os.path.join(paths.GO_source_patch_to_score_path, self.source,
                                              self.uniprot_name + '.pdb')
         print(structurePath)
-        structure = parser.get_structure(self.uniprot_name, structurePath)
+        if not os.path.exists(structurePath):
+            print(f"path does not exist for : {self.uniprot_name}")
+            structurePath2 = all_predictions['dict_pdb_files'][self.uniprot_name]
+            convert_cif_to_pdb(structurePath2, structurePath)
+            print(f"created new path in : {structurePath}")
+        else:
+            structure = parser.get_structure(self.uniprot_name, structurePath)
         return structure
 
     def get_plddt_values(self):
@@ -654,4 +664,19 @@ def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_l
  
         folds_training_dicts.append(training_dict)
     return folds_training_dicts
+
+def convert_cif_to_pdb(cif_path, pdb_path):
+    # Parse the .cif file to get the structure
+    parser = MMCIFParser()
+    structure = parser.get_structure("structure_id", cif_path)
+    
+    # Initialize PDBIO object
+    io = PDBIO()
+    
+    # Set the structure for the PDBIO object
+    io.set_structure(structure)
+    
+    # Save the structure as a .pdb file
+    io.save(pdb_path)
+
 

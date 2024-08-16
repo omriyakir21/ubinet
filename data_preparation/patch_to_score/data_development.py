@@ -114,7 +114,8 @@ if __name__ == "__main__":
     # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
     # all_predictions = dev_utils.all_predictions
     # create_patches(all_predictions)
-
+    # all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
+    # print(all_predictions.keys())
     MAX_NUMBER_OF_COMPONENTS = 10
     # merged_dict = create_merged_protein_object_dict()
     # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution')
@@ -122,9 +123,13 @@ if __name__ == "__main__":
     # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion0'))
     # create_small_sample_dict(merged_dict)
     # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
+    
+    
     uniprots, sequences, protein_paths, data_components_flattend, data_protein_size, data_number_of_components, data_components, sources = create_data_relevant_for_training(
         MAX_NUMBER_OF_COMPONENTS, merged_dict)
     proteins = [protein for _, protein in merged_dict.items()]
+    
+    
     # CREATE SCALERS
    
     dev_utils.fit_protein_data(np.array(data_components_flattend), np.array(data_protein_size),  np.array(data_number_of_components),
