@@ -21,6 +21,8 @@ ImerFiles_path = os.path.join(ScanNet_data_preparation_path, 'ImerFiles')
 datasets_path = os.path.join(current_dir, 'datasets')
 #   patch_to_score
 patch_to_score_dataset_path = os.path.join(datasets_path, 'patch_to_score')
+#       patches dict
+patches_dicts_path = os.path.join(patch_to_score_dataset_path, 'patches_dicts') 
 #       data_for_training
 patch_to_score_data_for_training_path = os.path.join(patch_to_score_dataset_path, 'data_for_training')
 #       sources
@@ -65,7 +67,7 @@ results_path = os.path.join(current_dir, 'results')
 ScanNet_results_path = os.path.join(results_path, 'ScanNet')
 #   patch_to_score
 patch_to_score_results_path = os.path.join(results_path, 'patch_to_score')
-patches_dicts_path = os.path.join(patch_to_score_results_path, 'patches_dicts')
+
 
 # tmp
 tmp_path = os.path.join(current_dir, 'tmp')
