@@ -32,25 +32,21 @@ def divide_clusters(cluster_sizes):
     return sublists, sublistsSum
 
 
-def get_uniprot_indices_for_groups(cluster_indices, sublists, fold_num):
+def get_uniprot_indices_for_groups(clusters_participants_list, sublists, fold_num):
     """
     Get the Uniprot indices for a specific fold.
 
-    :param cluster_indices: List of lists where each sublist contains the indices of Uniprots in that cluster.
+    :param clusters_participants_list: List of np arrays where each array contains the indices of Uniprots in that fold.
     :param sublists: List of lists where each sublist contains the cluster indices for that fold.
     :param fold_num: The fold number for which to get the Uniprot indices.
     :return: List of Uniprot indices for the specified fold.
     """
 
     uniprot_indices = []
-    print(f'sublists type is {type(sublists)}')
     for cluster_index in sublists[fold_num]:
-
-        print(f'cluster index type is {type(cluster_index)}')
-        print(f'cluster_indices type is {type(cluster_indices)}')
-        fold_indices = list(cluster_indices[cluster_index])
-        uniprot_indices.extend(fold_indices)
-    return uniprot_indices
+        fold_indices = list(clusters_participants_list[cluster_index])
+        uniprot_indices.append(fold_indices)
+    return np.concatenate(uniprot_indices)
 
 
 

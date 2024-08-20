@@ -23,7 +23,11 @@ import paths
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import pickle
 import numpy as np
-import torch
+import tensorflow as tf
+from Bio.PDB.MMCIFParser import MMCIFParser
+from Bio.PDB.PDBIO import PDBIO
+
+
 
 NEGATIVE_SOURCES = set(
     ['Yeast proteome', 'Human proteome', 'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
@@ -31,7 +35,8 @@ NEGATIVE_SOURCES = set(
 POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
 
 parser = PDBParser()
-# all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
+parserMMcif = MMCIFParser()
+all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
 # all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
 # all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
 # percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
@@ -76,7 +81,13 @@ class Protein:
                 structurePath = os.path.join(paths.GO_source_patch_to_score_path, self.source,
                                              self.uniprot_name + '.pdb')
         print(structurePath)
-        structure = parser.get_structure(self.uniprot_name, structurePath)
+        if not os.path.exists(structurePath):
+            print(f"path does not exist for : {self.uniprot_name}")
+            structurePath2 = all_predictions['dict_pdb_files'][self.uniprot_name]
+            convert_cif_to_pdb(structurePath2, structurePath)
+            print(f"created new path in : {structurePath}")
+        else:
+            structure = parser.get_structure(self.uniprot_name, structurePath)
         return structure
 
     def get_plddt_values(self):
@@ -527,7 +538,7 @@ def extract_protein_data(proteins, max_number_of_components):
         # Sort components by average_ubiq in descending order and take the top 10
         top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
                          :max_number_of_components]
-        data_components.append(component[:4] for component in top_components)
+        data_components.append([component[:4] for component in top_components])
         for component in top_components:
             patch_size, average_ubiq, average_non_ubiq, average_plddt = component[:4]
             data_components_flattend.append([patch_size, average_ubiq, average_non_ubiq, average_plddt])
@@ -569,15 +580,15 @@ def transform_protein_data(protein, scaler_size, scaler_components, encoder, max
     if len(protein_components_scaled) < max_number_of_components:
         padding = ((0, max_number_of_components - len(protein_components_scaled)), (0, 0))
         protein_components_scaled = np.pad(protein_components_scaled, padding, mode='constant', constant_values=0)
-    protein_components_scaled = protein_components_scaled.reshape(1, -1, 4)
+    # protein_components_scaled = protein_components_scaled.reshape(1, -1, 4)
 
     # Encode the number of components
     encoded_components = encoder.transform(np.array([len(top_components)]).reshape(-1, 1))
 
     # Convert to tensors
-    scaled_size_tensor = torch.tensor(scaled_size)
-    scaled_components_tensor = torch.tensor(protein_components_scaled)
-    encoded_components_tensor = torch.tensor(encoded_components)
+    scaled_size_tensor = tf.convert_to_tensor(scaled_size)
+    scaled_components_tensor = tf.convert_to_tensor(protein_components_scaled)
+    encoded_components_tensor = tf.convert_to_tensor(encoded_components)
 
     return scaled_size_tensor, scaled_components_tensor, encoded_components_tensor
 
@@ -606,36 +617,66 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
     print("encoded_components_list shape:", len(encoded_components_list),
           encoded_components_list[0].shape if encoded_components_list else None)
 
-    return torch.stack(scaled_sizes), torch.stack(scaled_components_list), torch.stack(encoded_components_list)
+    return tf.convert_to_tensor(scaled_sizes), tf.convert_to_tensor(scaled_components_list), tf.convert_to_tensor(encoded_components_list)
 
+def save_as_tensor(data, path):
+    tensor = tf.convert_to_tensor(data)
+    serialized_tensor = tf.io.serialize_tensor(tensor)
+    tf.io.write_file(path, serialized_tensor)
+
+def load_as_tensor(path,out_type=tf.double):
+    serialized_tensor = tf.io.read_file(path)
+    tensor = tf.io.parse_tensor(serialized_tensor,out_type=out_type)  # Adjust `out_type` as needed
+    return tensor
 
 def create_training_folds(groups_indices, scaled_sizes_path, scaled_components_list_path, encoded_components_list_path,
                           all_uniprots_path, labels_path):
     folds_training_dicts = []
-    scaled_sizes = load_as_pickle(scaled_sizes_path)
-    scaled_components = load_as_pickle(scaled_components_list_path)
-    encoded_components = load_as_pickle(encoded_components_list_path)
+    scaled_sizes = load_as_tensor(scaled_sizes_path)
+    scaled_components = load_as_tensor(scaled_components_list_path)
+    encoded_components = load_as_tensor(encoded_components_list_path)
+    labels = load_as_tensor(labels_path,tf.int32)
     uniprots = load_as_pickle(all_uniprots_path)
-    labels = load_as_pickle(labels_path)
+
     for i in range(5):
         training_dict = {}
-        validation_indices = groups_indices[i]
-        test_indices = groups_indices[(i + 1) % 5]
-        training_indices = groups_indices[(i + 2) % 5] + groups_indices[(i + 3) % 5] + groups_indices[(i + 4) % 5]
-        training_dict['sizes_train'] = scaled_sizes[training_indices]
-        training_dict['components_train'] = scaled_components[training_indices]
-        training_dict['num_patches_train'] = encoded_components[training_indices]
-        training_dict['uniprots_train'] = [uniprots[i] for i in training_indices]
-        training_dict['labels_train'] = labels[training_indices]
-        training_dict['sizes_validation'] = scaled_sizes[validation_indices]
-        training_dict['components_validation'] = scaled_components[validation_indices]
-        training_dict['num_patches_validation'] = encoded_components[validation_indices]
-        training_dict['uniprots_validation'] = [uniprots[i] for i in validation_indices]
-        training_dict['labels_validation'] = labels[validation_indices]
-        training_dict['sizes_test'] = scaled_sizes[test_indices]
-        training_dict['components_test'] = scaled_components[test_indices]
-        training_dict['num_patches_test'] = encoded_components[test_indices]
-        training_dict['uniprots_test'] = [uniprots[i] for i in test_indices]
-        training_dict['labels_test'] = labels[test_indices]
+
+        training_indices = tf.constant(np.concatenate((groups_indices[(i + 2) % 5] , groups_indices[(i + 3) % 5] , groups_indices[(i + 4) % 5])))
+        validation_indices = tf.constant(groups_indices[i])
+        test_indices = tf.constant(groups_indices[(i + 1) % 5])
+
+        # When using these indices to index tensors
+        training_dict['sizes_train'] = tf.gather(scaled_sizes, training_indices)
+        training_dict['components_train'] = tf.gather(scaled_components, training_indices)
+        training_dict['num_patches_train'] = tf.gather(encoded_components, training_indices)
+        training_dict['uniprots_train'] = [uniprots[i] for i in training_indices.numpy()]  # Assuming uniprots is a list and not a tensor
+        training_dict['labels_train'] = tf.gather(labels, training_indices)
+        training_dict['sizes_validation'] = tf.gather(scaled_sizes, validation_indices)
+        training_dict['components_validation'] = tf.gather(scaled_components, validation_indices)
+        training_dict['num_patches_validation'] = tf.gather(encoded_components, validation_indices)
+        training_dict['uniprots_validation'] = [uniprots[i] for i in validation_indices.numpy()]  # Assuming uniprots is a list and not a tensor
+        training_dict['labels_validation'] = tf.gather(labels, validation_indices)
+        training_dict['sizes_test'] = tf.gather(scaled_sizes, test_indices)
+        training_dict['components_test'] = tf.gather(scaled_components, test_indices)
+        training_dict['num_patches_test'] = tf.gather(encoded_components, test_indices)
+        training_dict['uniprots_test'] = [uniprots[i] for i in test_indices.numpy()]  # Assuming uniprots is a list and not a tensor
+        training_dict['labels_test'] = tf.gather(labels, test_indices)
+ 
         folds_training_dicts.append(training_dict)
     return folds_training_dicts
+
+def convert_cif_to_pdb(cif_path, pdb_path):
+    # Parse the .cif file to get the structure
+    parser = MMCIFParser()
+    structure = parser.get_structure("structure_id", cif_path)
+    
+    # Initialize PDBIO object
+    io = PDBIO()
+    
+    # Set the structure for the PDBIO object
+    io.set_structure(structure)
+    
+    # Save the structure as a .pdb file
+    io.save(pdb_path)
+
+

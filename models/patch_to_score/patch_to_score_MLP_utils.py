@@ -1,12 +1,14 @@
 # for array computations and loading data
 import math
 import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import csv
 
 from PIL.ImageOps import pad
 from sklearn.utils import compute_class_weight
 
-import path
+import paths
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -23,6 +25,7 @@ from tensorflow.keras.layers import Dense, GlobalAveragePooling1D, Reshape, Mask
 
 maxNumberOfPatches = 10
 from tensorflow.python.keras import backend
+from data_preparation.patch_to_score.data_development_utils import NEGATIVE_SOURCES,POSITIVE_SOURCES
 
 
 class GlobalSumPooling(GlobalAveragePooling1D):
@@ -37,20 +40,6 @@ class GlobalSumPooling(GlobalAveragePooling1D):
             return backend.sum(
                 inputs, axis=steps_axis, keepdims=self.keepdims
             )
-
-
-def plotROC(y_probs, labels):
-    fpr, tpr, thresholds = roc_curve(labels, y_probs)
-    auc = roc_auc_score(labels, y_probs)
-    plt.figure(figsize=(8, 6))
-    plt.plot(fpr, tpr, label='ROC Curve (AUC = {:.2f})'.format(auc))
-    plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Random')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
 
 
 def plotPrecisionRecall(y_probs, labels):
@@ -285,225 +274,7 @@ def plotPrecisionRecall(y_probs, labels, header):
     plt.show()
 
 
-def createDataForTraining(componentsPath, labelsPath, outputDirPath):
-    modelsDir = os.path.join(path.gridSearchDir, 'finalmodel')
-    labels = loadPickle(labelsPath)
-    tuplesLen4 = loadPickle(componentsPath)
-    x_train, x_cv, x_test, y_train, y_cv, y_test = divideTrainValidationTest(tuplesLen4, labels)
-    x_train_components, x_train_sizes, x_train_n_patches = divideXData(x_train)
-    x_cv_components, x_cv_sizes, x_cv_n_patches = divideXData(x_cv)
-    x_test_components, x_test_sizes, x_test_n_patches = divideXData(x_test)
-    x_train_n_patches_encoded = hotOneEncodeNPatches(x_train_n_patches)
-    x_cv_n_patches_encoded = hotOneEncodeNPatches(x_cv_n_patches)
-    x_test_n_patches_encoded = hotOneEncodeNPatches(x_test_n_patches)
-    sortPatches(x_train_components)
-    sortPatches(x_cv_components)
-    sortPatches(x_test_components)
-    scaleXComponents4D(x_train_components, x_cv_components, x_test_components, modelsDir)
-    x_train_sizes_scaled, x_cv_sizes_scaled, x_test_sizes_scaled = getScaleXSizes3D(x_train_sizes, x_cv_sizes,
-                                                                                    x_test_sizes, modelsDir)
-    x_train_components_scaled_padded, x_cv_components_scaled_padded, x_test_components_scaled_padded = padXValues(
-        x_train_components, x_cv_components, x_test_components, maxNumberOfPatches)
-    allInfoDict = {'x_train': x_train, 'x_cv': x_cv, 'x_test': x_test, 'y_train': y_train, 'y_cv': y_cv,
-                   'y_test': y_test}
-    dictForTraining = {'x_train_components_scaled_padded': x_train_components_scaled_padded,
-                       'x_cv_components_scaled_padded': x_cv_components_scaled_padded,
-                       'x_test_components_scaled_padded': x_test_components_scaled_padded,
-                       'x_train_sizes_scaled': x_train_sizes_scaled, 'x_cv_sizes_scaled': x_cv_sizes_scaled,
-                       'x_test_sizes_scaled': x_test_sizes_scaled,
-                       'x_train_n_patches_encoded': x_train_n_patches_encoded,
-                       'x_cv_n_patches_encoded': x_cv_n_patches_encoded,
-                       'x_test_n_patches_encoded': x_test_n_patches_encoded,
-                       'y_train': y_train, 'y_cv': y_cv,
-                       'y_test': y_test
-                       }
-
-    saveAsPickle(allInfoDict, os.path.join(outputDirPath, 'allInfoDict'))
-    saveAsPickle(dictForTraining, os.path.join(outputDirPath, 'dictForTraining'))
-    return allInfoDict, dictForTraining
-
-
-def saveScalersForFinalModel(finalModelPath, allInfoDictPath):
-    allInfoDict = loadPickle(allInfoDictPath)
-    x_train = allInfoDict['x_train']
-    x_train_components, x_train_sizes, x_train_n_patches = divideXData(x_train)
-    sortPatches(x_train_components)
-    # CREATE SCALERS FOR COMPONENTS
-    allTupleSizesTrain = np.concatenate([tuples[:, 0] for tuples in x_train_components if tuples.shape != (0,)])
-    allTupleUbAveragesTrain = np.concatenate([tuples[:, 1] for tuples in x_train_components if tuples.shape != (0,)])
-    allTuplePlddtTrain = np.concatenate([tuples[:, 3] for tuples in x_train_components if tuples.shape != (0,)])
-    scalerSizeComponent = StandardScaler()
-    scalerAverageUbBinding = StandardScaler()
-    plddtScaler = StandardScaler()
-    scalerSizeComponent.fit(allTupleSizesTrain.reshape((-1, 1)))
-    scalerAverageUbBinding.fit(allTupleUbAveragesTrain.reshape((-1, 1)))
-    plddtScaler.fit(allTuplePlddtTrain.reshape((-1, 1)))
-    # CREATE SCALER FOR SIZE
-    scalerSizeProtein = StandardScaler()
-    scalerSizeProtein.fit(x_train_sizes.reshape((-1, 1)))
-    saveAsPickle(scalerSizeComponent, os.path.join(finalModelPath, 'sizeComponentScaler'))
-    saveAsPickle(scalerAverageUbBinding, os.path.join(finalModelPath, 'averageUbBindingScaler'))
-    saveAsPickle(plddtScaler, os.path.join(finalModelPath, 'plddtScaler'))
-    saveAsPickle(scalerSizeProtein, os.path.join(finalModelPath, 'proteinSizeScaler'))
-
-
-def simpleModelTraining():
-    model = Sequential(
-        [
-            tf.keras.Input(shape=(maxNumberOfPatches, 3)),
-            Masking(mask_value=0.0),
-            Dense(36, activation='relu'),
-            Dense(25, activation='relu'),
-            Dense(16, activation='relu'),
-            GlobalSumPooling(data_format='channels_last'),
-            Dense(1, activation='sigmoid')
-        ],
-        name='model_2'
-    )
-    model.compile(
-        loss=tf.keras.losses.BinaryCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        metrics=['accuracy']
-    )
-    class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
-    # Convert class weights to a dictionary
-    class_weight = {i: class_weights[i] for i in range(len(class_weights))}
-
-    model.fit(
-        x_train_components_scaled_padded, y_train,
-        epochs=300,
-        verbose=1,
-        callbacks=[tf.keras.callbacks.EarlyStopping(monitor='accuracy', patience=6)],
-        batch_size=1024,
-        class_weight=class_weight
-
-    )
-
-    yhat_train = model.predict(x_train_components_scaled_padded)
-    predictions_train = np.where(yhat_train >= 0.5, 1, 0)
-    print(classification_report(y_train, predictions_train))
-
-
-def createTrainValidationTestForAllGroups(x_groups, y_groups, componentsGroups, sizesGroups, n_patchesGroups,
-                                          outputDir):
-    dictsForTraining = []
-    allInfoDicts = []
-    for i in range(len(x_groups)):
-        x_cv_components_scaled_padded = componentsGroups[i % 5]
-        x_test_components_scaled_padded = componentsGroups[(i + 1) % 5]
-        x_cv_sizes_scaled = sizesGroups[i % 5]
-        x_test_sizes_scaled = sizesGroups[(i + 1) % 5]
-        x_cv_n_patches_encoded = n_patchesGroups[i % 5]
-        x_test_n_patches_encoded = n_patchesGroups[(i + 1) % 5]
-        x_cv = x_groups[i % 5]
-        x_test = x_groups[(i + 1) % 5]
-        y_cv = y_groups[i % 5]
-        y_test = y_groups[(i + 1) % 5]
-        groupsForComponentsXTrain = [componentsGroups[j] for j in range(len(componentsGroups)) if
-                                     j != i % 5 and j != (i + 1) % 5]
-        x_train_components_scaled_padded = np.concatenate(
-            (groupsForComponentsXTrain[0], groupsForComponentsXTrain[1], groupsForComponentsXTrain[2]), axis=0)
-        groupsForSizesXTrain = [sizesGroups[j] for j in range(len(sizesGroups)) if j != i % 5 and j != (i + 1) % 5]
-        x_train_sizes_scaled = np.concatenate(
-            (groupsForSizesXTrain[0], groupsForSizesXTrain[1], groupsForSizesXTrain[2]), axis=0)
-        groupsForNPatchesXTrain = [n_patchesGroups[j] for j in range(len(n_patchesGroups)) if
-                                   j != i % 5 and j != (i + 1) % 5]
-        x_train_n_patches_encoded = np.concatenate(
-            (groupsForNPatchesXTrain[0], groupsForNPatchesXTrain[1], groupsForNPatchesXTrain[2]), axis=0)
-        groupsForXTrain = [x_groups[j] for j in range(len(x_groups)) if j != i % 5 and j != (i + 1) % 5]
-        groupsForYTrain = [y_groups[j] for j in range(len(y_groups)) if j != i % 5 and j != (i + 1) % 5]
-        x_train = []
-        y_train = []
-        for i in range(len(groupsForXTrain)):
-            x_train.extend(groupsForXTrain[i])
-            y_train.extend(groupsForYTrain[i])
-
-        # x_train_components, x_train_sizes, x_train_n_patches = divideXData(x_train)
-        # x_cv_components, x_cv_sizes, x_cv_n_patches = divideXData(x_cv)
-        # x_test_components, x_test_sizes, x_test_n_patches = divideXData(x_test)
-        # x_train_n_patches_encoded = hotOneEncodeNPatches(x_train_n_patches)
-        # x_cv_n_patches_encoded = hotOneEncodeNPatches(x_cv_n_patches)
-        # x_test_n_patches_encoded = hotOneEncodeNPatches(x_test_n_patches)
-        # sortPatches(x_train_components)
-        # sortPatches(x_cv_components)
-        # sortPatches(x_test_components)
-        # scaleXComponents4D(x_train_components, x_cv_components, x_test_components)
-        # x_train_sizes_scaled, x_cv_sizes_scaled, x_test_sizes_scaled = getScaleXSizes3D(x_train_sizes, x_cv_sizes,
-        #                                                                                 x_test_sizes)
-        # x_train_components_scaled_padded, x_cv_components_scaled_padded, x_test_components_scaled_padded = padXValues(
-        #     x_train_components, x_cv_components, x_test_components, maxNumberOfPatches)
-        allInfoDict = {'x_train': x_train, 'x_cv': x_cv, 'x_test': x_test, 'y_train': y_train, 'y_cv': y_cv,
-                       'y_test': y_test}
-        dictForTraining = {'x_train_components_scaled_padded': x_train_components_scaled_padded,
-                           'x_cv_components_scaled_padded': x_cv_components_scaled_padded,
-                           'x_test_components_scaled_padded': x_test_components_scaled_padded,
-                           'x_train_sizes_scaled': x_train_sizes_scaled, 'x_cv_sizes_scaled': x_cv_sizes_scaled,
-                           'x_test_sizes_scaled': x_test_sizes_scaled,
-                           'x_train_n_patches_encoded': x_train_n_patches_encoded,
-                           'x_cv_n_patches_encoded': x_cv_n_patches_encoded,
-                           'x_test_n_patches_encoded': x_test_n_patches_encoded,
-                           'y_train': y_train, 'y_cv': y_cv,
-                           'y_test': y_test
-                           }
-
-        dictsForTraining.append(dictForTraining)
-        allInfoDicts.append(allInfoDict)
-    saveAsPickle(allInfoDicts, os.path.join(outputDir, 'allInfoDicts'))
-    saveAsPickle(dictsForTraining, os.path.join(outputDir, 'dictsForTraining'))
-    return allInfoDicts, dictsForTraining
-
-
-def buildModel(n_layers_component, n_layers_size, n_layers_n_patches, n_layers_final):
-    # Define the input shape
-    input_shape = (maxNumberOfPatches, 4)
-    input_data = tf.keras.Input(shape=input_shape, name='sensor_input')
-    size_value = tf.keras.Input(shape=(1,), name='extra_value_input')
-    n_patches_hot_encoded_value = tf.keras.Input(shape=(maxNumberOfPatches + 1,), name='hot_encoded_value_input')
-    masked_input = tf.keras.layers.Masking(mask_value=0.0)(input_data)
-
-    currentOutput = masked_input
-    for i in range(n_layers_component, 0, -1):
-        dense_output = tf.keras.layers.Dense(pow(2, 3 + i), activation='linear')(currentOutput)
-        batchNorm = tf.keras.layers.BatchNormalization()(dense_output)
-        activation = tf.keras.layers.ReLU()(batchNorm)
-        currentOutput = activation
-
-    global_pooling_output = GlobalSumPooling(data_format='channels_last')(currentOutput)
-
-    currentOutput = size_value
-    for i in range(n_layers_size, 0, -1):
-        dense_output = tf.keras.layers.Dense(pow(2, 3 + i), activation='linear')(currentOutput)
-        batchNorm = tf.keras.layers.BatchNormalization()(dense_output)
-        activation = tf.keras.layers.ReLU()(batchNorm)
-        currentOutput = activation
-    size_output = currentOutput
-
-    currentOutput = n_patches_hot_encoded_value
-    for i in range(n_layers_n_patches, 0, -1):
-        dense_output = tf.keras.layers.Dense(pow(2, 3 + i), activation='linear')(currentOutput)
-        batchNorm = tf.keras.layers.BatchNormalization()(dense_output)
-        activation = tf.keras.layers.ReLU()(batchNorm)
-        currentOutput = activation
-    n_patches_output = currentOutput
-
-    concatenated_output = tf.keras.layers.Concatenate()(
-        [global_pooling_output, size_output, n_patches_output])
-
-    currentOutput = concatenated_output
-    for i in range(n_layers_final, 0, -1):
-        dense_output = tf.keras.layers.Dense(pow(2, 3 + i), activation='linear')(currentOutput)
-        batchNorm = tf.keras.layers.BatchNormalization()(dense_output)
-        activation = tf.keras.layers.ReLU()(batchNorm)
-        currentOutput = activation
-
-    before_sigmoid_output = currentOutput
-
-    output = tf.keras.layers.Dense(1, activation='sigmoid')(before_sigmoid_output)
-    model = tf.keras.Model(inputs=[input_data, size_value, n_patches_hot_encoded_value], outputs=output)
-    return model
-
-
-def buildModelConcatSizeAndNPatchesSameNumberOfLayers(m_a, m_b, m_c, n_layers):
+def build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n_layers):
     '''
     :param m_a: size of the hidden layers in the MLP of the components
     :param m_b: size of the hidden layers in the MLP of the concatenated size and number of patches
@@ -553,15 +324,15 @@ def buildModelConcatSizeAndNPatchesSameNumberOfLayers(m_a, m_b, m_c, n_layers):
     return model
 
 
-def KComputation(prediction, trainingUbRation):
+def k_computation(prediction, training_ub_ration):
     val = 1 - prediction
     if val == 0:
         return
-    K = ((1 - trainingUbRation) * prediction) / ((trainingUbRation) * (val))
+    K = ((1 - training_ub_ration) * prediction) / ((training_ub_ration) * (val))
     return K
 
 
-def predictionFunctionUsingBayesFactorComputation(priorUb, KValue):
+def prediction_function_using_bayes_factor_computation(priorUb, KValue):
     finalPrediction = float((KValue * priorUb) / ((KValue * priorUb) + (1 - priorUb)))
     return finalPrediction
 
@@ -602,8 +373,8 @@ def createInfoCsv(yhat_groups, dictsForTraining, allInfoDicts, dataDictPath, out
     allKvalues = []
     for i in range(len(dictsForTraining)):
         trainingUbRatio = np.mean(dictsForTraining[i]['y_train'])
-        allKvalues.extend([KComputation(yhat_groups[i][j], trainingUbRatio) for j in range(len(yhat_groups[i]))])
-    Inference5PercentPredictions = [predictionFunctionUsingBayesFactorComputation(0.05, KValue) for KValue in
+        allKvalues.extend([k_computation(yhat_groups[i][j], trainingUbRatio) for j in range(len(yhat_groups[i]))])
+    Inference5PercentPredictions = [prediction_function_using_bayes_factor_computation(0.05, KValue) for KValue in
                                     allKvalues]
     logKValues = [np.log10(k) for k in allKvalues]
     uniDictList = []
@@ -657,12 +428,12 @@ def getLabelsPredictionsAndArchitectureOfBestArchitecture(gridSearchDir):
     return predictions, labels, bestArchitecture
 
 
-def createCSVFileFromResults(gridSearchDir, trainingDictsDir, dirName):
-    predictions, labels, bestArchitecture = getLabelsPredictionsAndArchitectureOfBestArchitecture(gridSearchDir)
-    allInfoDicts = loadPickle(os.path.join(trainingDictsDir, 'allInfoDicts.pkl'))
-    dictsForTraining = loadPickle(os.path.join(trainingDictsDir, 'dictsForTraining.pkl'))
-    dataDictPath = os.path.join(os.path.join(path.GoPath, 'idmapping_2023_12_26.tsv'), 'AllOrganizemsDataDict.pkl')
-    yhat_groups = createYhatGroupsFromPredictions(predictions, dictsForTraining)
-    outputPath = os.path.join(gridSearchDir, 'results_' + dirName + '.csv')
-    print(outputPath)
-    createInfoCsv(yhat_groups, dictsForTraining, allInfoDicts, dataDictPath, outputPath)
+# def createCSVFileFromResults(gridSearchDir, trainingDictsDir, dirName):
+#     predictions, labels, bestArchitecture = getLabelsPredictionsAndArchitectureOfBestArchitecture(gridSearchDir)
+#     allInfoDicts = loadPickle(os.path.join(trainingDictsDir, 'allInfoDicts.pkl'))
+#     dictsForTraining = loadPickle(os.path.join(trainingDictsDir, 'dictsForTraining.pkl'))
+#     dataDictPath = os.path.join(os.path.join(path.GoPath, 'idmapping_2023_12_26.tsv'), 'AllOrganizemsDataDict.pkl')
+#     yhat_groups = createYhatGroupsFromPredictions(predictions, dictsForTraining)
+#     outputPath = os.path.join(gridSearchDir, 'results_' + dirName + '.csv')
+#     print(outputPath)
+#     createInfoCsv(yhat_groups, dictsForTraining, allInfoDicts, dataDictPath, outputPath)
