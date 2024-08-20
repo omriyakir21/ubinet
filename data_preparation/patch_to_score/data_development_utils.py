@@ -26,9 +26,9 @@ import numpy as np
 import tensorflow as tf
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBIO import PDBIO
+import pdb
 
-
-
+MAX_NUMBER_OF_COMPONENTS = 10
 NEGATIVE_SOURCES = set(
     ['Yeast proteome', 'Human proteome', 'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
 
@@ -36,7 +36,7 @@ POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
 
 parser = PDBParser()
 parserMMcif = MMCIFParser()
-all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
+# all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
 # all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
 # all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
 # percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
@@ -68,7 +68,7 @@ class Protein:
         self.size = None
         self.graph = nx.Graph()
         self.create_graph(plddt_threshold)
-        self.connected_components_tuples = self.creat_connected_components_tuples()
+        self.connected_components_tuples = self.create_connected_components_tuples()
 
     def get_structure(self, path=None):
         if path is not None:
@@ -82,12 +82,12 @@ class Protein:
                                              self.uniprot_name + '.pdb')
         print(structurePath)
         if not os.path.exists(structurePath):
-            print(f"path does not exist for : {self.uniprot_name}")
-            structurePath2 = all_predictions['dict_pdb_files'][self.uniprot_name]
-            convert_cif_to_pdb(structurePath2, structurePath)
-            print(f"created new path in : {structurePath}")
-        else:
-            structure = parser.get_structure(self.uniprot_name, structurePath)
+            # print(f"path does not exist for : {self.uniprot_name}")
+            # structurePath2 = all_predictions['dict_pdb_files'][self.uniprot_name]
+            # convert_cif_to_pdb(structurePath2, structurePath)
+            # print(f"created new path in : {structurePath}")
+            raise Exception("path does not exist")
+        structure = parser.get_structure(self.uniprot_name, structurePath)
         return structure
 
     def get_plddt_values(self):
@@ -126,15 +126,18 @@ class Protein:
         return seq
 
     def create_graph(self, plddt_threshold):
-        seq = self.get_sequence()
-        self.size = len(seq)
-        nodes = self.create_nodes_for_graph(seq, plddt_threshold)
-        valid_residues = [seq[i] for i in nodes]
-        edges = self.create_edges_for_graph(valid_residues, nodes)
-        self.graph.add_nodes_from(nodes)
-        self.graph.add_edges_from(edges)
+        structure = self.get_structure()
+        model = structure.child_list[0]
+        assert (len(model) == 1)
+        for chain in model:
+            residues = aa_out_of_chain(chain)
+            nodes = self.create_nodes_for_graph(residues, plddt_threshold)
+            valid_residues = [residues[i] for i in nodes]
+            edges = self.create_edges_for_graph(valid_residues, nodes)
+            self.graph.add_nodes_from(nodes)
+            self.graph.add_edges_from(edges)
 
-    def creat_connected_components_tuples(self):
+    def create_connected_components_tuples(self):
         tuples = []
         connected_components = list(nx.connected_components(self.graph))
         for component_set in connected_components:
@@ -428,51 +431,6 @@ def plot_dummy_prauc(allPredictions):
     create_dummy_pr_plot(trainingDataDir, predictions, labels, 'Highest Predicted Amino Acid Baseline')
 
 
-# common_values = repeating_uniprots_to_filter()
-# # existingUniprotNames = [obj.uniprotName for obj in concatenatedListOfProteins]
-# for p in concatenatedListOfProteins:
-#     if p.uniprotName in common_values:
-#         p.source = 'proteome'
-#
-# # missingUniprotsNames = [key for key in allPredictionsUbiq.keys() if key not in uniprotNames]
-#
-# allComponents3d = [(protein.source, protein.uniprotName, protein.connectedComponentsTuples, protein.size,
-#                     len(protein.connectedComponentsTuples)) for protein in concatenatedListOfProteins]
-# # allComponents3dFiltered = [component for component in allComponents3d if component[1] not in common_values]
-#
-# saveAsPickle(allComponents3d,
-#              os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3')))
-#
-# allComponents3d = loadPickle(
-#     os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3_23_3.pkl')))
-# labels = loadPickle(
-#     os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d_23_3.pkl'))
-#
-# KBINS
-# # n_bins_parameter = 30  # it will actualli be 30^(number of parameter which is 2 because of len(size,average)
-# allComponents3dFiltered = loadPickle(
-#     os.path.join(ubdPath, os.path.join('aggregateFunctionMLP', 'allTuplesListsOfLen3.pkl')))
-# labels = createLabelsForComponents(allComponents3dFiltered)
-# saveAsPickle(labels, os.path.join(r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\aggregateFunctionMLP', 'labels3d'))
-#
-# print(sum(labels))
-# kBinModel = trainKBinDescretizierModel(concatenated_tuples, n_bins_parameter)
-# vectorizedData = createVectorizedData(kBinModel, allTuplesLists, n_bins_parameter)
-# logisticRegressionModel = trainLogisticRegressionModel(vectorizedData, labels)
-# logisticRegressionModelBalanced = trainLogisticRegressionModel(vectorizedData, labels, 'balanced')
-# testLogisticRegressionModel(logisticRegressionModel, vectorizedData, labels)
-# testLogisticRegressionModel(logisticRegressionModelBalanced, vectorizedData, labels)
-# # plt.matshow(logisticRegressionModel.coef_.reshape([30,30]),vmin=-1.,vmax=1,cmap='jet'); plt.colorbar(); plt.show()
-# trainingRatio = sum(labels) / len(allTuplesLists)
-# ubProbabillits = np.array([row[1] for row in logisticRegressionModel.predict_proba(vectorizedData)])
-# finalOutputsTen = [predictionFunctionUsingBayesFactorComputation(proba, 0.1, trainingRatio) for proba in ubProbabillits]
-# finalOutputsFifty = [predictionFunctionUsingBayesFactorComputation(proba, 0.5, trainingRatio) for proba in
-#                      ubProbabillits]
-# KValues = [KComputation(proba, trainingRatio) for proba in ubProbabillits]
-
-
-# import csv
-
 def readDataFromUni(fileName):
     data_dict = {}
     # Read the TSV file and populate the dictionary
@@ -487,9 +445,6 @@ def readDataFromUni(fileName):
             data_dict[key] = row_data
         return data_dict
 
-
-# data_dict = readDataFromUni(
-#     r'C:\Users\omriy\UBDAndScanNet\newUBD\UBDModel\GO\idmapping_2023_12_26.tsv\idmapping_2023_12_26.tsv')
 
 def createInfoCsvLogisticRegression(data_dict, predBayes10, predBayes50, KValues):
     finalOutputsTen = None
@@ -580,7 +535,6 @@ def transform_protein_data(protein, scaler_size, scaler_components, encoder, max
     if len(protein_components_scaled) < max_number_of_components:
         padding = ((0, max_number_of_components - len(protein_components_scaled)), (0, 0))
         protein_components_scaled = np.pad(protein_components_scaled, padding, mode='constant', constant_values=0)
-    # protein_components_scaled = protein_components_scaled.reshape(1, -1, 4)
 
     # Encode the number of components
     encoded_components = encoder.transform(np.array([len(top_components)]).reshape(-1, 1))
@@ -678,5 +632,4 @@ def convert_cif_to_pdb(cif_path, pdb_path):
     
     # Save the structure as a .pdb file
     io.save(pdb_path)
-
 

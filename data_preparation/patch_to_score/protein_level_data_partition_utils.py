@@ -4,9 +4,9 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from data_preparation.ScanNet.create_tables_and_weights import cluster_sequences
 import numpy as np
-
-
-# seqid=0.5, coverage=0.4
+from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle,load_as_pickle
+from data_development_utils import create_training_folds
+import paths
 
 
 def create_cluster_participants_indices(cluster_indices):
@@ -48,59 +48,38 @@ def get_uniprot_indices_for_groups(clusters_participants_list, sublists, fold_nu
         uniprot_indices.append(fold_indices)
     return np.concatenate(uniprot_indices)
 
+def partition_to_folds_and_save(sequences):
+    cluster_indices, representative_indices = cluster_sequences(sequences, seqid=0.5, coverage=0.4,
+                                                                path2mmseqstmp=paths.tmp_path,
+                                                                path2mmseqs=paths.mmseqs_exec_path)
+    save_as_pickle(cluster_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'cluster_indices.pkl'))
+    clusters_participants_list = create_cluster_participants_indices(cluster_indices)
+    cluster_sizes = [l.size for l in clusters_participants_list]
+    cluster_sizes_and_indices = [(i, cluster_sizes[i]) for i in range(len(cluster_sizes))]
+    sublists, sublists_sum = divide_clusters(cluster_sizes_and_indices)
+    groups_indices = [get_uniprot_indices_for_groups(clusters_participants_list, sublists, fold_num) for fold_num
+                      in
+                      range(5)] 
+    save_as_pickle(groups_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'groups_indices.pkl'))
+        # CREATE TRAINING DICTS
+    folds_training_dicts = create_training_folds(groups_indices,
+                                                           os.path.join(paths.patch_to_score_data_for_training_path,
+                                                                        'scaled_sizes.tf'),
+                                                           os.path.join(paths.patch_to_score_data_for_training_path,
+                                                                        'scaled_components_list.tf'),
+                                                           os.path.join(paths.patch_to_score_data_for_training_path,
+                                                                        'encoded_components_list.tf'),
+                                                           os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots.pkl'),
+                                                           os.path.join(paths.patch_to_score_data_for_training_path, 'labels.tf'))
+    print(f'before saving folds dict')
+    save_as_pickle(folds_training_dicts,os.path.join(paths.patch_to_score_data_for_training_path,
+                                                                        'folds_traning_dicts.pkl'))
 
-
-# def create_x_y_groups(allPredictionsPath, dirPath):
-#     allPredictions = loadPickle(os.path.join(path.ScanNetPredictionsPath, allPredictionsPath))
-#     trainingDictsDir = os.path.join(dirPath, 'trainingDicts')
-#     allInfoDict = loadPickle(os.path.join(trainingDictsDir, 'allInfoDict.pkl'))
-#     dictForTraining = loadPickle(os.path.join(trainingDictsDir, 'dictForTraining.pkl'))
-#     allProteinsDict = dict()
-#     allProteinsDict['x'] = allInfoDict['x_train'] + allInfoDict['x_cv'] + allInfoDict['x_test']
-#     allProteinsDict['y'] = np.concatenate((allInfoDict['y_train'], allInfoDict['y_cv'], allInfoDict['y_test']))
-#     components = np.concatenate((dictForTraining['x_train_components_scaled_padded'],
-#                                  dictForTraining['x_cv_components_scaled_padded'],
-#                                  dictForTraining['x_test_components_scaled_padded']), axis=0)
-#     sizes = np.concatenate((dictForTraining['x_train_sizes_scaled'],
-#                             dictForTraining['x_cv_sizes_scaled'],
-#                             dictForTraining['x_test_sizes_scaled']), axis=0)
-#     n_patches = np.concatenate((dictForTraining['x_train_n_patches_encoded'],
-#                                 dictForTraining['x_cv_n_patches_encoded'],
-#                                 dictForTraining['x_test_n_patches_encoded']), axis=0)
-#
-#     uniprots = [info[1] for info in allProteinsDict['x']]
-#     sequences = [allPredictions['dict_sequences'][uniprot] for uniprot in uniprots]
-#     cluster_indices, representative_indices = cluster_sequences(sequences)
-#     clustersParticipantsList = createClusterParticipantsIndexes(cluster_indices)
-#     clusterSizes = [l.size for l in clustersParticipantsList]
-#     clusterSizesAndInedxes = [(i, clusterSizes[i]) for i in range(len(clusterSizes))]
-#     sublists, sublistsSum = divideClusters(clusterSizesAndInedxes)
-#     groupsIndexes = []
-#
-#     for l in sublists:
-#         groupsIndexes.append(np.concatenate([clustersParticipantsList[index] for index in l]))
-#
-#     y_groups = []
-#     x_groups = []
-#     componentsGroups = []
-#     sizesGroups = []
-#     n_patchesGroups = []
-#     assert components.shape[0] == sizes.shape[0] == n_patches.shape[0]
-#     for indexGroup in groupsIndexes:
-#         x = [allProteinsDict['x'][index] for index in indexGroup]
-#         y = allProteinsDict['y'][indexGroup]
-#         componentsGroup = components[indexGroup]
-#         sizesGroup = sizes[indexGroup]
-#         n_patchesGroup = n_patches[indexGroup]
-#         x_groups.append(x)
-#         y_groups.append(y)
-#         componentsGroups.append(componentsGroup)
-#         sizesGroups.append(sizesGroup)
-#         n_patchesGroups.append(n_patchesGroup)
-#
-#     saveAsPickle(x_groups, os.path.join(trainingDictsDir, 'x_groups'))
-#     saveAsPickle(y_groups, os.path.join(trainingDictsDir, 'y_groups'))
-#     saveAsPickle(componentsGroups, os.path.join(trainingDictsDir, 'componentsGroups'))
-#     saveAsPickle(sizesGroups, os.path.join(trainingDictsDir, 'sizesGroups'))
-#     saveAsPickle(n_patchesGroups, os.path.join(trainingDictsDir, 'n_patchesGroups'))
-#     return x_groups, y_groups, componentsGroups, sizesGroups, n_patchesGroups
+def create_uniprots_sets():
+    uniprots = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots.pkl'))
+    groups_indices = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'groups_indices.pkl'))
+    uniprots_sets = []
+    for i in range(5):
+        uniprots_set = set([uniprots[j] for j in groups_indices[(i+1)%5]])
+        uniprots_sets.append(uniprots_set)
+    save_as_pickle(uniprots_sets, os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots_sets.pkl'))
