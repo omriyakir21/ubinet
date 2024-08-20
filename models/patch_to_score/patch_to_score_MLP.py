@@ -7,12 +7,10 @@ import paths
 import patch_to_score_MLP_utils as utils
 import tensorflow as tf
 from data_preparation.ScanNet.db_creation_scanNet_utils import load_as_pickle,save_as_pickle
+from results.patch_to_score.patch_to_score_result_analysis import get_best_architecture_path
 
-if __name__ == "__main__":
-
+def train_models():
     dirName = sys.argv[4]
-    # dirPath = os.path.join(path.predictionsToDataSetDir, dirName)
-    # trainingDictsDir = os.path.join(dirPath, 'trainingDicts')
     folds_training_dicts = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path,
                                                                         'folds_traning_dicts.pkl'))
     directory_name = os.path.join(paths.with_MSA_patch_to_score_dir, dirName)
@@ -102,3 +100,38 @@ if __name__ == "__main__":
         np.save(os.path.join(models_dir_path,f'labels.npy'),all_labels)
         save_as_pickle(architecture_aucs,os.path.join(models_dir_path,f'architecture_aucs.pkl'))
     save_as_pickle(total_aucs, os.path.join(directory_name, f'totalAucs:n_layers:{str(n_layers)}_m_a:{str(m_a)}_m_c:{str(m_c)}.pkl'))
+
+def predict_over_test_set():
+    dir_name = sys.argv[1]
+    models_dir_path = get_best_architecture_path(os.path.join(paths.with_MSA_patch_to_score_dir, dir_name))
+    models = []
+    for filename in os.listdir(models_dir_path):
+        if filename.endswith('.keras'):
+            models.append(tf.keras.models.load_model(os.path.join(models_dir_path, filename)))
+    folds_training_dicts = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path,
+                                                                        'folds_traning_dicts.pkl'))
+    all_predictions = []
+    all_labels = []
+    for i in range(len(folds_training_dicts)):
+        dict_for_training = folds_training_dicts[i]
+        sizes_test = tf.squeeze(dict_for_training['sizes_test'],axis=1)
+        components_test = dict_for_training['components_test']
+        num_patches_test = tf.squeeze(dict_for_training['num_patches_test'],axis=1)
+        labels_test = dict_for_training['labels_test']
+        predictions = []
+        for model in models:
+            predictions.append(model.predict([components_test, sizes_test, num_patches_test]))
+        predictions = np.mean(predictions, axis=0)
+        all_predictions.append(predictions)
+        all_labels.append(labels_test.numpy())
+    all_labels = np.concatenate(all_labels)
+    all_predictions = np.concatenate(all_predictions)
+    np.save(os.path.join(models_dir_path,'predictions_test.npy'),all_predictions)
+    np.save(os.path.join(models_dir_path,'labels_test.npy'),all_labels)
+
+    
+
+
+if __name__ == "__main__":
+    #train_models()
+    predict_over_test_set()
