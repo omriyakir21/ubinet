@@ -67,7 +67,8 @@ results_path = os.path.join(current_dir, 'results')
 ScanNet_results_path = os.path.join(results_path, 'ScanNet')
 #   patch_to_score
 patch_to_score_results_path = os.path.join(results_path, 'patch_to_score')
-
+#       with_MSA
+with_MSA_patch_to_score_dir = os.path.join(patch_to_score_results_path, 'with_MSA')
 
 # tmp
 tmp_path = os.path.join(current_dir, 'tmp')
