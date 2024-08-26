@@ -9,11 +9,9 @@ import tensorflow as tf
 from data_preparation.ScanNet.db_creation_scanNet_utils import load_as_pickle,save_as_pickle
 from results.patch_to_score.patch_to_score_result_analysis import get_best_architecture_path
 
-def train_models():
-    dirName = sys.argv[4]
+def train_models(directory_name):
     folds_training_dicts = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path,
                                                                         'folds_traning_dicts.pkl'))
-    directory_name = os.path.join(paths.with_MSA_patch_to_score_dir, dirName)
     if not os.path.exists(directory_name):
         os.mkdir(directory_name)
 
@@ -25,9 +23,9 @@ def train_models():
     batch_size = 1024
     n_early_stopping_epochs = 12
     for m_b in m_b_values:
-        models_dir_path = os.path.join(directory_name,f'architecture:{n_layers}_{m_a}_{m_b}_{m_c}')
-        if not os.path.exists(models_dir_path):
-            os.mkdir(models_dir_path)
+        architecture_dir_path = os.path.join(directory_name,f'architecture:{n_layers}_{m_a}_{m_b}_{m_c}')
+        if not os.path.exists(architecture_dir_path):
+            os.mkdir(architecture_dir_path)
         all_predictions = []
         all_labels = []
         architecture_aucs = []
@@ -68,7 +66,7 @@ def train_models():
             model.fit(
                 [components_train, sizes_train, num_patches_train],
                 labels_train,
-                epochs=300,
+                epochs=1,
                 verbose=1,
                 validation_data=(
                     [components_validation, sizes_validation, num_patches_validation], labels_validation),
@@ -76,7 +74,8 @@ def train_models():
                                                             mode='max',
                                                             patience=n_early_stopping_epochs,
                                                             restore_best_weights=True)],
-                batch_size=batch_size
+                batch_size=batch_size,
+                class_weight=class_weight
 
             )
 
@@ -88,7 +87,7 @@ def train_models():
                                     n_early_stopping_epochs, batch_size, i), pr_auc))
             all_predictions.append(yhat_validation)
             all_labels.append(labels_validation.numpy())
-            model.save(os.path.join(models_dir_path, 'model'+str(i)+'.keras'))
+            model.save(os.path.join(architecture_dir_path, 'model'+str(i)+'.keras'))
 
         all_labels = np.concatenate(all_labels)
         all_predictions = np.concatenate(all_predictions)
@@ -96,14 +95,13 @@ def train_models():
         pr_auc = auc(recall, precision)
         total_aucs.append(((m_a, m_b, m_c, n_layers,
                         n_early_stopping_epochs, batch_size), pr_auc))
-        np.save(os.path.join(models_dir_path,f'predictions.npy'),all_predictions)
-        np.save(os.path.join(models_dir_path,f'labels.npy'),all_labels)
-        save_as_pickle(architecture_aucs,os.path.join(models_dir_path,f'architecture_aucs.pkl'))
+        np.save(os.path.join(architecture_dir_path,f'predictions.npy'),all_predictions)
+        np.save(os.path.join(architecture_dir_path,f'labels.npy'),all_labels)
+        save_as_pickle(architecture_aucs,os.path.join(architecture_dir_path,f'architecture_aucs.pkl'))
     save_as_pickle(total_aucs, os.path.join(directory_name, f'totalAucs:n_layers:{str(n_layers)}_m_a:{str(m_a)}_m_c:{str(m_c)}.pkl'))
 
-def predict_over_test_set():
-    dir_name = sys.argv[1]
-    models_dir_path = get_best_architecture_path(os.path.join(paths.with_MSA_patch_to_score_dir, dir_name))
+def predict_over_test_set(model_dir_path):
+    models_dir_path = get_best_architecture_path(models_dir_path)
     models = []
     for filename in os.listdir(models_dir_path):
         if filename.endswith('.keras'):
@@ -133,6 +131,6 @@ def predict_over_test_set():
 
 
 if __name__ == "__main__":
-    train_models()
-    # predict_over_test_set()
+    train_models(paths.with_MSA_50_plddt_0304_dir)
+    # predict_over_test_set(paths.with_MSA_50_plddt_0304_dir)
     # print('done')
