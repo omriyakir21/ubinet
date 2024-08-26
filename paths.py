@@ -59,13 +59,15 @@ assemblies_path = os.path.join(scanNet_sources_path, 'assemblies')
 models_path = os.path.join(current_dir, 'models')
 QUEEN_model_path = os.path.join(models_path, 'QUEEN')
 ScanNet_Ub_module_path = os.path.join(models_path, 'ScanNet_Ub')
-scalers_path = os.path.join(patch_to_score_model_path, 'scalers')
+
 #   patch_to_score
 patch_to_score_model_path = os.path.join(models_path, 'patch_to_score')
+#       scalers    
+scalers_path = os.path.join(patch_to_score_model_path, 'scalers')
 #       all_predictions_0304
 patch_to_score_all_predictions_0304_path = os.path.join(patch_to_score_model_path, 'all_predictions_0304')
 #           with_MSA_50_plddt
-with_MSA_50_plddt_0304_dir = os.path.join(patch_to_score_results_path, 'with_MSA_50_plddt')
+with_MSA_50_plddt_0304_dir = os.path.join(patch_to_score_all_predictions_0304_path, 'with_MSA_50_plddt')
 
 
 # results
