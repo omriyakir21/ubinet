@@ -24,11 +24,15 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, GlobalAveragePooling1D, Reshape, Masking
 
 maxNumberOfPatches = 10
-from tensorflow.python.keras import backend
 from data_preparation.patch_to_score.data_development_utils import NEGATIVE_SOURCES,POSITIVE_SOURCES
+from tensorflow.keras import backend
 
-
+@tf.keras.utils.register_keras_serializable(package="MyCustomLayers")
 class GlobalSumPooling(GlobalAveragePooling1D):
+    def __init__(self, data_format='channels_last', keepdims=False, **kwargs):
+        super(GlobalSumPooling, self).__init__(data_format=data_format, **kwargs)
+        self.keepdims = keepdims
+
     def call(self, inputs, mask=None):
         steps_axis = 1 if self.data_format == "channels_last" else 2
         if mask is not None:
@@ -40,6 +44,15 @@ class GlobalSumPooling(GlobalAveragePooling1D):
             return backend.sum(
                 inputs, axis=steps_axis, keepdims=self.keepdims
             )
+
+    def get_config(self):
+        config = super(GlobalSumPooling, self).get_config()
+        config.update({
+            "data_format": self.data_format,
+            "keepdims": self.keepdims
+        })
+        return config
+    
 
 
 def plotPrecisionRecall(y_probs, labels):

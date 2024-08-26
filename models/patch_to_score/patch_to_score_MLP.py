@@ -82,7 +82,7 @@ def train_models():
 
             yhat_validation = model.predict(
                 [components_validation, sizes_validation, num_patches_validation])
-            precision, recall, thresholds = utils.precision_recall_curve(labels_validation, yhat_validation)
+            precision, recall, _ = utils.precision_recall_curve(labels_validation, yhat_validation)
             pr_auc = auc(recall, precision)
             architecture_aucs.append(((m_a, m_b, m_c, n_layers,
                                     n_early_stopping_epochs, batch_size, i), pr_auc))
@@ -92,7 +92,7 @@ def train_models():
 
         all_labels = np.concatenate(all_labels)
         all_predictions = np.concatenate(all_predictions)
-        precision, recall, thresholds = utils.precision_recall_curve(all_labels, all_predictions)
+        precision, recall, _ = utils.precision_recall_curve(all_labels, all_predictions)
         pr_auc = auc(recall, precision)
         total_aucs.append(((m_a, m_b, m_c, n_layers,
                         n_early_stopping_epochs, batch_size), pr_auc))
@@ -133,5 +133,6 @@ def predict_over_test_set():
 
 
 if __name__ == "__main__":
-    #train_models()
-    predict_over_test_set()
+    train_models()
+    # predict_over_test_set()
+    # print('done')
