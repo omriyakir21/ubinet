@@ -66,7 +66,7 @@ def train_models(directory_name):
             model.fit(
                 [components_train, sizes_train, num_patches_train],
                 labels_train,
-                epochs=1,
+                epochs=300,
                 verbose=1,
                 validation_data=(
                     [components_validation, sizes_validation, num_patches_validation], labels_validation),
