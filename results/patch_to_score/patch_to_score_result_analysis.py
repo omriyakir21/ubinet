@@ -14,13 +14,13 @@ import math
 import requests
 import time
 
-def create_aucs_csv(dir_name):
+def create_aucs_csv(models_dir,results_dir):
     aucs_data = []
     
-    for filename in os.listdir(dir_name):
+    for filename in os.listdir(models_dir):
         match = re.match(r'totalAucs:n_layers:(\d+)_m_a:(\d+)_m_c:(\d+).pkl', filename)
         if match:
-            filepath = os.path.join(dir_name, filename)
+            filepath = os.path.join(models_dir, filename)
             tuples_list = load_as_pickle(filepath)
             for ((m_a, m_b, m_c, n_layers, n_early_stopping_epochs, batch_size), pr_auc) in tuples_list:
                 aucs_data.append({
@@ -37,16 +37,16 @@ def create_aucs_csv(dir_name):
     aucs_data.sort(key=lambda x: x['auc'], reverse=True)
     
     # Writing to CSV
-    with open(os.path.join(dir_name,'aucs_data.csv'), 'w', newline='') as csvfile:
+    with open(os.path.join(results_dir,'aucs_data.csv'), 'w', newline='') as csvfile:
         field_names = ['n_layers', 'm_a', 'm_b', 'm_c', 'n_early_stopping_epochs', 'batch_size', 'auc']
         writer = csv.DictWriter(csvfile, fieldnames=field_names)
         writer.writeheader()
         for data in aucs_data:
             writer.writerow(data)
 
-def get_best_architecture_parts(dir_name):
+def get_best_architecture_parts(results_dir):
     # Read the CSV file
-    data = pd.read_csv(os.path.join(dir_name, 'aucs_data.csv'))
+    data = pd.read_csv(os.path.join(results_dir, 'aucs_data.csv'))
     
     # Find the row with the highest AUC score
     best_row = data.loc[data['auc'].idxmax()]
@@ -58,20 +58,20 @@ def get_best_architecture_parts(dir_name):
     m_c = str(int(best_row['m_c']))    
     return n_layers, m_a, m_b, m_c
 
-def get_best_architecture_path(dir_name):
+def get_best_architecture_models_path(models_dir,results_dir):
     # Assuming get_best_architecture_parts returns the best architecture parts
-    n_layers, m_a, m_b, m_c = get_best_architecture_parts(dir_name)
+    n_layers, m_a, m_b, m_c = get_best_architecture_parts(results_dir)
     
     # Construct the directory name based on the architecture parts
     best_architecture_dir = f'architecture:{n_layers}_{m_a}_{m_b}_{m_c}'
     
     # Return the full path to the best architecture directory
-    return os.path.join(dir_name, best_architecture_dir)
+    return os.path.join(models_dir, best_architecture_dir)
 
-def save_pr_plot(dir_path):
+def save_pr_plot(architecture_models_dir,results_architecture_dir):
     # Load predictions and labels
-    predictions = np.load(os.path.join(dir_path,"predictions.npy"))
-    labels = np.load(os.path.join(dir_path,"labels.npy"))
+    predictions = np.load(os.path.join(architecture_models_dir,"predictions.npy"))
+    labels = np.load(os.path.join(architecture_models_dir,"labels.npy"))
     
     # Calculate Precision-Recall and AUC
     precision, recall, _ = precision_recall_curve(labels, predictions)
@@ -86,14 +86,15 @@ def save_pr_plot(dir_path):
     plt.legend(loc="best")
     
     # Save the plot
-    plt.savefig(os.path.join(dir_path,"pr_plot_with_auc.png"))
+    plt.savefig(os.path.join(results_architecture_dir,"pr_plot_with_auc.png"))
 
-def create_log_bayes_distribution_plot_from_results(dir_path):
-    predictions = np.load(os.path.join(dir_path,"predictions_test.npy")).squeeze()
+def create_log_bayes_distribution_plot_from_results(architecture_models_dir,results_architecture_dir):
+    plt.clf()
+    predictions = np.load(os.path.join(architecture_models_dir,"predictions_test.npy")).squeeze()
     allLog10Kvalues = np.array([np.log10(k_computation(prediction, 0.05)) if k_computation(prediction, 0.05) != None else math.inf for prediction in predictions])
     plt.hist(allLog10Kvalues)
     plt.title('logKvalues Distribution')
-    plt.savefig(os.path.join(dir_path, 'logKvalues Distribution'))
+    plt.savefig(os.path.join(results_architecture_dir, 'logKvalues Distribution'))
     plt.close()
 
 def createYhatGroupsFromPredictions(predictions, dictsForTraining, testOn='cv'):
@@ -153,12 +154,16 @@ def createCSVFileFromResults(gridSearchDir, trainingDictsDir, dir_path):
     yhat_groups = createYhatGroupsFromPredictions(predictions, dictsForTraining)
     createInfoCsv(yhat_groups, dictsForTraining, allInfoDicts, data_dict_path, os.path.join(dir_path, 'InferenceResults.csv'))
     
-
+def create_best_architecture_results_dir(best_architecture_models_path,results_dir):
+    best_architecture_results_dir = os.path.basename(best_architecture_models_path)
+    best_architecture_results_dir = os.path.join(results_dir, best_architecture_results_dir)
+    os.makedirs(best_architecture_results_dir, exist_ok=True)
+    return best_architecture_results_dir
 
 
 if __name__ == "__main__":
-    dir_name = os.path.join(paths.with_MSA_patch_to_score_dir, "50_plddt")
-    # create_aucs_csv(dir_name)
-    # best_architecture_path = get_best_architecture_path(dir_name)
-    # save_pr_plot(best_architecture_path)
-    # create_log_bayes_distribution_plot_from_results(best_architecture_path)
+    # create_aucs_csv(paths.with_MSA_50_plddt_0304_models_dir,paths.with_MSA_50_plddt_0304_results_dir)
+    best_architecture_models_path = get_best_architecture_models_path(paths.with_MSA_50_plddt_0304_models_dir,paths.with_MSA_50_plddt_0304_results_dir)
+    best_architecture_results_dir = create_best_architecture_results_dir(best_architecture_models_path,paths.with_MSA_50_plddt_0304_results_dir)
+    save_pr_plot(best_architecture_models_path,best_architecture_results_dir)
+    create_log_bayes_distribution_plot_from_results(best_architecture_models_path,best_architecture_results_dir)
