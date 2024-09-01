@@ -337,11 +337,13 @@ def build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n
     return model
 
 
-def k_computation(prediction, training_ub_ration):
+def k_computation(prediction, training_ub_ratio,with_class_weights = False):
+    if with_class_weights:
+        training_ub_ratio = 0.5
     val = 1 - prediction
     if val == 0:
         return
-    K = ((1 - training_ub_ration) * prediction) / ((training_ub_ration) * (val))
+    K = ((1 - training_ub_ratio) * prediction) / ((training_ub_ratio) * (val))
     return K
 
 

@@ -59,23 +59,38 @@ assemblies_path = os.path.join(scanNet_sources_path, 'assemblies')
 models_path = os.path.join(current_dir, 'models')
 QUEEN_model_path = os.path.join(models_path, 'QUEEN')
 ScanNet_Ub_module_path = os.path.join(models_path, 'ScanNet_Ub')
+AF2_multimer_model_path = os.path.join(models_path, 'AF2_multimer')
+#   structural_aligners
+structural_aligners_path = os.path.join(models_path, 'structural_aligners')
+#       dali_aligner
+dali_aligner_dir_path = os.path.join(structural_aligners_path, 'dali_aligner')
+#           DaliLite.v5 dir
+DaliLite_v5_dir_path = os.path.join(dali_aligner_dir_path, 'DaliLite.v5')
+#           dali_aligments
+dali_aligments_path = os.path.join(dali_aligner_dir_path, 'dali_aligments')
 
 #   patch_to_score
 patch_to_score_model_path = os.path.join(models_path, 'patch_to_score')
 #       scalers    
 scalers_path = os.path.join(patch_to_score_model_path, 'scalers')
 #       all_predictions_0304
-patch_to_score_all_predictions_0304_path = os.path.join(patch_to_score_model_path, 'all_predictions_0304')
+patch_to_score_all_predictions_0304_models_path = os.path.join(patch_to_score_model_path, 'all_predictions_0304')
 #           with_MSA_50_plddt
-with_MSA_50_plddt_0304_dir = os.path.join(patch_to_score_all_predictions_0304_path, 'with_MSA_50_plddt')
+with_MSA_50_plddt_0304_models_dir = os.path.join(patch_to_score_all_predictions_0304_models_path, 'with_MSA_50_plddt')
 
 
 # results
 results_path = os.path.join(current_dir, 'results')
+#   AF3_multimer
+AF3_predictions_path = os.path.join(results_path, 'AF3_predictions')
 #   ScanNet
 ScanNet_results_path = os.path.join(results_path, 'ScanNet')
 #   patch_to_score
 patch_to_score_results_path = os.path.join(results_path, 'patch_to_score')
+#       all_predictions_0304
+patch_to_score_all_predictions_0304_results_path = os.path.join(patch_to_score_results_path, 'all_predictions_0304')
+#           with_MSA_50_plddt
+with_MSA_50_plddt_0304_results_dir = os.path.join(patch_to_score_all_predictions_0304_results_path, 'with_MSA_50_plddt')
 
 
 # tmp

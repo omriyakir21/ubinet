@@ -55,33 +55,33 @@ def create_small_sample_dict(merge_dict):
 
 if __name__ == "__main__":
     # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
-    # all_predictions = dev_utils.all_predictions
+    # all_predictions = all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
     # create_patches(all_predictions)
 
     # all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
     # print(all_predictions.keys())
     # merged_dict = create_merged_protein_object_dict()
-    # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution')
-    # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution'))
+    # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution.pkl'))
+    merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution.pkl'))
     # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion0'))
     # create_small_sample_dict(merged_dict)
     # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
     
     # GET RELEVANT INFO FROM PROTEIN OBJECTS
 
-    # proteins = [protein for _, protein in merged_dict.items()]
-        #  uniprots, sequences, protein_paths, data_components_flattend, data_protein_size, data_number_of_components, data_components, sources = create_data_relevant_for_training(
-        # dev_utils.MAX_NUMBER_OF_COMPONENTS, merged_dict)
+    proteins = [protein for _, protein in merged_dict.items()]
+    uniprots, sequences, protein_paths, data_components_flattend, data_protein_size,data_number_of_components, data_components, sources = create_data_relevant_for_training(
+       dev_utils.MAX_NUMBER_OF_COMPONENTS, merged_dict)
     # CREATE SCALERS
    
-    # dev_utils.fit_protein_data(np.array(data_components_flattend), np.array(data_protein_size),  np.array(data_number_of_components),
-                            #    paths.scalers_path, dev_utils.MAX_NUMBER_OF_COMPONENTS)
+    dev_utils.fit_protein_data(np.array(data_components_flattend), np.array(data_protein_size),  np.array(data_number_of_components),
+                              paths.scalers_path, dev_utils.MAX_NUMBER_OF_COMPONENTS)
 
     # SAVE DATA FOR TRAINING
     save_as_pickle(sources,os.path.join(paths.patch_to_score_data_for_training_path, 'sources.pkl'))
     save_as_pickle(uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots.pkl'))
     save_as_pickle(protein_paths,os.path.join(paths.patch_to_score_data_for_training_path, 'protein_paths.pkl'))
-    labels = tf.convert_to_tensor([0 if source in NEGATIVE_SOURCES else 1 for source in sources])
+    labels = tf.convert_to_tensor([0 if source in dev_utils.NEGATIVE_SOURCES else 1 for source in sources])
     dev_utils.save_as_tensor(labels,os.path.join(paths.patch_to_score_data_for_training_path, 'labels.tf'))
     
     scaled_sizes, scaled_components_list, encoded_components_list = (
@@ -89,13 +89,13 @@ if __name__ == "__main__":
                                               os.path.join(paths.scalers_path, 'scaler_size.pkl'),
                                               os.path.join(paths.scalers_path, 'scaler_components.pkl'),
                                               os.path.join(paths.scalers_path, 'encoder.pkl'),
-                                              MAX_NUMBER_OF_COMPONENTS))
+                                              dev_utils.MAX_NUMBER_OF_COMPONENTS))
     dev_utils.save_as_tensor(scaled_sizes, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_sizes.tf'))
     dev_utils.save_as_tensor(scaled_components_list, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_components_list.tf'))
     dev_utils.save_as_tensor(encoded_components_list, os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list.tf'))
 
     # PARTIOTION THE DATA BY SEQUENCE LIKELIHOOD
-    # partition_utils.partition_to_folds_and_save(sequences)
+    partition_utils.partition_to_folds_and_save(sequences)
     
     # CREATE UNIPROTS SETS
     partition_utils.create_uniprots_sets()

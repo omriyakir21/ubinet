@@ -62,14 +62,21 @@ class Protein:
         self.uniprot_name = uniprot_name
         self.ubiq_predictions = all_predictions['dict_predictions_ubiquitin'][uniprot_name]
         self.non_ubiq_predictions = all_predictions['dict_predictions_interface'][uniprot_name]
-        self.residues = all_predictions['dict_resids'][uniprot_name]
         self.source = all_predictions['dict_sources'][uniprot_name]
         self.plddt_values = self.get_plddt_values()
-        self.size = None
+        self.sequence = self.get_sequence()
+        self.size = len(self.sequence)
         self.graph = nx.Graph()
         self.create_graph(plddt_threshold)
         self.connected_components_tuples = self.create_connected_components_tuples()
 
+    def get_residues(self):
+        structure = self.get_structure()
+        model = structure.child_list[0]
+        assert (len(model) == 1)
+        for chain in model:
+            return aa_out_of_chain(chain)
+    
     def get_structure(self, path=None):
         if path is not None:
             structurePath = path
@@ -174,14 +181,7 @@ def create_patches_dict(i, dir_path, plddt_threshold, all_predictions):
     for key in all_keys:
         print("i= ", i, " cnt = ", cnt, " key = ", key)
         cnt += 1
-        try:
-            patches_dict[key] = Protein(key, plddt_threshold, all_predictions)
-        except SizeDifferentiationException as e:
-            print(e)
-            continue
-        except Exception as e:
-            print(e)
-            continue
+        patches_dict[key] = Protein(key, plddt_threshold, all_predictions)
     save_as_pickle(patches_dict, os.path.join(os.path.join(dir_path, 'proteinObjectsWithEvoluion' + str(i))))
 
 
@@ -522,7 +522,11 @@ def fit_protein_data(all_data_components, all_data_protein_size, all_data_number
 
 def transform_protein_data(protein, scaler_size, scaler_components, encoder, max_number_of_components):
     # Extract and scale the size
+    print(f'protein is {protein}')
     scaled_size = scaler_size.transform(np.array([protein.size]).reshape(-1, 1))
+    print(f'protein.size is {protein.size}')
+    print(f'{np.array([protein.size]).reshape(-1, 1)}')
+    print(f'in transform_protein_data, scaled_size is {scaled_size}')
 
     # Extract, scale, and pad the components
     top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
@@ -566,6 +570,7 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
 
     # Print shapes of lists before stacking
     print("scaled_sizes list shape:", len(scaled_sizes), scaled_sizes[0].shape if scaled_sizes else None)
+    print(f'scaled_sizes is {scaled_sizes}')
     print("scaled_components_list shape:", len(scaled_components_list),
           scaled_components_list[0].shape if scaled_components_list else None)
     print("encoded_components_list shape:", len(encoded_components_list),
@@ -632,4 +637,3 @@ def convert_cif_to_pdb(cif_path, pdb_path):
     
     # Save the structure as a .pdb file
     io.save(pdb_path)
-

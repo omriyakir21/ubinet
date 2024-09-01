@@ -7,7 +7,7 @@ import paths
 import patch_to_score_MLP_utils as utils
 import tensorflow as tf
 from data_preparation.ScanNet.db_creation_scanNet_utils import load_as_pickle,save_as_pickle
-from results.patch_to_score.patch_to_score_result_analysis import get_best_architecture_path
+from results.patch_to_score.patch_to_score_result_analysis import get_best_architecture_models_path
 
 def train_models(directory_name):
     folds_training_dicts = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path,
@@ -18,7 +18,7 @@ def train_models(directory_name):
     total_aucs = []
     n_layers = int(sys.argv[1])
     m_a = int(sys.argv[2])
-    m_b_values = [128, 256, 512]
+    m_b_values = [1024]
     m_c = int(sys.argv[3])
     batch_size = 1024
     n_early_stopping_epochs = 12
@@ -74,9 +74,7 @@ def train_models(directory_name):
                                                             mode='max',
                                                             patience=n_early_stopping_epochs,
                                                             restore_best_weights=True)],
-                batch_size=batch_size,
-                class_weight=class_weight
-
+                batch_size=batch_size
             )
 
             yhat_validation = model.predict(
@@ -100,37 +98,37 @@ def train_models(directory_name):
         save_as_pickle(architecture_aucs,os.path.join(architecture_dir_path,f'architecture_aucs.pkl'))
     save_as_pickle(total_aucs, os.path.join(directory_name, f'totalAucs:n_layers:{str(n_layers)}_m_a:{str(m_a)}_m_c:{str(m_c)}.pkl'))
 
-def predict_over_test_set(model_dir_path):
-    models_dir_path = get_best_architecture_path(models_dir_path)
+def predict_over_test_set(models_dir_path,results_dir):
+    architecture_dir_path = get_best_architecture_models_path(models_dir_path,results_dir)
+    print(f'architecture_dir_path is {architecture_dir_path}')
     models = []
-    for filename in os.listdir(models_dir_path):
+    for filename in os.listdir(architecture_dir_path):
         if filename.endswith('.keras'):
-            models.append(tf.keras.models.load_model(os.path.join(models_dir_path, filename)))
+            models.append(tf.keras.models.load_model(os.path.join(architecture_dir_path, filename)))
     folds_training_dicts = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path,
                                                                         'folds_traning_dicts.pkl'))
     all_predictions = []
     all_labels = []
+    
     for i in range(len(folds_training_dicts)):
         dict_for_training = folds_training_dicts[i]
         sizes_test = tf.squeeze(dict_for_training['sizes_test'],axis=1)
         components_test = dict_for_training['components_test']
         num_patches_test = tf.squeeze(dict_for_training['num_patches_test'],axis=1)
         labels_test = dict_for_training['labels_test']
-        predictions = []
-        for model in models:
-            predictions.append(model.predict([components_test, sizes_test, num_patches_test]))
-        predictions = np.mean(predictions, axis=0)
+        model = models[i]
+        predictions = model.predict([components_test, sizes_test, num_patches_test])
         all_predictions.append(predictions)
         all_labels.append(labels_test.numpy())
     all_labels = np.concatenate(all_labels)
     all_predictions = np.concatenate(all_predictions)
-    np.save(os.path.join(models_dir_path,'predictions_test.npy'),all_predictions)
-    np.save(os.path.join(models_dir_path,'labels_test.npy'),all_labels)
+    np.save(os.path.join(architecture_dir_path,'predictions_test.npy'),all_predictions)
+    np.save(os.path.join(architecture_dir_path,'labels_test.npy'),all_labels)
 
     
 
 
 if __name__ == "__main__":
-    train_models(paths.with_MSA_50_plddt_0304_dir)
-    # predict_over_test_set(paths.with_MSA_50_plddt_0304_dir)
+    # train_models(paths.with_MSA_50_plddt_0304_models_dir)
+    predict_over_test_set(paths.with_MSA_50_plddt_0304_models_dir,paths.with_MSA_50_plddt_0304_results_dir)
     # print('done')
