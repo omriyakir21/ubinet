@@ -1,7 +1,7 @@
 import copy
 import os
 import sys
-
+import shutil
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import pickle
 
@@ -118,6 +118,42 @@ def integrate_all_files(num_sublists):
     integrate_all_batches_summarylog(paths.ImerFiles_path, os.path.join(paths.ImerFiles_path, 'Integrated_summaryLog.txt'), num_sublists)
 
 
+def copy_files_to_new_folder(file_paths, new_folder_path):
+    """
+    Copies a list of files to a new folder.
+
+    :param file_paths: List of file paths to be copied.
+    :param new_folder_path: Path to the new folder where files will be copied.
+    """
+    # Create the new folder if it doesn't exist
+    if not os.path.exists(new_folder_path):
+        os.makedirs(new_folder_path)
+
+    # Copy each file to the new folder
+    for file_path in file_paths:
+        if os.path.isfile(file_path):
+            shutil.copy(file_path, new_folder_path)
+        else:
+            print(f"File not found: {file_path}")
+
+
+def rename_cif_files(folder_path):
+    """
+    Renames .cif files in the specified folder from {pdb_name}-{some string}.cif to {pdb_name}.cif.
+
+    :param folder_path: Path to the folder containing the .cif files.
+    """
+    for file_name in os.listdir(folder_path):
+        if file_name.endswith('.cif'):
+            parts = file_name.split('-')
+            if len(parts) > 1:
+                pdb_name = parts[0]
+                new_file_name = f"{pdb_name}.cif"
+                old_file_path = os.path.join(folder_path, file_name)
+                new_file_path = os.path.join(folder_path, new_file_name)
+                os.rename(old_file_path, new_file_path)
+                print(f"Renamed {file_name} to {new_file_name}")
+
 
 if __name__ == "__main__":
     # retrive the list of PDB names
@@ -128,7 +164,9 @@ if __name__ == "__main__":
     # chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
     #     os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
     NUM_SUBLISTS = 40
-    chosen_assemblies = db_utils.load_as_pickle(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
-    print(len(chosen_assemblies))
+    # chosen_assemblies = db_utils.load_as_pickle(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
+    # print(len(chosen_assemblies))
     # run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'), NUM_SUBLISTS)
-    # integrate_all_files(NUM_SUBLISTS)
+    # integrate_all_files(NUM_SUBLISTS)  
+    # copy_files_to_new_folder(chosen_assemblies, paths.chosen_assemblies_path)
+    rename_cif_files(paths.chosen_assemblies_path)

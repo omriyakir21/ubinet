@@ -54,6 +54,7 @@ cath_path = os.path.join(scanNet_sources_path, 'cath')
 blast_search_path = os.path.join(scanNet_sources_path, 'blast_search')
 pdbs_path = os.path.join(scanNet_sources_path, 'pdbs')
 assemblies_path = os.path.join(scanNet_sources_path, 'assemblies')
+chosen_assemblies_path = os.path.join(scanNet_sources_path, 'chosen_assemblies')
 
 # models
 models_path = os.path.join(current_dir, 'models')
