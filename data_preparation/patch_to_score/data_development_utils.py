@@ -522,11 +522,11 @@ def fit_protein_data(all_data_components, all_data_protein_size, all_data_number
 
 def transform_protein_data(protein, scaler_size, scaler_components, encoder, max_number_of_components):
     # Extract and scale the size
-    print(f'protein is {protein}')
+    # print(f'protein is {protein}')
     scaled_size = scaler_size.transform(np.array([protein.size]).reshape(-1, 1))
-    print(f'protein.size is {protein.size}')
-    print(f'{np.array([protein.size]).reshape(-1, 1)}')
-    print(f'in transform_protein_data, scaled_size is {scaled_size}')
+    # print(f'protein.size is {protein.size}')
+    # print(f'{np.array([protein.size]).reshape(-1, 1)}')
+    # print(f'in transform_protein_data, scaled_size is {scaled_size}')
 
     # Extract, scale, and pad the components
     top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[

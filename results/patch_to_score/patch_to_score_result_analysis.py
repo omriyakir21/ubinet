@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import precision_recall_curve, auc
 import numpy as np
 from models.patch_to_score.patch_to_score_MLP_utils import k_computation, prediction_function_using_bayes_factor_computation
+
 import math
 import requests
 import time
@@ -70,8 +71,8 @@ def get_best_architecture_models_path(models_dir,results_dir):
 
 def save_pr_plot(architecture_models_dir,results_architecture_dir):
     # Load predictions and labels
-    predictions = np.load(os.path.join(architecture_models_dir,"predictions.npy"))
-    labels = np.load(os.path.join(architecture_models_dir,"labels.npy"))
+    predictions = np.load(os.path.join(architecture_models_dir,"predictions_test.npy"))
+    labels = np.load(os.path.join(architecture_models_dir,"labels_test.npy"))
     
     # Calculate Precision-Recall and AUC
     precision, recall, _ = precision_recall_curve(labels, predictions)
