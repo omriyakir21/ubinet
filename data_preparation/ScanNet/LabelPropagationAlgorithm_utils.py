@@ -1,7 +1,5 @@
 import os
-
 import sys
-
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import pickle
 import subprocess
@@ -10,7 +8,6 @@ import paths
 import numpy as np
 import pandas as pd
 from models.ScanNet_Ub.preprocessing.sequence_utils import load_FASTA, num2seq
-from db_creation_scanNet_utils import save_as_pickle, load_as_pickle
 import pdb
 
 
