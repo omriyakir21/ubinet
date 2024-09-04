@@ -181,7 +181,7 @@ def find_class_for_receptor(pdb_name, chains_names, not_found_tuples_list):
         pdb_name_4_letters = pdb_name[:4]
         print((pdb_name_4_letters, chain_name))
         try:
-            _, name, _, _, _ = Uniprot_utils.get_chain_organism(pdb_name_4_letters, chain_name)
+            _, name, _, _, _ = get_chain_organism(pdb_name_4_letters, chain_name)
             look_for_class_in_string_util(name, class_dict_for_receptor)
         except:
             print('Exception! ')
@@ -231,14 +231,14 @@ if __name__ == '__main__':
     chain_dict = make_chain_dict(chain_names)
     print(f'chain_dict: {chain_dict}')
 
-    # e1Dict, e2Dict, e3e4Dict, deubiquitylaseDict, notFoundTuplesList = find_class_for_receptors(pssm_content_path,
-    #                                                                                             asa_content_path,
-    #                                                                                             mono_ubiquitin_receptors_names)
-    # print(f'e1Dict: {e1Dict}')
-    # print(f'e2Dict: {e2Dict}')
-    # print(f'e3e4Dict: {e3e4Dict}')
-    # print(f'deubiquitylaseDict: {deubiquitylaseDict}')
-    # print(f'notFoundTuplesList: {notFoundTuplesList}')
+    e1Dict, e2Dict, e3e4Dict, deubiquitylaseDict, notFoundTuplesList = find_class_for_receptors(pssm_content_path,
+                                                                                                asa_content_path,
+                                                                                                mono_ubiquitin_receptors_names)
+    print(f'e1Dict: {e1Dict}')
+    print(f'e2Dict: {e2Dict}')
+    print(f'e3e4Dict: {e3e4Dict}')
+    print(f'deubiquitylaseDict: {deubiquitylaseDict}')
+    print(f'notFoundTuplesList: {notFoundTuplesList}')
 
     # averagePositivesPredictionsDict = calculate_positives_average_predicted_probability(mono_ubiquitin_receptors_names,
     #                                                                                 unpropagated_predictions)
