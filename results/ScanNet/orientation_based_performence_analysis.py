@@ -10,9 +10,7 @@ from sklearn.decomposition import PCA
 from sklearn.mixture import GaussianMixture
 import paths
 from data_preparation.ScanNet.LabelPropagationAlgorithm_utils import split_receptors_into_individual_chains
-# from UBDModel import LabelPropagationAlgorithm
-# from UBDModel import Uniprot_utils
-
+from uniprot_utils import get_chain_organism
 
 def from_binding_residues_string_to_hot_one_encoding(binding_residues_string):
     hot_one_encoding = np.zeros(75)
@@ -123,7 +121,7 @@ def calculate_is_covalent_bond_for_receptor(receptor_name, unpropagated_predicti
     # remove endLine from last residue
     mono_ubiquitin_splitted_lines[mono_ubiq_index][3] = mono_ubiquitin_splitted_lines[mono_ubiq_index][3][:-1]
     ubiquitins_bounded_residues_strings = mono_ubiquitin_splitted_lines[mono_ubiq_index][3].split('//')
-    C_terminus_amino_acid = 'G75'
+    C_terminus_amino_acid = 'G76'
     for ubiquitin_bounded_residues_string in ubiquitins_bounded_residues_strings:
         ubiquitin_bounded_residues = ubiquitin_bounded_residues_string.split('+')
         if C_terminus_amino_acid in ubiquitin_bounded_residues:
@@ -212,7 +210,7 @@ def find_class_for_receptors(pssm_content_path,asa_content_path,mono_ubiquitin_r
 
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
     summaryFile = open(os.path.join(paths.ImerFiles_path, 'Integrated_summaryLog.txt'), 'r')
     lines = summaryFile.readlines()
     summaryFile.close()
@@ -227,14 +225,20 @@ if __name__ == 'main':
     # isCovalentBondDict = calculate_is_covalent_bond_for_receptors(mono_ubiquitin_receptors_names)
     pssm_content_path = os.path.join(paths.PSSM_path, 'propagatedPssmWithAsaFile.txt')
     asa_content_path = os.path.join(paths.ASA_path, 'normalizedFullASAPssmContent.txt')
-    e1Dict, e2Dict, e3e4Dict, deubiquitylaseDict, notFoundTuplesList = find_class_for_receptors(pssm_content_path,
-                                                                                                asa_content_path,
-                                                                                                mono_ubiquitin_receptors_names)
-    print(f'e1Dict: {e1Dict}')
-    print(f'e2Dict: {e2Dict}')
-    print(f'e3e4Dict: {e3e4Dict}')
-    print(f'deubiquitylaseDict: {deubiquitylaseDict}')
-    print(f'notFoundTuplesList: {notFoundTuplesList}')
+    _, _, _, chain_names, _, _ = split_receptors_into_individual_chains(
+        pssm_content_path, asa_content_path)
+    print(f'chain_names: {chain_names}')
+    chain_dict = make_chain_dict(chain_names)
+    print(f'chain_dict: {chain_dict}')
+
+    # e1Dict, e2Dict, e3e4Dict, deubiquitylaseDict, notFoundTuplesList = find_class_for_receptors(pssm_content_path,
+    #                                                                                             asa_content_path,
+    #                                                                                             mono_ubiquitin_receptors_names)
+    # print(f'e1Dict: {e1Dict}')
+    # print(f'e2Dict: {e2Dict}')
+    # print(f'e3e4Dict: {e3e4Dict}')
+    # print(f'deubiquitylaseDict: {deubiquitylaseDict}')
+    # print(f'notFoundTuplesList: {notFoundTuplesList}')
 
     # averagePositivesPredictionsDict = calculate_positives_average_predicted_probability(mono_ubiquitin_receptors_names,
     #                                                                                 unpropagated_predictions)
