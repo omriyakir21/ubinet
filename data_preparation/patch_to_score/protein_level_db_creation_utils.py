@@ -70,7 +70,7 @@ def get_evidence_util(path):
     return evidence_list
 
 
-def download_alphafold_model(uniprot_id, class_dir):
+def download_alphafold_model(uniprot_id, dir_path):
     # Construct the URL for the AlphaFold model
     url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
 
@@ -79,7 +79,7 @@ def download_alphafold_model(uniprot_id, class_dir):
 
         # Send the request to fetch the model
         response = requests.get(url)
-        file_path = os.path.join(class_dir, f"{uniprot_id}.pdb")
+        file_path = os.path.join(dir_path, f"{uniprot_id}.pdb")
         # Check if the request was successful
         if response.status_code == 200:
             # Save the model to a file

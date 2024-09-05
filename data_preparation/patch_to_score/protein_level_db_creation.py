@@ -103,7 +103,7 @@ if __name__ == "__main__":
     # protein_db_utils.save_as_pickle(uniprotNames_evidences_list,
     #                                 os.path.join(paths.GO_source_patch_to_score_path,
     #                                              'uniprotNames_evidences_list.pkl'))
-    # fetch_af_models_from_user_args(uniprot_names_dict)
+    fetch_af_models_from_user_args(uniprot_names_dict)
     # rename_AFDB_files()
     PLDDT_RATIO_THRESHOLD = 0.2
     PLDDT_THRESHOLD = 90
