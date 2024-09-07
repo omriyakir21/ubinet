@@ -43,10 +43,14 @@ DUB_path = os.path.join(GO_source_patch_to_score_path, 'DUB')
 AFDB_source_patch_to_score_path = os.path.join(patch_to_score_sources_path, 'AFDB')
 #   scanNet
 datasets_scanNet_path = os.path.join(datasets_path, 'scanNet')
+scanNet_AF2_augmentations_path = os.path.join(datasets_scanNet_path, 'AF2_augmentations')
+
 PSSM_path = os.path.join(datasets_scanNet_path, 'PSSM')
 #       QUEEN
 QUEEN_path = os.path.join(datasets_scanNet_path, 'QUEEN')
 entry_dicts_path = os.path.join(QUEEN_path, 'entry_dicts')
+#       data_for_trainnig
+scanNet_data_for_training_path = os.path.join(datasets_scanNet_path, 'data_for_training')
 
 #       sources
 scanNet_sources_path = os.path.join(datasets_scanNet_path, 'sources')
@@ -63,13 +67,22 @@ ScanNet_Ub_module_path = os.path.join(models_path, 'ScanNet_Ub')
 AF2_multimer_model_path = os.path.join(models_path, 'AF2_multimer')
 #   structural_aligners
 structural_aligners_path = os.path.join(models_path, 'structural_aligners')
+#       pdb_files 
+pdb_files_structural_aligners_path = os.path.join(structural_aligners_path, 'pdb_files')
+#       missing uniprots fasta files
+missing_uniprots_fasta_files_path = os.path.join(structural_aligners_path, 'missing_uniprots_fasta_files')
 #       dali_aligner
 dali_aligner_dir_path = os.path.join(structural_aligners_path, 'dali_aligner')
 #           DaliLite.v5 dir
 DaliLite_v5_dir_path = os.path.join(dali_aligner_dir_path, 'DaliLite.v5')
 #           dali_aligments
 dali_aligments_path = os.path.join(dali_aligner_dir_path, 'dali_aligments')
-
+#       TM-align
+TM_aligner_dir_path = os.path.join(structural_aligners_path, 'TM-align')
+#           TM-align aligned pdbs
+TM_aligner_aligned_pdbs_path = os.path.join(TM_aligner_dir_path, 'aligned_pdbs')
+#           TM-align transformed pdb files
+TM_aligner_transformed_pdbs_path = os.path.join(TM_aligner_dir_path, 'transformed_pdbs')  
 #   patch_to_score
 patch_to_score_model_path = os.path.join(models_path, 'patch_to_score')
 #       scalers    
