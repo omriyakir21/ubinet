@@ -5,8 +5,20 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import numpy as np
 import subprocess, shutil
 import pandas as pd
+import paths
+import datetime
 
+def add_model_num_to_dataset(input_file, output_file):
+    with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
+        current_section = None
+        for line in infile:
+            if line.startswith('>'):
+                current_section = line.split('_')[1].split('-')[0]
+                outfile.write(line)
+            else:
+                outfile.write(f"{current_section} {line}")
 
+# Usage
 def read_labels(input_file, nmax=np.inf, label_type='int'):
     list_origins = []
     list_sequences = []
@@ -51,10 +63,9 @@ def read_labels(input_file, nmax=np.inf, label_type='int'):
     return list_origins, list_sequences, list_resids, list_labels
 
 
-def cluster_sequences(list_sequences, seqid=1.0, coverage=0.8, covmode='0', path2mmseqstmp='/Users/jerometubiana/tmp/',
-                      path2mmseqs='/opt/anaconda3/bin/mmseqs'
+def cluster_sequences(list_sequences, seqid=1.0, coverage=0.8, covmode='0', path2mmseqstmp=paths.tmp_path,
+                      path2mmseqs=paths.mmseqs_exec_path
                       ):
-    path2mmseqsdatabases = '/Users/jerometubiana/sequence_databases/'
 
     rng = np.random.randint(0, high=int(1e6))
     tmp_input = os.path.join(path2mmseqstmp, 'tmp_input_file_%s.fasta' % rng)
@@ -115,16 +126,37 @@ def calculate_weights(list_sequences, resolutions=[100, 95, 90, 70], coverage=0.
 # %%
 
 if __name__ == '__main__':
+    # # Get the current date
+    current_date = datetime.datetime.now()
+    day = current_date.day
+    month = current_date.month
 
-    input_folder = '0509_dataset/'
+    # # Create the directory name
+    # directory_name = f"{day}_{month}_dataset"
 
+    # # Create the full path
+    # output_folder = os.path.join(paths.scanNet_data_for_training_path, directory_name)
+
+    # # Check if the directory exists, if not, create it
+    # if not os.path.exists(output_folder):
+    #     os.makedirs(output_folder)
+    
+    # for i in range(5):
+    #     input_file = os.path.join(paths.PSSM_path,'PSSM_8_9', f'PSSM{i}.txt')
+    #     output_file = os.path.join(output_folder, f'labels_fold{i+1}.txt')
+    #     add_model_num_to_dataset(input_file, output_file)
+    
+    output_folder = os.path.join(paths.scanNet_data_for_training_path,f"{day}_{month}_dataset")
+    # if not os.path.exists(input_folder):
+    #     os.makedirs(input_folder)
+    
     all_origins = []
     all_folds = []
     all_weights = []
     all_sequences = []
 
     for k in range(1, 6):
-        dataset_file = os.path.join(input_folder, 'labels_fold%s.txt' % k)
+        dataset_file = os.path.join(output_folder, 'labels_fold%s.txt' % k)
         list_origins, list_sequences, list_resids, list_labels = read_labels(dataset_file)
         all_origins += list(list_origins)
         all_folds += ['Fold %s' % k] * len(list_origins)
@@ -148,7 +180,7 @@ if __name__ == '__main__':
         'Sample weight flat95': all_weights_v2,
         'Sample weight flat70': all_weights_v3,
     })
-    table.to_csv(os.path.join(input_folder, 'table.csv'))
+    table.to_csv(os.path.join(output_folder, 'table.csv'))
 
     # %%
 
