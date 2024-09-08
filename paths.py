@@ -71,6 +71,8 @@ structural_aligners_path = os.path.join(models_path, 'structural_aligners')
 pdb_files_structural_aligners_path = os.path.join(structural_aligners_path, 'pdb_files')
 #       missing uniprots fasta files
 missing_uniprots_fasta_files_path = os.path.join(structural_aligners_path, 'missing_uniprots_fasta_files')
+#       files from colab fold
+structural_alignment_files_from_colab_path = os.path.join(structural_aligners_path, 'files_from_colab_fold')
 #       dali_aligner
 dali_aligner_dir_path = os.path.join(structural_aligners_path, 'dali_aligner')
 #           DaliLite.v5 dir
