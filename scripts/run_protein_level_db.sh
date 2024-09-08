@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CLASS_NAME=E3
+CLASS_NAME=DUB
 BATCH_SIZE=2000
 
 # Load the uniprot names dict
