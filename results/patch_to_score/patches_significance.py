@@ -390,13 +390,50 @@ def process_top_uniprots_by_source(file_path, source, output_file,all_prediction
     # Save to a new CSV file
     top_500_df.to_csv(output_file, index=False)
 
+def calculate_log_likelihood_significance(inference_prediction, significance):
+    log_likelihood_inference_with_patch = np.log(inference_prediction / (1 - inference_prediction))
+    log_likelihood_inference_without_patch = np.log((inference_prediction - significance) / 
+                                                    (1 - inference_prediction + significance))
+    return log_likelihood_inference_with_patch - log_likelihood_inference_without_patch
 
+def calculate_significance_ll(input_csv, output_csv):
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(input_csv)
+    
+    # Iterate through each significance column
+    for i in range(1, 11):
+        significance_col = f'significance{i}'
+        
+        # Calculate significance_ll_{index} using the utility function
+        df[f'significance_ll_{i}'] = df.apply(lambda row: calculate_log_likelihood_significance(row['inference_prediction'], row[significance_col]), axis=1)
+        
+        # Insert the new column right after the respective significance column
+        col_index = df.columns.get_loc(significance_col) + 1
+        cols = df.columns.tolist()
+        cols.insert(col_index, cols.pop(cols.index(f'significance_ll_{i}')))
+        df = df[cols]
+    
+    # Save the updated DataFrame to a new CSV file
+    df.to_csv(output_csv, index=False)
+
+def filter_top_examples(input_csv, output_csv):
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(input_csv)
+    
+    # Filter rows where str_patch1 has fewer than 6 amino acids
+    df = df[df['str_patch1'].apply(lambda x: len(x.split(',')) >= 6)]
+    
+    # Filter rows where significance_ll_1 is lower than ln(2)
+    df = df[df['significance_ll_1'] >= np.log(2)]
+    
+    # Save the filtered DataFrame to the output CSV file
+    df.to_csv(output_csv, index=False)
 
 if __name__ == '__main__':
     # all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
     # labels = load_as_tensor(os.path.join(paths.patch_to_score_data_for_training_path, 'labels.tf'),out_type=tf.int32)
     # create_training_ub_ratio(labels,paths.patch_to_score_data_for_training_path)
-    ub_ratio = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'ub_ratio.pkl'))
+    # ub_ratio = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'ub_ratio.pkl'))
     # uniprots = ['Q86VN1']
     # all_predictions_sub = filter_dicts_by_keys(all_predictions, uniprots)
     # # save_as_pickle(all_predictions_sub, os.path.join(paths.with_MSA_50_plddt_0304_results_dir, 'all_predictions_sub.pkl'))
@@ -412,8 +449,18 @@ if __name__ == '__main__':
     # create csv file for source
     best_architecture_models_path = get_best_architecture_models_path(paths.with_MSA_50_plddt_0304_models_dir, paths.with_MSA_50_plddt_0304_results_dir)
     best_architecture_results_dir = create_best_architecture_results_dir(best_architecture_models_path,paths.with_MSA_50_plddt_0304_results_dir)    
-    for source in list(NEGATIVE_SOURCES):    
-        file_path = os.path.join(best_architecture_results_dir, 'data_predictions_sources.csv')
-        output_file_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_{source}.csv')
-        all_predictions_path = os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl')
-        process_top_uniprots_by_source(file_path, source, output_file_path,all_predictions_path)
+    # for source in list(NEGATIVE_SOURCES):    
+    #     file_path = os.path.join(best_architecture_results_dir, 'data_predictions_sources.csv')
+    #     output_file_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_{source}.csv')
+    #     all_predictions_path = os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl')
+    #     process_top_uniprots_by_source(file_path, source, output_file_path,all_predictions_path)
+
+    # add log likelihood difference significance columns
+    # input_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_Human proteome.csv')
+    output_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_Human proteome2.csv')
+    # calculate_significance_ll(input_path, output_path)    
+
+    #filter top examples
+    input_path = output_path
+    output_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_filtered_Human proteome.csv')
+    filter_top_examples(input_path, output_path)
