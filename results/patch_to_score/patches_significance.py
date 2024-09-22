@@ -17,6 +17,8 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import auc
 from typing import Dict, List
 import pdb
+from cut_protein import extract_patch_from_pdb
+from models.structural_aligners.TM_align.TM_aligner import align_uniprots_with_target
 
 
 def str_patch_from_list_indexes(protein, list_locations):
@@ -37,105 +39,6 @@ def find_model_number(uniprot, uniprots_sets):
             return i
     return None
 
-
-# def change_problamatic_values():
-#     dataDictPath = os.path.join(os.path.join(path.GoPath, 'idmapping_2023_12_26.tsv'), 'AllOrganizemsDataDict.pkl')
-#     data_dict = utils.loadPickle(dataDictPath)
-#     entrysWithDifferentKeyNames = [(key, data_dict[key]['Entry']) for key in data_dict.keys() if
-#                                    key != data_dict[key]['Entry']]
-#     differentNamesDict = {}
-#     for i in range(len(entrysWithDifferentKeyNames)):
-#         differentNamesDict[entrysWithDifferentKeyNames[i][1]] = entrysWithDifferentKeyNames[i][0]
-
-#     df = pd.read_csv(os.path.join(modelsDir, 'results_final_modelwith_evolution_50_plddt_all_organizems_15_4.csv'))
-
-#     # Replace values in the 'Entry' column
-#     df['Entry'].replace(differentNamesDict, inplace=True)
-
-#     # Save the modified DataFrame back to a CSV file
-#     df.to_csv(os.path.join(modelsDir, 'results_final_modelwith_evolution_50_plddt_all_organizems_fixed_15_4.csv'),
-#               index=False)
-
-#     print("Replacement complete.")
-
-
-# def sort_locations(componentsLocations, sorted_indices):
-#     sortedLocations = []
-#     for i in range(len(componentsLocations)):
-#         sortedLocations.append(componentsLocations[sorted_indices[i]])
-#     return sortedLocations
-
-
-# def sort_best_patches_from_uniprot(uniprot):
-#     if uniprot not in aggragate.allPredictions['dict_resids'].keys():
-#         raise Exception("uniprot " + str(uniprot) + " not in the DB")
-#     modelIndex = find_model_number(uniprot)
-#     model = models[modelIndex]
-#     trainingUbRatio = np.mean(allInfoDicts[modelIndex]['y_train'])
-#     protein = aggragate.Protein(uniprot, plddtThreshold)
-#     tuples = protein.connectedComponentsTuples
-#     components = np.array([[tup[0], tup[1], tup[2], tup[3]] for tup in tuples])
-#     componentsLocations = [tup[4] for tup in tuples]
-#     n_patches = 0
-#     if len(tuples) == 0:
-#         return [None for i in range(10)], [None for i in range(10)]
-#     # SORT BY UB BINDING PROB
-#     sorted_indices = tf.argsort(components[:, 1])
-#     sorted_tensor = tf.gather(components, sorted_indices)
-#     sortedTensorListed = [sorted_tensor]
-#     utils.Scale4DUtil(sortedTensorListed, sizeComponentScaler, averageUbBindingScaler, plddtScaler)
-#     sortedScaledPadded = tf.keras.preprocessing.sequence.pad_sequences(
-#         sortedTensorListed, padding="post", maxlen=maxNumberOfPatches, dtype='float32')
-#     n_patches = np.array([np.min([maxNumberOfPatches, sorted_tensor.shape[0]])])
-#     n_patches_encoded = utils.hotOneEncodeNPatches(n_patches)
-#     sortedLocations = sort_locations(componentsLocations, sorted_indices)
-#     sortedLocationsCutted = sortedLocations[:n_patches[0]]
-
-#     size = protein.size
-#     sizeScaled = proteinSizeScaler.transform(np.array([size]).reshape(-1, 1))
-
-#     yhat = model.predict([sortedScaledPadded, sizeScaled, n_patches_encoded])
-#     KValue = utils.KComputation(yhat[0], trainingUbRatio)
-#     inferencePrediction = utils.predictionFunctionUsingBayesFactorComputation(0.05, KValue)
-
-#     significance = [None for _ in range(n_patches[0])]
-#     for i in range(n_patches[0]):
-#         newComponents = np.delete(sortedScaledPadded, i, axis=1)
-#         location = sortedLocationsCutted[i]
-#         new_n_patches_encoded = utils.hotOneEncodeNPatches(n_patches - 1)
-#         newYhat = model.predict([newComponents, sizeScaled, new_n_patches_encoded])
-#         newKValue = utils.KComputation(newYhat[0], trainingUbRatio)
-#         newInferencePrediction = utils.predictionFunctionUsingBayesFactorComputation(0.05, newKValue)
-#         significance[i] = (i, inferencePrediction - newInferencePrediction)
-
-#     significance.sort(key=lambda x: -x[1])
-
-#     strPatches, significance10 = create_str_patches_and_Significance10(significance, sortedLocationsCutted, uniprot,
-#                                                                    protein)
-#     return strPatches, significance10
-
-# def createCsvForType(type, numOfType):
-#     finalReslutsPath = os.path.join(modelsDir,
-#                                     'results_final_modelwith_evolution_50_plddt_all_organizems_fixed_15_4.csv')
-#     df = pd.read_csv(finalReslutsPath)
-#     typeDf = df[df['type'] == type]
-#     sortedDf = typeDf.sort_values(by='Inference Prediction 0.05 prior', ascending=False)
-#     sortedCutted = sortedDf.head(numOfType)
-#     uniprots = sortedCutted['Entry'].to_list()
-#     strPatchesLists = [[] for i in range(10)]
-#     significanceLists = [[] for i in range(10)]
-#     for i in range(numOfType):
-#         print(uniprots[i])
-#         strPatches, significance10 = sortBestPatchesFromUniprot(uniprots[i])
-#         for j in range(10):
-#             strPatchesLists[j].append(strPatches[j])
-#             significanceLists[j].append(significance10[j])
-
-#     for i in range(10):
-#         sortedCutted['Patch' + str(i)] = strPatchesLists[i]
-#         sortedCutted['Reduced Probability' + str(i)] = significanceLists[i]
-#     sortedCutted.to_csv(os.path.join(modelsDir, type + '.csv'), index=False)
-#     return sortedCutted
 
 def predict_for_protein(uniprot, scaled_size, scaled_components, encoded_components, models):
     uniprots_sets = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots_sets.pkl'))
@@ -429,13 +332,51 @@ def filter_top_examples(input_csv, output_csv):
     # Save the filtered DataFrame to the output CSV file
     df.to_csv(output_csv, index=False)
 
+def create_substructures_for_filtered(csv_file, output_dir):
+    substructures_dir = os.path.join(output_dir, 'substructures')
+    if not os.path.exists(substructures_dir):
+        os.makedirs(substructures_dir)
+    # Read the CSV file
+    df = pd.read_csv(csv_file)
+    
+    # Iterate through each row in the DataFrame
+    for index, row in df.iterrows():
+        # Extract uniprot and str_patch1
+        uniprot_id = row['uniprot']
+        str_patch = row['str_patch1']
+        source = row['source']
+        organism = source.split()[0]
+        
+        # Call extract_patch_from_pdb
+        # Assuming input_file is handled later, using a placeholder for now
+        input_file = os.path.join(paths.AFDB_source_patch_to_score_path,organism,f'{uniprot_id}.pdb')
+        residue_count = extract_patch_from_pdb(uniprot_id, str_patch, 1, input_file, substructures_dir)
+        # Remove the row if residue_count is greater than 300
+        if residue_count > 300:
+            df.drop(index, inplace=True)
+    # Save the filtered DataFrame to the output CSV file
+    output_path = os.path.join(output_dir, f'data_predictions_significances_final_{organism}.csv')
+    df.to_csv(output_path, index=False)
+
+def tm_align_substructures(substructures_dir, output_dir):
+    pdb_chain_table_path = os.path.join(paths.structural_aligners_path,'pdb_chain_table_uniprot_with_classes.csv')
+    aligned_pdbs_dir = os.path.join(output_dir, 'aligned_pdbs')
+    if not os.path.exists(aligned_pdbs_dir):
+        os.makedirs(aligned_pdbs_dir)
+    # Iterate through each substructure file in the substructures directory
+    for file in os.listdir(substructures_dir):
+        # Call TM-align
+        # Assuming input_file is handled later, using a placeholder for now
+        target_pdb = os.path.join(substructures_dir, file)
+        align_uniprots_with_target(target_pdb, pdb_chain_table_path,aligned_pdbs_dir)
+
+
 if __name__ == '__main__':
     # all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
     # labels = load_as_tensor(os.path.join(paths.patch_to_score_data_for_training_path, 'labels.tf'),out_type=tf.int32)
     # create_training_ub_ratio(labels,paths.patch_to_score_data_for_training_path)
     # ub_ratio = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'ub_ratio.pkl'))
-    # uniprots = ['Q86VN1']
-    # all_predictions_sub = filter_dicts_by_keys(all_predictions, uniprots)
+        # all_predictions_sub = filter_dicts_by_keys(all_predictions, uniprots)
     # # save_as_pickle(all_predictions_sub, os.path.join(paths.with_MSA_50_plddt_0304_results_dir, 'all_predictions_sub.pkl'))
     # all_predictions_sub = load_as_pickle(os.path.join(paths.with_MSA_50_plddt_0304_results_dir, 'all_predictions_sub.pkl'))
     # significances_lists, str_patches_lists = create_str_patches_and_Significances(all_predictions_sub, 50, ub_ratio)
@@ -457,10 +398,12 @@ if __name__ == '__main__':
 
     # add log likelihood difference significance columns
     # input_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_Human proteome.csv')
-    output_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_Human proteome2.csv')
-    # calculate_significance_ll(input_path, output_path)    
+    # calculate_significance_ll(input_path, input_path)    
 
     #filter top examples
-    input_path = output_path
-    output_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_filtered_Human proteome.csv')
-    filter_top_examples(input_path, output_path)
+    # output_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_filtered_Human proteome.csv')
+    # filter_top_examples(input_path, output_path)
+    # create_substructures_for_filtered(output_path, best_architecture_results_dir)
+    tm_align_substructures(os.path.join(best_architecture_results_dir, 'substructures'), best_architecture_results_dir)
+
+
