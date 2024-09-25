@@ -102,6 +102,7 @@ def integrate_all_batches_summarylog(batch_dir, output_file, num_sublists):
         summary_log_path = os.path.join(batch_path, "summaryLog.txt")
         if os.path.exists(summary_log_path):
             with open(summary_log_path, 'r') as file:
+                integrated_content += '\n'
                 integrated_content += file.read()
     with open(output_file, 'w') as output:
         output.write(integrated_content)
@@ -169,4 +170,5 @@ if __name__ == "__main__":
     # run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'), NUM_SUBLISTS)
     # integrate_all_files(NUM_SUBLISTS)  
     # copy_files_to_new_folder(chosen_assemblies, paths.chosen_assemblies_path)
-    rename_cif_files(paths.chosen_assemblies_path)
+    # rename_cif_files(paths.chosen_assemblies_path)
+    integrate_all_batches_summarylog(paths.ImerFiles_path, os.path.join(paths.ImerFiles_path, 'Integrated_summaryLog2.txt'), NUM_SUBLISTS)
