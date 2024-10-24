@@ -43,7 +43,18 @@ DUB_path = os.path.join(GO_source_patch_to_score_path, 'DUB')
 AFDB_source_patch_to_score_path = os.path.join(patch_to_score_sources_path, 'AFDB')
 #   scanNet
 datasets_scanNet_path = os.path.join(datasets_path, 'scanNet')
+#       binding_chains_pdbs
+binding_chains_pdbs_path = os.path.join(datasets_scanNet_path, 'binding_chains_pdbs')
+#           with ubiqs
+binding_chains_pdbs_with_ubiqs_path = os.path.join(binding_chains_pdbs_path, 'with_ubiqs')
+#           without ubiqs
+binding_chains_pdbs_without_ubiqs_path = os.path.join(binding_chains_pdbs_path, 'without_ubiqs')
+#       AF2_augmentations
 scanNet_AF2_augmentations_path = os.path.join(datasets_scanNet_path, 'AF2_augmentations')
+#           original_pdbs_with_augmentations
+original_pdbs_with_augmentations_path = os.path.join(scanNet_AF2_augmentations_path, 'original_pdbs_with_augmentations')
+#           pdbs_with_augmentations_path
+pdbs_with_augmentations_path = os.path.join(scanNet_AF2_augmentations_path, 'pdbs_with_augmentations')
 
 PSSM_path = os.path.join(datasets_scanNet_path, 'PSSM')
 #       QUEEN
@@ -80,7 +91,7 @@ DaliLite_v5_dir_path = os.path.join(dali_aligner_dir_path, 'DaliLite.v5')
 #           dali_aligments
 dali_aligments_path = os.path.join(dali_aligner_dir_path, 'dali_aligments')
 #       TM-align
-TM_aligner_dir_path = os.path.join(structural_aligners_path, 'TM-align')
+TM_aligner_dir_path = os.path.join(structural_aligners_path, 'TM_align')
 #           TM-align aligned pdbs
 TM_aligner_aligned_pdbs_path = os.path.join(TM_aligner_dir_path, 'aligned_pdbs')
 #           TM-align transformed pdb files
@@ -97,6 +108,8 @@ with_MSA_50_plddt_0304_models_dir = os.path.join(patch_to_score_all_predictions_
 
 # results
 results_path = os.path.join(current_dir, 'results')
+#   chainsaw
+chainsaw_results_path = os.path.join(results_path, 'chainsaw')
 #   AF3_multimer
 AF3_predictions_path = os.path.join(results_path, 'AF3_predictions')
 #   ScanNet
