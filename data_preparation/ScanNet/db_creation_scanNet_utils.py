@@ -648,12 +648,13 @@ def create_ASA_list(model):
     return AsaList
 
 
-def create_amino_acid_labels(model, ubiq_diameter):
+def create_amino_acid_labels(model):
     """
     :param model:
     :return: Tuple : (ubiq_neighbors , non_ubiq_neighbors, model_attributes_matrix)
     model_attributes_matrix[i][j] = model_attributes_matrix[i] = (chain_id, aa_id , aa_type, aa label)
     """
+    ubiq_diameters = [calculate_diameter_from_chain(model.ubiq_chains[i]) for i in range(len(model.ubiq_chains))]
     ubiq_neighbors = [[0 for j in range(len(model.ubiq_chains))] for i in range(len(model.non_ubiq_chains))]
     ubiq_chains_amino_acid_lists = [aa_out_of_chain(model.ubiq_chains[i]) for i in range(len(model.ubiq_chains))]
     ubiq_chains_atoms_lists = [get_atoms_of_amino_acids(ubiq_chains_amino_acid_lists[i]) for i in
@@ -674,7 +675,7 @@ def create_amino_acid_labels(model, ubiq_diameter):
             if get_labels_for_amino_acids(non_ubiq_chains_amino_acid_lists[i], ubiq_chains_atoms_lists[j],
                                           model_labels_matrix[
                                               i],
-                                          ubiq_diameter):  # there is a connection between the non ubiquitin chain and the ubiquitin chain
+                                          ubiq_diameters[j]):  # there is a connection between the non ubiquitin chain and the ubiquitin chain
                 ubiq_neighbors[i][j] = 1
         chain_id = model.non_ubiq_chains[i].get_id()
         fill_atrributes_amino_acids(non_ubiq_chains_amino_acid_lists[i], chain_id, model_attributes_matrix[i],
@@ -890,7 +891,7 @@ def create_receptor_summary(candidate, model, ubiq_neighbors, ith_component_inde
 import pdb
 
 
-def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
+def create_data_base(tuple, ubiq_residus_list):
     chosen_assemblies, index = tuple[0], tuple[1]
     try:
         index_string = str(index)
@@ -920,8 +921,7 @@ def create_data_base(tuple, ubiq_diameter, ubiq_residus_list):
                 non_ubiq_diameters = [calculate_diameter_from_chain(NonUbiqChain) for NonUbiqChain in
                                       model.non_ubiq_chains]
                 asa_list = create_ASA_list(model)
-                ubiq_neighbors, non_ubiq_neighbors, model_attributes_matrix = create_amino_acid_labels(model,
-                                                                                                       ubiq_diameter)
+                ubiq_neighbors, non_ubiq_neighbors, model_attributes_matrix = create_amino_acid_labels(model)
                 np_non_ubiq_neighbors = np.array(non_ubiq_neighbors)
                 np_ubiquitin_neighbors = np.array(ubiq_neighbors)
                 num_components, components_labels, connection_index_list = connectivity_algorithm(

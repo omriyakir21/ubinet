@@ -58,7 +58,7 @@ def run_create_db_with_user_argv(chosen_assemblies_path, num_sublists):
     ubiq_chain = ubiq_structure[0]['B']
     ubiq_amino_acids = db_utils.aa_out_of_chain(ubiq_chain)
     ubiq_atoms = db_utils.get_atoms_of_amino_acids(ubiq_chain)
-    ubiqDiameter = db_utils.calculate_diameter(ubiq_atoms)
+    # ubiqDiameter = db_utils.calculate_diameter(ubiq_atoms)
     ubiq_residues_list = [
         db_utils.THREE_LETTERS_TO_SINGLE_AA_DICT[str(aminoAcid.get_resname())] + str(aminoAcid.get_id()[1]) for
         aminoAcid
@@ -66,8 +66,8 @@ def run_create_db_with_user_argv(chosen_assemblies_path, num_sublists):
     chosen_assemblies = db_utils.load_as_pickle(chosen_assemblies_path)
     chosenAssembliesListOfSublists = db_utils.split_list(chosen_assemblies, num_sublists)
     items = [(chosenAssembliesListOfSublists[i], i) for i in range(num_sublists)]
-    db_utils.create_data_base(items[int(sys.argv[1])], ubiqDiameter, ubiq_residues_list)  # download
-
+    db_utils.create_data_base(items[int(sys.argv[1])], ubiq_residues_list)  # download
+    # db_utils.create_data_base(items[12], ubiq_residues_list)
 
 def integrate_checkchains_per_batch(batch_dir, prefix_batch, prefix_file, num_sublists):
     for i in range(num_sublists):
@@ -165,10 +165,10 @@ if __name__ == "__main__":
     # chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
     #     os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
     NUM_SUBLISTS = 40
-    # chosen_assemblies = db_utils.load_as_pickle(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
-    # print(len(chosen_assemblies))
+    chosen_assemblies = db_utils.load_as_pickle(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
+    print(len(chosen_assemblies))
     # run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'), NUM_SUBLISTS)
-    # integrate_all_files(NUM_SUBLISTS)  
+    integrate_all_files(NUM_SUBLISTS)  
     # copy_files_to_new_folder(chosen_assemblies, paths.chosen_assemblies_path)
     # rename_cif_files(paths.chosen_assemblies_path)
     integrate_all_batches_summarylog(paths.ImerFiles_path, os.path.join(paths.ImerFiles_path, 'Integrated_summaryLog2.txt'), NUM_SUBLISTS)

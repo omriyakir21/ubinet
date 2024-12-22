@@ -5,21 +5,108 @@ import paths
 import csv
 from results.ScanNet.orientation_based_performence_analysis import split_receptors_into_individual_chains,make_chain_dict
 import shutil
-from Bio.Blast import NCBIXML
+from Bio.PDB.SASA import ShrakeRupley
 from Bio.Blast import NCBIWWW
 from Bio import SeqIO
 import numpy as np
-import logging
 from create_tables_and_weights import cluster_sequences
 import biotite.sequence as seq
 import biotite.sequence.io.fasta as fasta
 from biotite.application.blast import BlastWebApp
 import logging
-import os
-import numpy as np
 from create_tables_and_weights import cluster_sequences
-from Bio.PDB import MMCIFParser, MMCIFIO, Select
+from Bio.PDB import MMCIFParser, MMCIFIO, Select,PDBParser,PDBIO
 import pandas as pd
+import csv
+from Bio import SeqIO
+import biotite.application.muscle as muscle
+from biotite.sequence import ProteinSequence
+from biotite.sequence.io.fasta import FastaFile
+from data_preparation.patch_to_score.data_development_utils import get_str_seq_of_chain
+from data_preparation.ScanNet.db_creation_scanNet_utils import aa_out_of_chain,load_as_pickle,THREE_LETTERS_TO_SINGLE_AA_DICT
+from data_preparation.ScanNet.LabelPropagationAlgorithm_utils import normalize_value
+import time
+import subprocess,fileinput
+from data_preparation.patch_to_score.protein_level_db_creation_utils import download_alphafold_model
+
+
+path2mmseqs = 'mmseqs'
+path2mmseqstmp = '/specific/disk2/home/mol_group/tmp/'
+path2mmseqsdatabases = '/specific/disk2/home/mol_group/sequence_database/MMSEQS/'
+
+def call_mmseqs(
+        input_file,
+        output_file,
+        database = 'SwissProt',
+        nthreads = 6,
+        filtermsa = True,
+        cov = 0.0,
+        qid = 0.0,
+        maxseqid = 1.1,
+        gapopen = 11,
+        gapextend = 1,
+        s = 5.7000,
+        num_iterations = 1,
+        maxseqs = 100000,
+        overwrite = True,
+        report=None
+
+):
+    t = time.time()
+    if cov>1:
+        cov = cov/100.
+    if not overwrite:
+        if os.path.exists(output_file):
+            print('File %s already exists. Not recomputing' %output_file,file=report)
+            return output_file
+
+    ninputs = sum([line.startswith('>') for line in open(input_file,'r').readlines()])
+
+    '''
+    Source: https://github.com/soedinglab/MMseqs2/issues/693
+    '''
+    tmp_folder = '.'.join(output_file.split('.')[:-1]) + '/'
+    os.makedirs(tmp_folder,exist_ok=True)
+    tmp_input_file = os.path.join(tmp_folder,'input')
+    tmp_output_file = os.path.join(tmp_folder, 'output')
+    tmp_output_file2 = os.path.join(tmp_folder, 'output2')
+
+    commands = [
+        [path2mmseqs, 'createdb', input_file, tmp_input_file],
+        [path2mmseqs, 'search', tmp_input_file, os.path.join(path2mmseqsdatabases,database), tmp_output_file, path2mmseqstmp,
+        '-s',str(s),'--cov', str(cov),'--cov-mode','1','--diff',str(maxseqs), '--qid', str(qid), '--max-seq-id', str(maxseqid),'--gap-open', str(gapopen), '--gap-extend', str(gapextend), '--threads',str(nthreads),'--num-iterations',str(num_iterations),
+           '--max-seqs',str(maxseqs)],
+        [path2mmseqs, 'result2msa', tmp_input_file, os.path.join(path2mmseqsdatabases,database), tmp_output_file,tmp_output_file2,
+        '--filter-msa',str(int(filtermsa)), '--cov',str(cov),'--diff',str(maxseqs),'--qid', str(qid), '--max-seq-id',str(maxseqid),'--msa-format-mode','5','--gap-open', str(gapopen), '--gap-extend',str(gapextend), '--threads',str(nthreads)],
+        [path2mmseqs, 'convertalis', tmp_input_file, os.path.join(path2mmseqsdatabases,database), tmp_output_file,tmp_output_file +'.tab','--format-output',"target,theader"],
+        [path2mmseqs, 'unpackdb', tmp_output_file2, tmp_folder, '--unpack-name-mode', '0', '--threads',str(nthreads)]
+    ]
+    for command in commands:
+        print(' '.join(command))
+        subprocess.call(command)
+    table_labels = pd.read_csv(tmp_output_file +'.tab',sep='\t',header=None,index_col=0).drop_duplicates()
+
+    for n in range(ninputs):
+        if ninputs == 1:
+            output_file_ = output_file
+        else:
+            output_file_ = output_file.split('.fasta')[0] + '_%s.fasta'%n
+        os.rename(os.path.join(tmp_folder,str(n) ),output_file_)
+        with fileinput.input(files=output_file_, inplace=True) as f:
+            for line in f:
+                if line.startswith('>'):
+                    try:
+                        newlabel = table_labels.loc[line[1:-1]].item()
+                    except:
+                        newlabel = 'na|%s|' % line[1:-1]
+                    newline = '>' + newlabel + '\n'
+                else:
+                    newline = line
+                print(newline, end='')
+        assert os.path.exists(output_file_)
+    subprocess.call(['rm', '-r', tmp_folder])
+    print('Called mmseqs finished: Duration %.2f s' % (time.time() - t),file=report)
+    return output_file
 
 class ChainSelect(Select):
     def __init__(self, chain_id):
@@ -28,13 +115,20 @@ class ChainSelect(Select):
     def accept_chain(self, chain):
         return chain.id == self.chain_id
 
+class CuttedChainSelect(Select):
+    def __init__(self, first_index, last_index,first_aa_index):
+        self.first_index = first_index+first_aa_index
+        self.last_index = last_index+first_aa_index
+        print (f'in cutted chain select first_index = {first_index}, last_index = {last_index}')
+
+
+    def accept_residue(self, residue):
+        print(f'residue.get_id()[1] = {residue.get_id()[1]}')
+        return self.first_index <= residue.get_id()[1] <= self.last_index
+
 def process_pdb_chain_table(csv_path, structures_path, new_folder_path):
     # Read the CSV file
     df = pd.read_csv(csv_path)
-
-    # Create the new folder path if it doesn't exist
-    if not os.path.exists(new_folder_path):
-        os.makedirs(new_folder_path)
 
     # Initialize the MMCIF parser
     parser = MMCIFParser(QUIET=True)
@@ -58,8 +152,19 @@ def process_pdb_chain_table(csv_path, structures_path, new_folder_path):
         io.save(os.path.join(new_subfolder, f"{pdb_id}_{chain_id}.cif"), ChainSelect(chain_id))
 
 
-def from_chains_dict_to_pdb_chain_table(chain_dict):
-    with open(os.path.join(paths.scanNet_AF2_augmentations_path,'pdb_chain_table.csv'), mode='w', newline='') as file:
+def get_str_seq_of_single_chain_protein(pdb_id, structure_file):
+    parser = MMCIFParser()
+    structure = parser.get_structure(pdb_id, structure_file)
+    for model in structure:
+        for chain in model:
+            return get_str_seq_of_chain(chain)
+
+
+def from_chains_dict_to_pdb_chain_table(chain_dict,augmentations_folder,seq_id):
+    # Create the new folder path if it doesn't exist
+    if not os.path.exists(augmentations_folder):
+        os.makedirs(augmentations_folder)
+    with open(os.path.join(augmentations_folder,f'pdb_chain_table_{seq_id}.csv'), mode='w', newline='') as file:
         writer = csv.writer(file)
         # Write the header row
         writer.writerow(['PDB_ID', 'CHAIN_ID'])
@@ -75,102 +180,27 @@ def run_blast_online(query_sequence, db, output, evalue=1e-5,hitlist_size=50,ent
     with open(output, "w") as out_handle:
         out_handle.write(result_handle.read())
 
-def run_blast_biotite(query_sequence, db, output, evalue=1e-5, hitlist_size=50, entrez_query="(none)", matrix_name="BLOSUM62"):
-    app = BlastWebApp(
-        program="blastp",
-        query=query_sequence,
-        database=db,
-        mail="padix.key@gmail.com"
-    )
-    app.set_max_expect_value(evalue)
-    app.set_max_results(hitlist_size)
-    app.set_entrez_query(entrez_query)
-    app.set_substitution_matrix(matrix_name)
-    
-    app.start()
-    app.join()
-    
-    with open(output, "w") as out_handle:
-        out_handle.write(app.get_xml_response())
-
-def find_close_homologs_biotite(id, sequence, output_folder):
-    logging.info(f"Finding close homologs for {id}, with sequence {sequence}")
-    output_path = os.path.join(output_folder, f"{id}_blast_results.xml")
-    
-    if not os.path.exists(output_path):
-        attempts = 0
-        max_attempts = 2
-        while attempts < max_attempts:
-            try:
-                run_blast_biotite(sequence, "nr", output_path)
-                break
-            except Exception as e:
-                attempts += 1
-                if attempts == max_attempts:
-                    logging.error(f"Failed to run BLAST with Biotite after {max_attempts} attempts for id {id}, error message: {e}")
-                    return None
-    
-    # Parse BLAST results
-    app = BlastWebApp("blastp", sequence)
-    app.start()
-    app.join()
-    alignments = app.get_alignments()
-
-    all_sequences = []
-    for alignment in alignments:
-        similarity = alignment.identities / alignment.length
-        if similarity < 0.95 or alignment.hit_sequence.replace("-", "") == sequence:
-            continue
-        all_sequences.append({
-            "aligned_sequence": alignment.hit_sequence.replace("-", ""),
-            "definition": alignment.hit_def,
-            "similarity": similarity
-        })
-    
-    if not all_sequences:
-        return None
-    
-    logging.info(f"Found {len(all_sequences)} homologs for {id}")
-    
-    # Cluster the sequences and take cluster representatives
-    cluster_indices, representative_indices = cluster_sequences([all_sequences[i]["aligned_sequence"] for i in range(len(all_sequences))],
-                                                                 seqid=0.98, coverage=0.9, covmode='0')
-    
-    cluster_sizes = {i: np.sum(cluster_indices == i) for i in set(cluster_indices)}
-    
-    sorted_representative_indices = sorted(representative_indices, key=lambda x: cluster_sizes[list(representative_indices).index(x)], reverse=True)
-    top_representatives = sorted_representative_indices[:min(10, len(sorted_representative_indices))]
-    
-    homologs = [all_sequences[i] for i in top_representatives]
-    
-    # Save the cluster representatives as the final paralogs
-    output_file = os.path.join(output_folder, f"{id}_homologs.csv")
-    with open(output_file, "w") as csvfile:
-        csvfile.write("sequence,similarity,definition\n")
-        for i in range(len(homologs)):
-            result = homologs[i]
-            csvfile.write(f"{result['aligned_sequence']},{result['similarity']:.2f},{result['definition']}\n")
-    
-    return homologs
 
 
-def find_all_close_homologs(input_folder):
+def find_all_close_homologs(input_folder,seq_id):
     cnt = 0
     for subfolder in os.listdir(input_folder):
         subfolder_path = os.path.join(input_folder, subfolder)
         if os.path.isdir(subfolder_path):
             pdb_file = os.path.join(subfolder_path, f"{subfolder}.cif")
             if os.path.exists(pdb_file):
-                # Extract the sequence from the PDB file
-                for record in SeqIO.parse(pdb_file, "cif-atom"):
-                    sequence = str(record.seq)
-                    break
-                # Call find_close_homologs with the id, sequence, and subfolder path as output folder
-                # find_close_homologs_biotite(subfolder, sequence, subfolder_path)
-                logging.info(f"Processing {subfolder}")
-                find_close_homologs(subfolder, sequence, subfolder_path)
+                sequence = get_str_seq_of_single_chain_protein(subfolder, pdb_file)
+                print(f'Processing {subfolder}, cnt: {cnt}')
+                # find_close_homologs(subfolder, sequence, subfolder_path,seq_id)
+            # if cnt <= 580:
+            #     cnt+=1 
+            #     continue
+            try:
+                find_close_homologs(subfolder, sequence, subfolder_path,seq_id)
                 logging.info(f"Processed {subfolder}, cnt: {cnt}")
-                cnt += 1
+            except Exception as e:
+                logging.error(f"Error processing {subfolder}: {e}")
+            cnt += 1
 
 def create_fasta_file(sequence, id,output_folder):
     fasta_file = os.path.join(output_folder, f"{id}.fasta")
@@ -179,52 +209,55 @@ def create_fasta_file(sequence, id,output_folder):
     return fasta_file
 
 
-def find_close_homologs(id,sequence, output_folder):
+def find_close_homologs(id,sequence, output_folder,seq_id):
     logging.info(f"Finding close homologs for {id}, with sequence {sequence}")
-    # Run BLAST command with entrez_query to filter by organism
-    output_path = os.path.join(output_folder, f"{id}_blast_results.xml") 
-    if not os.path.exists(output_path):
-        attempts = 0
-        max_attempts = 2
-        while attempts < max_attempts:
-            try:
-                run_blast_online(sequence, "nr", output_path)
-                break
-            except Exception as e:
-                attempts += 1
-                if attempts == max_attempts:
-                    logging.error(f"Failed to run BLAST online after {max_attempts} attempts for id {id}, error message: {e}")
-                    return None
+    input_file = create_fasta_file(sequence, id, output_folder)
+    output_file = os.path.join(output_folder, f"{id}_homologs.fasta")
 
-    output_file = os.path.join(output_folder, f"{id}_homologs.csv")
-    if os.path.exists(output_file):
-        return None
-    # Parse BLAST results
-    with open(output_path) as result_handle:
-        blast_records = NCBIXML.parse(result_handle)
-        
-        all_sequences = []
-        for blast_record in blast_records:
-            for alignment in blast_record.alignments:
-                for hsp in alignment.hsps:
-                    similarity = hsp.identities / hsp.align_length
-                    if similarity < 0.95 or hsp.sbjct.replace("-", "") == sequence: 
-                        continue
-                    all_sequences.append({
-                        "aligned_sequence": hsp.sbjct.replace("-", ""),
-                        "definition": alignment.hit_def,
-                        "similarity": similarity
-                    })
-            
-        if len(all_sequences) == 0:
-            with open(output_file, "w") as csvfile:
-                csvfile.write("sequence,similarity,definition\n")
+    call_mmseqs(
+        input_file,
+        output_file,
+        # database = 'UniProtKB',
+        database = 'colabfold_envdb_202108',
+        nthreads = 128,
+        filtermsa = True,
+        cov = 0.9,
+        qid = seq_id,
+        maxseqid = 1.1,
+        gapopen = 11,
+        gapextend = 1,
+        s = 5.7000,
+        num_iterations = 1,
+        maxseqs = 100000,
+        overwrite = True,
+        report=None
+    )
+    # Parse the sequences and their definitions
+    output_csv_file = os.path.join(output_folder, f"{id}_homologs_representatives.csv")
+    all_sequences = []
+    all_definitions = []
+    all_uniprots = []
+    with open(output_file, "r") as f:
+        lines = f.readlines()
+        if len(lines) <= 2:
+            with open(output_csv_file, "w") as csvfile:
+                csvfile.write("sequence,uniprot,definition\n")
             logging.info(f"No homologs found for {id}")
             return None
+        for i in range(2, len(lines), 2):  # Skip the first sequence
+            if lines[i].startswith('>'):
+                definition = lines[i].strip()
+                hit_sequence = lines[i + 1].strip().replace('-', '')
+                uniprot = definition.split('|')[1]
+                if sequence != hit_sequence:
+                    all_definitions.append(definition)
+                    all_sequences.append(hit_sequence)
+                    all_uniprots.append(uniprot)
 
+        
         logging.info(f"Found {len(all_sequences)} homologs for {id}")
         # Cluster the sequences and take cluster representatives
-        cluster_indices, representative_indices = cluster_sequences([all_sequences[i]["aligned_sequence"] for i in range(len(all_sequences))],
+        cluster_indices, representative_indices = cluster_sequences(all_sequences,
                                                         seqid=0.98,coverage=0.9, covmode='0')
         print(f'cluster_indices {cluster_indices}')
         print(f'representative_indices {representative_indices}')
@@ -239,15 +272,18 @@ def find_close_homologs(id,sequence, output_folder):
         top_representatives = sorted_representative_indices[:min(10, len(sorted_representative_indices))]
         
         homologs = [all_sequences[i] for i in top_representatives]
+        definitions = [all_definitions[i] for i in top_representatives]
+        uniprots = [all_uniprots[i] for i in top_representatives]
 
         # Save the cluster representatives as the final paralogs
-        with open(output_file, "w") as csvfile:
-            csvfile.write("sequence,similarity,definition\n")
+        with open(output_csv_file, "w") as csvfile:
+            csvfile.write("sequence,uniprot,definition\n")
             for i in range(len(homologs)):
-                result = homologs[i]
-                csvfile.write(f"{result['aligned_sequence']},{result['similarity']:.3f},{result['definition']}\n")
-                create_fasta_file(result['aligned_sequence'], f'{id}_{i}', output_folder)
-    return homologs
+                homolog = homologs[i]
+                definition = definitions[i]
+                definition = definition.replace(',', '_')
+                uniprot = uniprots[i]
+                csvfile.write(f"{homolog},{uniprot},{definition}\n")
 
 def clean_subfolders(folder_path):
     # Iterate through all subfolders in the given folder
@@ -263,17 +299,368 @@ def clean_subfolders(folder_path):
                 os.remove(file_path)
                 print(f"Removed: {file_path}")
 
+def make_chain_dict_with_labels_info(chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values):
+    chain_dict = {}
+    for i in range(len(chains_keys)):
+        chain_dict[chain_names[i]] = {}
+        chain_dict[chain_names[i]]['sequences'] = chains_sequences[i]
+        chain_dict[chain_names[i]]['labels'] = chains_labels[i]
+        chain_dict[chain_names[i]]['lines'] = lines[i]
+        chain_dict[chain_names[i]]['asa_values'] = chains_asa_values[i]
+    return chain_dict
+
+
+def create_msas_from_folder(folder_path):
+    # Extract pdb_id and chain_id from folder path
+    folder_name = os.path.basename(folder_path)
+    pdb_id, chain_id = folder_name.split('_')
+
+    # Read the sequence from the structure file
+    structure_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}.cif")
+    structure_seq = get_str_seq_of_single_chain_protein(pdb_id, structure_file)
+    # Read homologs from the CSV file
+    homologs_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_homologs_representatives.csv")
+    sequences = [structure_seq]
+    uniprots = []
+    definitions = []
+    with open(homologs_file, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)  # Skip header
+        for row in reader:
+            sequences.append(row[0])
+            uniprots.append(row[1])
+    sequences = [ProteinSequence(sequence) for sequence in sequences]
+    if len(sequences) == 1:
+        msa_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_msa.txt")
+        with open(msa_file, 'w') as msa_out:
+            msa_out.write(f">{pdb_id}_{chain_id}\n")
+            msa_out.write(structure_seq + '\n')
+        sub_msa_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_sub_msa.txt")
+        with open(sub_msa_file, 'w') as sub_msa_out:
+            sub_msa_out.write(f">{pdb_id}_{chain_id}\n")
+            sub_msa_out.write(structure_seq + '\n')
+        return None 
+        
+    muscle_app = muscle.Muscle5App(sequences)
+    muscle_app.start()
+    muscle_app.join()
+    alignment = muscle_app.get_alignment()
+    gapped_seqs = alignment.get_gapped_sequences()
+
+    # Save MSA with definitions and similarity
+    msa_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_msa.txt")
+    with open(msa_file, 'w') as msa_out:
+        msa_out.write(f">{pdb_id}_{chain_id} \n")
+        msa_out.write(str(gapped_seqs[0]) + '\n')
+        for i, seq in enumerate(gapped_seqs[1:]):
+            msa_out.write(f">{uniprots[i]}\n")
+            msa_out.write(str(seq) + '\n')
+
+    # Extract sub-MSA
+    structure_msa_seq = str(gapped_seqs[0])
+    first_non_gap = next(i for i, c in enumerate(structure_msa_seq) if c != '-')
+    last_non_gap = len(structure_msa_seq) - next(i for i, c in enumerate(reversed(structure_msa_seq)) if c != '-')
+
+    sub_msa_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_sub_msa.txt")
+    with open(sub_msa_file, 'w') as sub_msa_out:
+        sub_msa_out.write(f">{pdb_id}_{chain_id}\n")
+        sub_msa_out.write(structure_msa_seq[first_non_gap:last_non_gap] + '\n')
+        for i, seq in enumerate(gapped_seqs[1:]):
+            sub_msa_out.write(f">{uniprots[i]}\n")
+            sub_msa_out.write(str(seq)[first_non_gap:last_non_gap] + '\n')
+
+def create_AF2_structures_for_folder(folder_path):
+    folder_name = os.path.basename(folder_path)
+    pdb_id, chain_id = folder_name.split('_')
+    sub_msa_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_sub_msa.txt")
+    with open(sub_msa_file, 'r') as file:
+        lines = file.readlines()
+        if len(lines) == 2:
+            logging.info(f"Skipping {pdb_id}_{chain_id} as it has no homologs")
+            return None
+        sequences_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_homologs_cutted.fasta")
+        with open(sequences_file, 'w') as seq_file:
+            cnt = 0
+            for i in range(3, len(lines), 2):
+                line = lines[i]
+                line = line.strip()
+                sequence = line.split(' ')[0]
+                sequence = sequence.replace('-', '')
+                seq_file.write(f">{pdb_id}_{chain_id}_{cnt}\n")
+                seq_file.write(sequence + '\n')
+                cnt += 1
+
+    
+
+def create_msas_all_folders(parent_folder):
+    cnt = 0
+    for item in os.listdir(parent_folder):
+        folder_path = os.path.join(parent_folder, item)
+        if os.path.isdir(folder_path):
+            try:
+                logging.info(f"Processing {folder_path}, cnt={cnt}")
+                create_msas_from_folder(folder_path)
+                logging.info(f"Processed {folder_path}, cnt={cnt}")
+            except Exception as e:
+                logging.error(f"Error processing {folder_path}: {e}")   
+            # create_AF2_structures_for_folder(folder_path)
+            cnt += 1
+        
+def download_uniprots_for_folder(folder_path):
+    folder_name = os.path.basename(folder_path)
+    pdb_id, chain_id = folder_name.split('_')
+    homologs_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_homologs_representatives.csv")
+    with open(homologs_file, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)  # Skip header
+        for row in reader:
+            uniprot_id = row[1]
+            if not os.path.exists(os.path.join(folder_path, f"{uniprot_id}.pdb")):
+                logging.info(f"Downloading {uniprot_id} for {folder_path}")
+                download_alphafold_model(uniprot_id, folder_path)
+def download_all_uniprots(parent_folder):
+    cnt = 0
+    for item in os.listdir(parent_folder):
+        folder_path = os.path.join(parent_folder, item)
+        if os.path.isdir(folder_path):
+            try:
+                logging.info(f" cnt={cnt}, downloading uniprots for {folder_path} ")
+                download_uniprots_for_folder(folder_path)
+                logging.info(f" cnt={cnt},Processed {folder_path}")
+            except Exception as e:
+                logging.error(f"Error processing {folder_path}: {e}")   
+            # create_AF2_structures_for_folder(folder_path)
+            cnt += 1
+
+def calculate_ASAF(amino_acids,quantile_dict):
+    sasa_calc = ShrakeRupley()
+    asa_values = []
+    for aa in amino_acids:
+        sasa_calc.compute(aa, level="R")
+        aa_char = THREE_LETTERS_TO_SINGLE_AA_DICT[aa.get_resname()]
+        quantile5,quantile95 = quantile_dict[aa_char]
+        asa_values.append(normalize_value(aa.sasa,quantile5,quantile95))
+    return asa_values
+
+def get_5_and_95_percentiles_for_asa_values(chains_asa_values):
+    all_asa_values = np.concatenate(chains_asa_values)
+    percentile_5 = np.percentile(all_asa_values, 5)
+    percentile_95 = np.percentile(all_asa_values, 95)
+    return percentile_5, percentile_95
+
+        
+def find_5_and_95_percentiles_for_folder(folder_path):
+    folder_name = os.path.basename(folder_path)
+    pdb_id, chain_id = folder_name.split('_')
+    msa_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_msa.txt")
+    with open(msa_file, 'r') as msa_out:
+        lines = msa_out.readlines()
+        asa_values = []
+        structure_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}.cif")
+        parser = MMCIFParser()
+        structure = parser.get_structure(pdb_id, structure_file)
+        for model in structure:
+            for chain in model:
+                chain_aa = aa_out_of_chain(chain)
+                asa_values.append(calculate_ASAF(chain_aa))
+        for i in range(2, len(lines), 2):
+            uniprot_id = lines[i][1:]
+            uniprot_pdb_file = os.path.join(folder_path, f"{uniprot_id}.pdb")
+            if os.path.exists(uniprot_pdb_file):
+                parser = PDBParser()
+                structure = parser.get_structure(uniprot_id, uniprot_pdb_file)
+                for model in structure:
+                    for chain in model:
+                        chain_aa = aa_out_of_chain(chain)
+                        asa_values.append(calculate_ASAF(chain_aa))
+        percentile_5, percentile_95 = get_5_and_95_percentiles_for_asa_values(asa_values)
+        return percentile_5, percentile_95
+
+
+def find_initial_index_of_uniprot(chain_sequence, sequence):
+    ungapped_seq = sequence.replace('-','')
+    print(f'chain_sequence = {chain_sequence}')
+    print(f'ungapped_seq = {ungapped_seq}')
+    for i in range(len(chain_sequence)-len(ungapped_seq)+1):
+        if chain_sequence[i:i+len(ungapped_seq)] == ungapped_seq:
+            return i
+    
+
+def create_label_files_for_folder(folder_path,chain_dict):
+    folder_name = os.path.basename(folder_path)
+    # percentile_5, percentile_95 = find_5_and_95_percentiles_for_folder(folder_path)
+    quantile_dict = load_as_pickle(os.path.join(paths.ASA_path, 'quentile_asa_amino_acid_dict.pkl'))
+    pdb_id, chain_id = folder_name.split('_')
+    msa_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_msa.txt")
+
+    key = f"{pdb_id}_{chain_id}"
+    # if key != '2fuh_A':
+    #     return
+    print(f'in {key}')
+    original_sequence_normalized_asa_values = chain_dict[key]['asa_values']
+    original_sequence_labels = chain_dict[key]['labels']
+    write_lines = []
+    if not os.path.exists(msa_file):
+        logging.error(f"MSA file {msa_file} not found")
+        return
+    with open(msa_file, 'r') as msa_out:
+        lines = msa_out.readlines()
+        original_sequence = lines[1][:-1]
+        first_non_gap = next(i for i, c in enumerate(original_sequence) if c != '-')
+        last_non_gap = len(original_sequence) - next(i for i, c in enumerate(reversed(original_sequence)) if c != '-')
+        for i in range(3, len(lines), 2):
+            uniprot_id = lines[i-1][1:-1]
+            print(f'uniprot_id = {uniprot_id}')
+            sequence = lines[i][:-1].upper()
+            uniprot_pdb_file = os.path.join(folder_path, f"{uniprot_id}.pdb")
+            if os.path.exists(uniprot_pdb_file):
+                parser = PDBParser()
+                structure = parser.get_structure(uniprot_id, uniprot_pdb_file)
+                for model in structure:
+                    for chain in model:
+                        chain_sequence = get_str_seq_of_chain(chain)
+                        chain_aa = aa_out_of_chain(chain)                       
+                        uniprot_aa_index = find_initial_index_of_uniprot(chain_sequence,sequence)
+                        # print(f'uniprot_aa_index = {uniprot_aa_index}')
+                        if uniprot_aa_index is None:
+                            logging.error(f'blast sequence of {uniprot_id} not found in the chain sequence')
+                            continue
+                        original_sequence_index = 0
+                        start_index = find_initial_index_of_uniprot(chain_sequence,sequence) -1
+                        first_index_of_uniprot = start_index
+                        normalized_asa_values = calculate_ASAF(chain_aa,quantile_dict)
+                        chain_id = chain.id[0]
+                        header = f">{uniprot_id}_{model.id}-{chain_id}\n"
+                        write_lines.append(header)
+                        last_index_of_uniprot = -1
+                        for i in range(len(sequence)):
+                            if i < first_non_gap:
+                                if sequence[i] != '-':
+                                    uniprot_aa_index += 1
+                            elif i >= last_non_gap:
+                                last_index_of_uniprot = uniprot_aa_index
+                                break
+                            else:
+                                if sequence[i] != '-':
+                                    if first_index_of_uniprot == start_index:
+                                        first_index_of_uniprot = uniprot_aa_index
+                                    if original_sequence[i] != '-':
+                                        if normalized_asa_values[uniprot_aa_index] > min(0.2,0.75*float(original_sequence_normalized_asa_values[original_sequence_index])):
+                                            label = original_sequence_labels[original_sequence_index]
+                                        else:
+                                            label = 0
+                                        aa_index = str(chain_aa[uniprot_aa_index].get_id()[1])
+                                        aa_letter = chain_sequence[uniprot_aa_index]
+                                        original_sequence_index += 1
+                                        line = f"{chain_id} {aa_index} {aa_letter} {label}\n"
+                                        write_lines.append(line)
+                                    uniprot_aa_index += 1
+                                else:
+                                    if original_sequence[i] != '-':
+                                        original_sequence_index += 1
+                        last_index_of_uniprot = min(last_index_of_uniprot, len(chain_aa)-1)
+                        io = PDBIO()
+                        io.set_structure(structure)
+                        io.save(os.path.join(folder_path, f"{uniprot_id}_cutted.pdb"), CuttedChainSelect(first_index_of_uniprot,last_index_of_uniprot,chain_aa[0].get_id()[1]))
+    augmentations_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_augmentations.txt")
+    with open(augmentations_file, 'w') as aug_file:
+        aug_file.writelines(write_lines)
+
+                                   
+
+
+
+
+
+def create_label_files_for_augmentations(parent_folder,chain_dict):
+    cnt = 0
+    for item in os.listdir(parent_folder):
+        folder_path = os.path.join(parent_folder, item)
+        if os.path.isdir(folder_path):
+            logging.info(f"Processing {folder_path}, cnt={cnt}")
+            create_label_files_for_folder(folder_path,chain_dict)
+            logging.info(f"Processed {folder_path}, cnt={cnt}")
+
+
+
+
+def create_chain_dict_with_all_info(chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values, chains_asa_not_normalized_values):
+    chain_dict = {}
+    for i in range(len(chain_names)):
+        id  =chain_names[i]
+        id = id.split('_')[0] + '_' + id.split('_')[1].split('$')[-1]
+        chain_dict[id] = {}
+        chain_dict[id]['sequences'] = chains_sequences[i]
+        chain_dict[id]['labels'] = chains_labels[i]
+        chain_dict[id]['lines'] = lines[i]
+        chain_dict[id]['asa_values'] = chains_asa_values[i]
+        chain_dict[id]['asa_not_normalized_values'] = chains_asa_not_normalized_values[i]
+    return chain_dict
+
+def merge_all_augmentations(folder):
+    merged_content = ""
+    for subdir, _, files in os.walk(folder):
+        for file in files:
+            if file.endswith("augmentations.txt"):
+                file_path = os.path.join(subdir, file)
+                with open(file_path, 'r') as f:
+                    merged_content += f.read()
+    merged_file_path = os.path.join(folder, "merged_augmentations.txt")
+    with open(merged_file_path, 'w') as merged_file:
+        merged_file.write(merged_content)
+    return merged_file_path
+
+def create_fasta_homologs_folder(input_folder, output_folder):
+    # Ensure the output folder exists
+    os.makedirs(output_folder, exist_ok=True)
+    
+    # Walk through all subfolders in the input folder
+    for root, dirs, files in os.walk(input_folder):
+        for file in files:
+            if file.endswith("homologs_representatives.csv"):
+                file_path = os.path.join(root, file)
+                
+                # Open and parse the CSV file
+                with open(file_path, mode='r') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    for row in reader:
+                        sequence = row['sequence']
+                        uniprot = row['uniprot']
+                        
+                        # Create FASTA content
+                        fasta_content = f">{uniprot}\n{sequence}\n"
+                        
+                        # Define the output file path
+                        output_file_path = os.path.join(output_folder, f"{uniprot}.fasta")
+                        
+                        # Write the FASTA file
+                        with open(output_file_path, mode='w') as fasta_file:
+                            fasta_file.write(fasta_content)
+
+
 if __name__ == '__main__':
     DATE = '8_9'
-    # pssm_content_path = os.path.join(paths.PSSM_path,f'PSSM_{DATE}', 'propagatedPssmWithAsaFile.txt')
-    # asa_content_path = os.path.join(paths.ASA_path, 'normalizedFullASAPssmContent.txt')
-    # _, _, _, chain_names, _, _ = split_receptors_into_individual_chains(
+    seq_id = '0.95'
+    augmentations_path = paths.pdbs_with_augmentations_95_path
+    augmentations_path = paths.pdbs_with_augmentations_90_path
+    # pssm_content_path = os.path.join(paths.PSSM_path,f'PSSM_{DATE}',f'seq_id_{seq_id}' ,f'propagatedPssmWithAsaFile_{seq_id}.txt')
+    # asa_content_path = os.path.join(paths.ASA_path, f'normalizedFullASAPssmContent.txt')
+    # asa_not_normalized_content_path = os.path.join(paths.ASA_path, 'Integrated_Checkchains_asa_mer.txt')
+    # chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values= split_receptors_into_individual_chains(
     #     pssm_content_path, asa_content_path)
-    # chain_dict = make_chain_dict(chain_names)
-    # from_chains_dict_to_pdb_chain_table(chain_dict)
-    # process_pdb_chain_table(os.path.join(paths.scanNet_AF2_augmentations_path,'pdb_chain_table.csv'), paths.chosen_assemblies_path, paths.pdbs_with_augmentations_path)
-    log_file = os.path.join(paths.scanNet_AF2_augmentations_path, f"AF2_augmentations_2.log")
+    # _,_,_,_,_,chains_asa_not_normlized_values = split_receptors_into_individual_chains(pssm_content_path,asa_not_normalized_content_path)
+    # chain_dict = create_chain_dict_with_all_info(chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values, chains_asa_not_normlized_values)
+    # chain_names_dict = make_chain_dict(chain_names)
+    # from_chains_dict_to_pdb_chain_table(chain_names_dict,augmentations_path,seq_id)
+    # process_pdb_chain_table(os.path.join(augmentations_path,f'pdb_chain_table_{seq_id}.csv'), paths.chosen_assemblies_path, augmentations_path)
+    
+    # # # find homologs 
+    log_file = os.path.join(paths.scanNet_AF2_augmentations_path, f"AF2_augmentations_{seq_id}.log")
     logging.basicConfig(filename=log_file, level=logging.INFO, 
                         format='%(asctime)s %(levelname)s:%(message)s')
-    find_all_close_homologs(paths.pdbs_with_augmentations_path) 
-    # clean_subfolders(paths.original_pdbs_with_augmentations_path)
+    # find_all_close_homologs(augmentations_path,float(seq_id)) 
+    # create_fasta_homologs_folder(augmentations_path,os.path.join(augmentations_path,'fasta_folder'))
+    # create_msas_all_folders(paths.pdbs_with_augmentations_path)
+    # download_all_uniprots(paths.pdbs_with_augmentations_95_path)
+    # create_label_files_for_augmentations(paths.pdbs_with_augmentations_95_path,chain_dict)
+    # merge_all_augmentations(paths.pdbs_with_augmentations_95_path)
