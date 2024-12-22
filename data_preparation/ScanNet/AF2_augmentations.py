@@ -14,7 +14,6 @@ import biotite.sequence as seq
 import biotite.sequence.io.fasta as fasta
 from biotite.application.blast import BlastWebApp
 import logging
-from create_tables_and_weights import cluster_sequences
 from Bio.PDB import MMCIFParser, MMCIFIO, Select,PDBParser,PDBIO
 import pandas as pd
 import csv
@@ -28,6 +27,7 @@ from data_preparation.ScanNet.LabelPropagationAlgorithm_utils import normalize_v
 import time
 import subprocess,fileinput
 from data_preparation.patch_to_score.protein_level_db_creation_utils import download_alphafold_model
+from collections import defaultdict
 
 
 path2mmseqs = 'mmseqs'
@@ -123,7 +123,6 @@ class CuttedChainSelect(Select):
 
 
     def accept_residue(self, residue):
-        print(f'residue.get_id()[1] = {residue.get_id()[1]}')
         return self.first_index <= residue.get_id()[1] <= self.last_index
 
 def process_pdb_chain_table(csv_path, structures_path, new_folder_path):
@@ -184,6 +183,7 @@ def run_blast_online(query_sequence, db, output, evalue=1e-5,hitlist_size=50,ent
 
 def find_all_close_homologs(input_folder,seq_id):
     cnt = 0
+    homologs_set = set()
     for subfolder in os.listdir(input_folder):
         subfolder_path = os.path.join(input_folder, subfolder)
         if os.path.isdir(subfolder_path):
@@ -192,14 +192,14 @@ def find_all_close_homologs(input_folder,seq_id):
                 sequence = get_str_seq_of_single_chain_protein(subfolder, pdb_file)
                 print(f'Processing {subfolder}, cnt: {cnt}')
                 # find_close_homologs(subfolder, sequence, subfolder_path,seq_id)
-            # if cnt <= 580:
+            # if cnt <= 635:
             #     cnt+=1 
-            #     continue
-            try:
-                find_close_homologs(subfolder, sequence, subfolder_path,seq_id)
-                logging.info(f"Processed {subfolder}, cnt: {cnt}")
-            except Exception as e:
-                logging.error(f"Error processing {subfolder}: {e}")
+                # continue
+                try:
+                    find_close_homologs(subfolder, sequence, subfolder_path,seq_id,homologs_set)
+                    logging.info(f"Processed {subfolder}, cnt: {cnt}")
+                except Exception as e:
+                    logging.error(f"Error processing {subfolder}: {e}", exc_info=True)
             cnt += 1
 
 def create_fasta_file(sequence, id,output_folder):
@@ -209,7 +209,7 @@ def create_fasta_file(sequence, id,output_folder):
     return fasta_file
 
 
-def find_close_homologs(id,sequence, output_folder,seq_id):
+def find_close_homologs(id,sequence, output_folder,seq_id,homologs_set):
     logging.info(f"Finding close homologs for {id}, with sequence {sequence}")
     input_file = create_fasta_file(sequence, id, output_folder)
     output_file = os.path.join(output_folder, f"{id}_homologs.fasta")
@@ -217,8 +217,8 @@ def find_close_homologs(id,sequence, output_folder,seq_id):
     call_mmseqs(
         input_file,
         output_file,
-        # database = 'UniProtKB',
-        database = 'colabfold_envdb_202108',
+        database = 'UniProtKB',
+        # database = 'colabfold_envdb_202108',
         nthreads = 128,
         filtermsa = True,
         cov = 0.9,
@@ -265,12 +265,24 @@ def find_close_homologs(id,sequence, output_folder,seq_id):
         cluster_sizes = {i: np.sum(cluster_indices == i) for i in set(cluster_indices)}
         print(f'cluster_sizes {cluster_sizes}')
 
-        # Sort the representative indices by cluster size in descending order
-        sorted_representative_indices = sorted(representative_indices, key=lambda x:cluster_sizes[list(representative_indices).index(x)], reverse=True)
+        # Sort the clusters by size in descending order
+        sorted_clusters = sorted(cluster_sizes.keys(), key=lambda x: cluster_sizes[x], reverse=True)
 
-        # Take the top ten representatives
-        top_representatives = sorted_representative_indices[:min(10, len(sorted_representative_indices))]
-        
+        # Take the top ten representatives that are not in homologs_set
+        top_representatives = []
+        for cluster in sorted_clusters:
+            cluster_members = [i for i, x in enumerate(cluster_indices) if x == cluster]
+            for idx in cluster_members:
+                if homologs_set is None:
+                    raise Exception('homologos set is None')
+                logging.info(f'homologos set size is {len(homologs_set)}')
+                if all_uniprots[idx] not in homologs_set:
+                    top_representatives.append(idx)
+                    homologs_set.add(all_uniprots[idx])
+                    break
+            if len(top_representatives) >= 10:
+                break
+
         homologs = [all_sequences[i] for i in top_representatives]
         definitions = [all_definitions[i] for i in top_representatives]
         uniprots = [all_uniprots[i] for i in top_representatives]
@@ -284,6 +296,7 @@ def find_close_homologs(id,sequence, output_folder,seq_id):
                 definition = definition.replace(',', '_')
                 uniprot = uniprots[i]
                 csvfile.write(f"{homolog},{uniprot},{definition}\n")
+    return homologs_set
 
 def clean_subfolders(folder_path):
     # Iterate through all subfolders in the given folder
@@ -494,8 +507,8 @@ def create_label_files_for_folder(folder_path,chain_dict):
     msa_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_msa.txt")
 
     key = f"{pdb_id}_{chain_id}"
-    # if key != '2fuh_A':
-    #     return
+    if key != '1nbf_A':
+        return
     print(f'in {key}')
     original_sequence_normalized_asa_values = chain_dict[key]['asa_values']
     original_sequence_labels = chain_dict[key]['labels']
@@ -558,6 +571,8 @@ def create_label_files_for_folder(folder_path,chain_dict):
                                 else:
                                     if original_sequence[i] != '-':
                                         original_sequence_index += 1
+                        if last_index_of_uniprot == -1:
+                            last_index_of_uniprot =  uniprot_aa_index - 1
                         last_index_of_uniprot = min(last_index_of_uniprot, len(chain_aa)-1)
                         io = PDBIO()
                         io.set_structure(structure)
@@ -577,9 +592,13 @@ def create_label_files_for_augmentations(parent_folder,chain_dict):
     for item in os.listdir(parent_folder):
         folder_path = os.path.join(parent_folder, item)
         if os.path.isdir(folder_path):
-            logging.info(f"Processing {folder_path}, cnt={cnt}")
-            create_label_files_for_folder(folder_path,chain_dict)
-            logging.info(f"Processed {folder_path}, cnt={cnt}")
+            try:
+                logging.info(f"Processing {folder_path}, cnt={cnt}")
+                create_label_files_for_folder(folder_path,chain_dict)
+                logging.info(f"Processed {folder_path}, cnt={cnt}")
+            except Exception as e:
+                logging.error(f"Error processing {folder_path}: {e}")
+            cnt += 1
 
 
 
@@ -597,18 +616,6 @@ def create_chain_dict_with_all_info(chains_keys, chains_sequences, chains_labels
         chain_dict[id]['asa_not_normalized_values'] = chains_asa_not_normalized_values[i]
     return chain_dict
 
-def merge_all_augmentations(folder):
-    merged_content = ""
-    for subdir, _, files in os.walk(folder):
-        for file in files:
-            if file.endswith("augmentations.txt"):
-                file_path = os.path.join(subdir, file)
-                with open(file_path, 'r') as f:
-                    merged_content += f.read()
-    merged_file_path = os.path.join(folder, "merged_augmentations.txt")
-    with open(merged_file_path, 'w') as merged_file:
-        merged_file.write(merged_content)
-    return merged_file_path
 
 def create_fasta_homologs_folder(input_folder, output_folder):
     # Ensure the output folder exists
@@ -638,11 +645,113 @@ def create_fasta_homologs_folder(input_folder, output_folder):
                             fasta_file.write(fasta_content)
 
 
+def fetch_AF2_structures(folder_path, AF2_structures_path):
+    cnt = 0
+    for subdir, _, files in os.walk(folder_path):
+        logging.info(f"Processing {subdir}, cnt={cnt}")
+        for file in files:
+            if file.endswith('homologs_representatives.csv'):
+                csv_path = os.path.join(subdir, file)
+                df = pd.read_csv(csv_path)
+                uniprot_ids = df['uniprot'].tolist()
+                
+                for uniprot_id in uniprot_ids:
+                    found = False
+                    for af2_file in os.listdir(AF2_structures_path):
+                        if af2_file.startswith(f"{uniprot_id}_unrelaxed_rank_001") and af2_file.endswith(".pdb"):
+                            source_file = os.path.join(AF2_structures_path, af2_file)
+                            destination_file = os.path.join(subdir, f"{uniprot_id}.pdb")
+                            shutil.copy(source_file, destination_file)
+                            found = True
+                            break
+                    if not found:
+                        print(f"No matching file found for {uniprot_id} in {AF2_structures_path}")
+        cnt += 1
+
+def parse_augmentation_file(file_path):
+    augmentations = defaultdict(dict)
+    with open(file_path, 'r') as f:
+        current_key = None
+        for line in f:
+            if line.startswith('>'):
+                current_key = line.strip()
+                augmentations[current_key] = {}
+            else:
+                parts = line.split()
+                index = int(parts[1])
+                chain = parts[0]
+                aa_type = parts[2]
+                label = int(parts[3])
+                augmentations[current_key][index] = (chain, aa_type, label)
+    return augmentations
+
+def merge_augmentations(augmentations_list):
+    merged_augmentations = defaultdict(dict)
+    for key in augmentations_list[0].keys():
+        indices = set(augmentations_list[0][key].keys())
+        for augmentations in augmentations_list[1:]:
+            indices &= set(augmentations[key].keys())
+        for index in indices:
+            max_label = max(augmentations[key][index][2] for augmentations in augmentations_list)
+            chain, aa_type, _ = augmentations_list[0][key][index]
+            merged_augmentations[key][index] = (chain, aa_type, max_label)
+    return merged_augmentations
+
+def write_augmentation_file(file_path, augmentations):
+    with open(file_path, 'w') as f:
+        for key, values in augmentations.items():
+            f.write(f"{key}\n")
+            for index, (chain, aa_type, label) in sorted(values.items()):
+                f.write(f"{chain} {index} {aa_type} {label}\n")
+
+def unite_augmentations(folder):
+    subfolders = [os.path.join(folder, subfolder) for subfolder in os.listdir(folder) if os.path.isdir(os.path.join(folder, subfolder))]
+    processed_augmentations = set()
+
+    for subfolder in subfolders:
+        augmentations_in_subfolder = []
+        for file in os.listdir(subfolder):
+            if file.endswith("_augmentations.txt"):
+                file_path = os.path.join(subfolder, file)
+                augmentations = parse_augmentation_file(file_path)
+                augmentations_in_subfolder.append((file_path, augmentations))
+        
+        united_augmentations = defaultdict(dict)
+        for file_path, augmentation in augmentations_in_subfolder:
+            for key, values in augmentation.items():
+                if key not in processed_augmentations:
+                    processed_augmentations.add(key)
+                    all_augmentations = [values]
+                    other_files = []
+                    for other_subfolder in subfolders:
+                        if other_subfolder != subfolder:
+                            for other_file in os.listdir(other_subfolder):
+                                if other_file.endswith("_augmentations.txt"):
+                                    other_file_path = os.path.join(other_subfolder, other_file)
+                                    other_augmentations = parse_augmentation_file(other_file_path)
+                                    if key in other_augmentations:
+                                        all_augmentations.append(other_augmentations[key])
+                                        other_files.append(other_file_path)
+                    if len(all_augmentations) > 1:
+                        print(f"Merging augmentation {key} from {file_path} with {other_files}")
+                        merged_augmentation = merge_augmentations([dict({key: aug}) for aug in all_augmentations])
+                        united_augmentations[key] = merged_augmentation[key]
+                    else:
+                        united_augmentations[key] = values
+        
+        output_file_path = os.path.join(subfolder, f"{os.path.basename(subfolder)}_augmentations_united.txt")
+        write_augmentation_file(output_file_path, united_augmentations)
+
+
+
 if __name__ == '__main__':
     DATE = '8_9'
     seq_id = '0.95'
     augmentations_path = paths.pdbs_with_augmentations_95_path
-    augmentations_path = paths.pdbs_with_augmentations_90_path
+    # augmentations_path = paths.pdbs_with_augmentations_90_path
+    # if not os.path.exists(augmentations_path):
+    #     os.makedirs(augmentations_path)
+    
     # pssm_content_path = os.path.join(paths.PSSM_path,f'PSSM_{DATE}',f'seq_id_{seq_id}' ,f'propagatedPssmWithAsaFile_{seq_id}.txt')
     # asa_content_path = os.path.join(paths.ASA_path, f'normalizedFullASAPssmContent.txt')
     # asa_not_normalized_content_path = os.path.join(paths.ASA_path, 'Integrated_Checkchains_asa_mer.txt')
@@ -659,8 +768,13 @@ if __name__ == '__main__':
     logging.basicConfig(filename=log_file, level=logging.INFO, 
                         format='%(asctime)s %(levelname)s:%(message)s')
     # find_all_close_homologs(augmentations_path,float(seq_id)) 
-    # create_fasta_homologs_folder(augmentations_path,os.path.join(augmentations_path,'fasta_folder'))
-    # create_msas_all_folders(paths.pdbs_with_augmentations_path)
+    create_fasta_homologs_folder(augmentations_path,os.path.join(augmentations_path,'fasta_folder'))
+    
     # download_all_uniprots(paths.pdbs_with_augmentations_95_path)
-    # create_label_files_for_augmentations(paths.pdbs_with_augmentations_95_path,chain_dict)
-    # merge_all_augmentations(paths.pdbs_with_augmentations_95_path)
+
+
+    # af2_predictions_path = os.path.join(augmentations_path,'AF2_predictions')
+    # fetch_AF2_structures(augmentations_path,af2_predictions_path)
+    # create_msas_all_folders(augmentations_path)
+    # create_label_files_for_augmentations(augmentations_path,chain_dict)
+    # unite_augmentations(augmentations_path)
