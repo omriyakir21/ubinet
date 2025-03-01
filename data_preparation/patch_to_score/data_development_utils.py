@@ -36,17 +36,10 @@ POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
 
 parser = PDBParser()
 parserMMcif = MMCIFParser()
-# all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
-# all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
-# all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
-# percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
-# save_as_pickle(percentile_90, os.path.join(paths.patches_dicts_path, 'percentile_90.pkl'))
-percentile_90 = load_as_pickle(os.path.join(paths.patches_dicts_path, 'percentile_90.pkl'))
+
 server_PDBs = True
 DISTANCE_THRESHOLD = 10
-# indexes = list(range(0, len(all_predictions['dict_resids']) + 1, 1500)) + [len(all_predictions['dict_resids'])]
-# save_as_pickle(indexes, os.path.join(paths.patches_dicts_path, 'indexes.pkl'))
-indexes = load_as_pickle(os.path.join(paths.patches_dicts_path, 'indexes.pkl'))
+
 # to be removed
 trainingDataDir = None
 ubdPath = None
@@ -58,10 +51,10 @@ class SizeDifferentiationException(Exception):
 
 
 class Protein:
-    def __init__(self, uniprot_name, plddt_threshold, all_predictions):
+    def __init__(self, uniprot_name, plddt_threshold, all_predictions,percentile_90):
         self.uniprot_name = uniprot_name
-        self.ubiq_predictions = all_predictions['dict_predictions_ubiquitin'][uniprot_name]
-        self.non_ubiq_predictions = all_predictions['dict_predictions_interface'][uniprot_name]
+        self.percentile_90 = percentile_90 
+        self.predictions_dict = self.fill_predictions_dict(all_predictions)
         self.source = all_predictions['dict_sources'][uniprot_name]
         self.plddt_values = self.get_plddt_values()
         self.sequence = self.get_sequence()
@@ -69,6 +62,20 @@ class Protein:
         self.graph = nx.Graph()
         self.create_graph(plddt_threshold)
         self.connected_components_tuples = self.create_connected_components_tuples()
+
+    def fill_predictions_dict(self,all_predictions):
+        predictions_dict = {}
+        predictions_dict['scanNet_ubiq'] = all_predictions['dict_predictions_ubiquitin'][self.uniprot_name]
+        predictions_dict['scanNet_protein'] = all_predictions['dict_predictions_interface'][self.uniprot_name]
+        predictions_dict['pesto_protein'] = all_predictions['pesto_protein'][self.uniprot_name]
+        predictions_dict['pesto_dna_rna'] = all_predictions['pesto_dna_rna'][self.uniprot_name]
+        predictions_dict['pesto_ion'] = all_predictions['pesto_ion'][self.uniprot_name]
+        predictions_dict['pesto_ligand'] = all_predictions['pesto_ligand'][self.uniprot_name]
+        predictions_dict['pesto_lipid'] = all_predictions['pesto_lipid'][self.uniprot_name]
+
+        return predictions_dict
+
+        
 
     def get_residues(self):
         structure = self.get_structure()
@@ -107,11 +114,15 @@ class Protein:
 
     def create_nodes_for_graph(self, residues, plddt_threshold):
         nodes = []
-        if len(residues) != len(self.ubiq_predictions):  # need to skip this protein
+        if len(residues) != len(self.predictions_dict['scanNet_ubiq']):
             raise SizeDifferentiationException(self.uniprot_name)
         for i in range(len(residues)):
             plddtVal = residues[i].child_list[0].bfactor
-            if plddtVal > plddt_threshold and self.ubiq_predictions[i] > percentile_90:
+            # print(f'plddt_val {plddtVal}')
+            # print(f'threshold {plddt_threshold}')
+            # print(f' self.predictions_dict[scanNet_ubiq][i] {self.predictions_dict["scanNet_ubiq"][i]}')
+            # print(f'self.percentile_90 {self.percentile_90}')
+            if plddtVal > plddt_threshold and self.predictions_dict['scanNet_ubiq'][i] > self.percentile_90:
                 nodes.append(i)
         return nodes
 
@@ -148,23 +159,30 @@ class Protein:
         tuples = []
         connected_components = list(nx.connected_components(self.graph))
         for component_set in connected_components:
-            average_ubiq, average_non_ubiq, average_plddt = self.calculate_average_predictions_for_component(
-                component_set)
+            # average_ubiq, average_non_ubiq, average_plddt = self.calculate_average_predictions_for_component(
+                # component_set)
+            patch_dict = self.calculate_average_predictions_for_component(component_set)
             patch_size = len(component_set)
-            tuples.append((patch_size, average_ubiq, average_non_ubiq, average_plddt, list(component_set)))
+            tuples.append((patch_size, patch_dict, list(component_set)))
         return tuples
 
     def calculate_average_predictions_for_component(self, indexSet):
+        patch_dict = {}
         indexes = list(indexSet)
-        ubiq_predictions = [self.ubiq_predictions[index] for index in indexes]
-        non_ubiq_predictions = [self.non_ubiq_predictions[index] for index in indexes]
         plddt_values = [self.plddt_values[index] for index in indexes]
-        assert (len(ubiq_predictions) == len(non_ubiq_predictions) == len(plddt_values))
-        average_ubiq = sum(ubiq_predictions) / len(ubiq_predictions)
-        average_non_ubiq = sum(non_ubiq_predictions) / len(non_ubiq_predictions)
-        average_plddt = sum(plddt_values) / len(plddt_values)
-        return average_ubiq, average_non_ubiq, average_plddt
+        for key,val in self.predictions_dict.items():
+            patch_dict[f'average_{key}'] = sum([val[index] for index in indexes]) / len(indexes)
+        patch_dict['average_plddt'] = sum(plddt_values) / len(plddt_values)
+        return patch_dict
 
+
+def create_90_percentile(all_predictions_path,percentile_90_path):
+    all_predictions = load_as_pickle(all_predictions_path)
+    all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
+    all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
+    percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)
+    print(percentile_90)
+    save_as_pickle(percentile_90,percentile_90_path)
 
 def c_alpha_distance(atom1, atom2):
     vector1 = atom1.get_coord()
@@ -173,7 +191,12 @@ def c_alpha_distance(atom1, atom2):
     return distance
 
 
-def create_patches_dict(i, dir_path, plddt_threshold, all_predictions):
+def create_patches_dict(i, dir_path, plddt_threshold, all_predictions,percentile_90):
+    indexes_path = os.path.join(dir_path, 'indexes.pkl')
+    if not os.path.exists(indexes_path):
+        indexes = list(range(0, len(all_predictions['dict_resids']) + 1, 1500)) + [len(all_predictions['dict_resids'])]
+        save_as_pickle(indexes, indexes_path)
+    indexes = load_as_pickle(indexes_path)
     print(f'len indexes is : {len(indexes)}')
     patches_dict = {}
     all_keys = list(all_predictions['dict_resids'].keys())[indexes[i]:indexes[i + 1]]
@@ -181,7 +204,7 @@ def create_patches_dict(i, dir_path, plddt_threshold, all_predictions):
     for key in all_keys:
         print("i= ", i, " cnt = ", cnt, " key = ", key)
         cnt += 1
-        patches_dict[key] = Protein(key, plddt_threshold, all_predictions)
+        patches_dict[key] = Protein(key, plddt_threshold, all_predictions, percentile_90)
     save_as_pickle(patches_dict, os.path.join(os.path.join(dir_path, 'proteinObjectsWithEvoluion' + str(i))))
 
 
@@ -483,7 +506,7 @@ def getNBiggestFP(labels, predictions, allComponentsFiltered, N):
 
 # NBiggestFP = getNBiggestFP(labels, finalOutputsFifty, allComponentsFiltered, 10)
 
-
+ 
 def extract_protein_data(proteins, max_number_of_components):
     data_components_flattend = []
     data_protein_size = []
@@ -491,12 +514,16 @@ def extract_protein_data(proteins, max_number_of_components):
     data_components = []
     for protein in proteins:
         # Sort components by average_ubiq in descending order and take the top 10
-        top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
+        top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1]['average_scanNet_ubiq'], reverse=True)[
                          :max_number_of_components]
-        data_components.append([component[:4] for component in top_components])
+        data_components.append([component[:2] for component in top_components])
         for component in top_components:
-            patch_size, average_ubiq, average_non_ubiq, average_plddt = component[:4]
-            data_components_flattend.append([patch_size, average_ubiq, average_non_ubiq, average_plddt])
+            patch_size, patch_dict = component[:2]
+            patch_dict_flattened = [float(val) for val in patch_dict.values()]
+            patch_flattened = [patch_size] + patch_dict_flattened
+            print(f'patch_dict : {patch_dict}')
+            print(f'patch_flattened : {patch_flattened}')
+            data_components_flattend.append(patch_flattened)
         data_protein_size.append(protein.size)
         data_number_of_components.append(len(top_components))
     return data_components_flattend, data_protein_size, data_number_of_components, data_components
@@ -509,7 +536,7 @@ def fit_protein_data(all_data_components, all_data_protein_size, all_data_number
     scaler_components = StandardScaler()
     scaler_size.fit(all_data_protein_size.reshape(-1, 1))
     scaler_components.fit(all_data_components)
-
+ 
     # Fit the encoder
     encoder = OneHotEncoder(sparse_output=False, categories=[range(max_number_of_components + 1)])
     encoder.fit(all_data_number_of_components.reshape(-1, 1))
@@ -520,22 +547,24 @@ def fit_protein_data(all_data_components, all_data_protein_size, all_data_number
     save_as_pickle(encoder, os.path.join(dir_path, 'encoder.pkl'))
 
 
-def transform_protein_data(protein, scaler_size, scaler_components, encoder, max_number_of_components):
-    # Extract and scale the size
-    # print(f'protein is {protein}')
+def transform_protein_data(protein, scaler_size, scaler_components, encoder, max_number_of_components,with_pesto):
     scaled_size = scaler_size.transform(np.array([protein.size]).reshape(-1, 1))
-    # print(f'protein.size is {protein.size}')
-    # print(f'{np.array([protein.size]).reshape(-1, 1)}')
-    # print(f'in transform_protein_data, scaled_size is {scaled_size}')
 
     # Extract, scale, and pad the components
-    top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1], reverse=True)[
+    top_components = sorted(protein.connected_components_tuples, key=lambda x: x[1]['average_scanNet_ubiq'], reverse=True)[
                      :max_number_of_components]
-    protein_components = np.array([component[:4] for component in top_components])
-    if protein_components.size == 0:
-        protein_components_scaled = np.zeros((0, 4))
+    component_size = 9 if with_pesto else 4
+    if len(top_components) == 0:
+        protein_components_scaled = np.zeros((0, component_size))
     else:
-        protein_components_scaled = scaler_components.transform(protein_components)
+        protein_components_flattend = []
+        for component in top_components:
+            patch_size, patch_dict = component[:2]
+            patch_dict_flattened = [float(val) for val in patch_dict.values()]
+            patch_flattened = [patch_size] + patch_dict_flattened
+            protein_components_flattend.append(patch_flattened)
+        protein_components_flattend = np.array(protein_components_flattend)
+        protein_components_scaled = scaler_components.transform(protein_components_flattend)
     if len(protein_components_scaled) < max_number_of_components:
         padding = ((0, max_number_of_components - len(protein_components_scaled)), (0, 0))
         protein_components_scaled = np.pad(protein_components_scaled, padding, mode='constant', constant_values=0)
@@ -552,7 +581,7 @@ def transform_protein_data(protein, scaler_size, scaler_components, encoder, max
 
 
 def transform_protein_data_list(proteins, scaler_size_path, scaler_components_path, encoder_path,
-                                max_number_of_components):
+                                max_number_of_components,with_pesto):
     scaler_size = load_as_pickle(scaler_size_path)
     scaler_components = load_as_pickle(scaler_components_path)
     encoder = load_as_pickle(encoder_path)
@@ -562,7 +591,7 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
 
     for protein in proteins:
         scaled_size_tensor, scaled_components_tensor, encoded_components_tensor = transform_protein_data(
-            protein, scaler_size, scaler_components, encoder, max_number_of_components)
+            protein, scaler_size, scaler_components, encoder, max_number_of_components,with_pesto)
 
         scaled_sizes.append(scaled_size_tensor)
         scaled_components_list.append(scaled_components_tensor)

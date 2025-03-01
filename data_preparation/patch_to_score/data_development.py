@@ -12,21 +12,22 @@ import tensorflow as tf
    
 
 
-def create_merged_protein_object_dict():
+def create_merged_protein_object_dict(dir_path):
+    indexes = load_as_pickle(os.path.join(dir_path, 'indexes.pkl'))
     merged_dict = {}
-    for i in range(len(dev_utils.indexes) - 1):
-        d = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion' + str(i)))
+    for i in range(len(indexes) - 1):
+        d = load_as_pickle(os.path.join(dir_path, 'proteinObjectsWithEvoluion' + str(i)))
         for key, value in d.items():
             merged_dict[key] = value
     return merged_dict
 
 
-def create_data_relevant_for_training(max_number_of_components, merged_dict):
+def create_data_relevant_for_training(max_number_of_components, merged_dict,dir_path):
     proteins = [protein for _, protein in merged_dict.items()]
     sequences = [protein.get_sequence() for protein in proteins]
     sources = [protein.source for protein in proteins]
     uniprots = [key for key, _ in merged_dict.items()]
-    protein_paths = [os.path.join(paths.patches_dicts_path, f'proteinObjectsWithEvoluion{str(i // 1500)}') for i in
+    protein_paths = [os.path.join(dir_path, f'proteinObjectsWithEvoluion{str(i // 1500)}') for i in
                      range(len(uniprots))]
 
     data_components_flattend, data_protein_size, data_number_of_components, data_components = dev_utils.extract_protein_data(
@@ -38,67 +39,112 @@ def create_data_relevant_for_training(max_number_of_components, merged_dict):
     return uniprots, sequences, protein_paths, data_components_flattend, data_protein_size, data_number_of_components, data_components, sources
 
 
-def create_patches(all_predictions):
+def create_patches(all_predictions,dir_path,percentile_90):
     i = int(sys.argv[1])
     PLDDT_THRESHOLD = 50
-    dev_utils.create_patches_dict(i, paths.patches_dicts_path, PLDDT_THRESHOLD, all_predictions)
+
+    dev_utils.create_patches_dict(i, dir_path, PLDDT_THRESHOLD, all_predictions,percentile_90)
 
 
-def create_small_sample_dict(merge_dict):
+def create_small_sample_dict(merge_dict,small_merged_dict_path):
     small_dict = {}
     for i, (key, value) in enumerate(merge_dict.items()):
-        if i == 10:
+        if i == 30:
             break
         small_dict[key] = value
-    save_as_pickle(small_dict, os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
+    save_as_pickle(small_dict, small_merged_dict_path)
+    return small_dict
 
+
+
+def add_pesto_predictions(all_predictions_path,pesto_predictions_path):
+    pesto_predictions = load_as_pickle(pesto_predictions_path)
+    all_predictions = load_as_pickle(all_predictions_path)  
+    scanNet_keys = all_predictions['dict_resids'].keys()
+    pesto_keys = pesto_predictions['protein'].keys()
+    intersection = set(scanNet_keys).intersection(set(pesto_keys))
+    pesto_predictions = {f'pesto_{class_name}': {sub_k: sub_v for sub_k, sub_v in class_dict.items() if sub_k in intersection} for class_name, class_dict in pesto_predictions.items()}
+    
+    all_predictions.update(pesto_predictions)
+    path_with_pesto = all_predictions_path.split(".pkl")[0]+"_with_pesto.pkl"
+    save_as_pickle(all_predictions, path_with_pesto)
+    return all_predictions
+
+def normalize_and_save_data(data_for_training_folder_path, proteins, sequences, sources, uniprots, protein_paths):
+    scaled_sizes, scaled_components_list, encoded_components_list = (
+        dev_utils.transform_protein_data_list(proteins,
+                                                os.path.join(scalers_folder_path, 'scaler_size.pkl'),
+                                                os.path.join(scalers_folder_path, 'scaler_components.pkl'),
+                                                os.path.join(scalers_folder_path, 'encoder.pkl'),
+                                                dev_utils.MAX_NUMBER_OF_COMPONENTS,with_pesto))
+    dev_utils.save_as_tensor(scaled_sizes, os.path.join(data_for_training_folder_path, 'scaled_sizes.tf'))
+    dev_utils.save_as_tensor(scaled_components_list, os.path.join(data_for_training_folder_path, 'scaled_components_list.tf'))
+    dev_utils.save_as_tensor(encoded_components_list, os.path.join(data_for_training_folder_path, 'encoded_components_list.tf'))
+    save_as_pickle(sources,os.path.join(data_for_training_folder_path, 'sources.pkl'))
+    save_as_pickle(uniprots, os.path.join(data_for_training_folder_path, 'uniprots.pkl'))
+    save_as_pickle(protein_paths,os.path.join(data_for_training_folder_path, 'protein_paths.pkl'))
+    labels = tf.convert_to_tensor([0 if source in dev_utils.NEGATIVE_SOURCES else 1 for source in sources])
+    dev_utils.save_as_tensor(labels,os.path.join(data_for_training_folder_path, 'labels.tf'))
 
 if __name__ == "__main__":
-    # CREATE PROTEIN OBJECTS, I'M DOING IT IN BATCHES
-    # all_predictions = all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
-    # create_patches(all_predictions)
+    
+    DATE = '0304'
+    with_pesto = True
+    with_pesto_addition = '_with_pesto' if with_pesto else ''
+    training_name = f'{DATE}{with_pesto_addition}'
+    all_predictions_path = os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl')
+    patches_dict_folder_path = os.path.join(paths.patches_dicts_path, f'{training_name}')
+    os.makedirs(patches_dict_folder_path, exist_ok=True)
+    data_for_training_folder_path = os.path.join(paths.patch_to_score_data_for_training_path, f'{training_name}')
+    os.makedirs(data_for_training_folder_path, exist_ok=True)
+    pesto_predictions_path = '/home/iscb/wolfson/doririmon/home/order/ubinet/pesto/C_structured/PeSToIntegration/assets/data/pesto_inference_outputs/dict_predictions_pesto.pkl'
+    merged_dict = None
+    if with_pesto:
+        all_predictions = add_pesto_predictions(all_predictions_path,pesto_predictions_path)
+    else:
+        all_predictions = load_as_pickle(all_predictions_path)
+    
+    percentile_90_path = os.path.join(patches_dict_folder_path, 'percentile_90.pkl')
+    if not os.path.exists(percentile_90_path):
+        dev_utils.create_90_percentile(all_predictions_path,percentile_90_path)
+    percentile_90 = load_as_pickle(percentile_90_path)
+    print(percentile_90)
+    create_patches(all_predictions,patches_dict_folder_path,percentile_90)   
 
-    # all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
-    # print(all_predictions.keys())
-    # merged_dict = create_merged_protein_object_dict()
-    # save_as_pickle(merged_dict, os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution.pkl'))
-    merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'merged_protein_objects_with_evolution.pkl'))
-    # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'proteinObjectsWithEvoluion0'))
-    # create_small_sample_dict(merged_dict)
-    # merged_dict = load_as_pickle(os.path.join(paths.patches_dicts_path, 'small_sample_dict.pkl'))
+    merged_dict = create_merged_protein_object_dict(patches_dict_folder_path)
+    merged_dict_path = os.path.join(patches_dict_folder_path, 'merged_protein_objects.pkl')
+    if not os.path.exists(merged_dict_path):
+        save_as_pickle(merged_dict, merged_dict_path)
+    merged_dict = load_as_pickle(merged_dict_path)
+
+    # small_sample_dict_path = os.path.join(patches_dict_folder_path, 'small_sample_dict.pkl')
+    # if not os.path.exists(small_sample_dict_path):
+    #     merged_dict = create_small_sample_dict(merged_dict,small_sample_dict_path)
+    # else:
+    #     merged_dict = load_as_pickle(small_sample_dict_path)
     
     # GET RELEVANT INFO FROM PROTEIN OBJECTS
 
     proteins = [protein for _, protein in merged_dict.items()]
     uniprots, sequences, protein_paths, data_components_flattend, data_protein_size,data_number_of_components, data_components, sources = create_data_relevant_for_training(
-       dev_utils.MAX_NUMBER_OF_COMPONENTS, merged_dict)
-    # CREATE SCALERS
-   
+       dev_utils.MAX_NUMBER_OF_COMPONENTS, merged_dict,patches_dict_folder_path)
+    # # # CREATE AND FIT SCALERS
+    patch_to_score_model_path =os.path.join(paths.patch_to_score_model_path, f'{training_name}') 
+    scalers_folder_path = os.path.join(patch_to_score_model_path, 'scalers')
+    os.makedirs(scalers_folder_path, exist_ok=True)
+
     dev_utils.fit_protein_data(np.array(data_components_flattend), np.array(data_protein_size),  np.array(data_number_of_components),
-                              paths.scalers_path, dev_utils.MAX_NUMBER_OF_COMPONENTS)
+                              scalers_folder_path, dev_utils.MAX_NUMBER_OF_COMPONENTS)
 
-    # SAVE DATA FOR TRAINING
-    save_as_pickle(sources,os.path.join(paths.patch_to_score_data_for_training_path, 'sources.pkl'))
-    save_as_pickle(uniprots, os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots.pkl'))
-    save_as_pickle(protein_paths,os.path.join(paths.patch_to_score_data_for_training_path, 'protein_paths.pkl'))
-    labels = tf.convert_to_tensor([0 if source in dev_utils.NEGATIVE_SOURCES else 1 for source in sources])
-    dev_utils.save_as_tensor(labels,os.path.join(paths.patch_to_score_data_for_training_path, 'labels.tf'))
-    
-    scaled_sizes, scaled_components_list, encoded_components_list = (
-    dev_utils.transform_protein_data_list(proteins,
-                                              os.path.join(paths.scalers_path, 'scaler_size.pkl'),
-                                              os.path.join(paths.scalers_path, 'scaler_components.pkl'),
-                                              os.path.join(paths.scalers_path, 'encoder.pkl'),
-                                              dev_utils.MAX_NUMBER_OF_COMPONENTS))
-    dev_utils.save_as_tensor(scaled_sizes, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_sizes.tf'))
-    dev_utils.save_as_tensor(scaled_components_list, os.path.join(paths.patch_to_score_data_for_training_path, 'scaled_components_list.tf'))
-    dev_utils.save_as_tensor(encoded_components_list, os.path.join(paths.patch_to_score_data_for_training_path, 'encoded_components_list.tf'))
 
-    # PARTIOTION THE DATA BY SEQUENCE LIKELIHOOD
-    partition_utils.partition_to_folds_and_save(sequences)
+    # # SAVE DATA FOR TRAINING
+    normalize_and_save_data(data_for_training_folder_path, proteins, sequences, sources, uniprots, protein_paths)
+
+    # # PARTIOTION THE DATA BY SEQUENCE LIKELIHOOD
+    partition_utils.partition_to_folds_and_save(sequences,data_for_training_folder_path)
     
-    # CREATE UNIPROTS SETS
-    partition_utils.create_uniprots_sets()
+    # # # CREATE UNIPROTS SETS
+    partition_utils.create_uniprots_sets(data_for_training_folder_path)
     
 
     # PLOT DUMMY BASELINE FOR AGGREGATE SCORING FUNCTION
