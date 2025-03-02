@@ -9,35 +9,37 @@ import tensorflow as tf
 from data_preparation.ScanNet.db_creation_scanNet_utils import load_as_pickle,save_as_pickle
 from results.patch_to_score.patch_to_score_result_analysis import get_best_architecture_models_path
 
-def train_models(directory_name):
-    folds_training_dicts = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path,
-                                                                        'folds_traning_dicts.pkl'))
-    if not os.path.exists(directory_name):
-        os.mkdir(directory_name)
-
-    total_aucs = []
+def train_models(models_folder_path,results_folder_path,data_for_training_folder_path,with_pesto):
+    folds_training_dicts = load_as_pickle(os.path.join(data_for_training_folder_path,'folds_training_dicts.pkl'))
+    os.makedirs(models_folder_path,exist_ok=True)
+    os.makedirs(results_folder_path,exist_ok=True)
+    model_log_dir = os.path.join(models_folder_path, 'logs')
+    os.makedirs(model_log_dir,exist_ok=True)
+    metric = 'pr_auc'
+    max_pr_auc = 0
+    grid_results = []
     n_layers = int(sys.argv[1])
     m_a = int(sys.argv[2])
     m_b_values = [1024]
     m_c = int(sys.argv[3])
-    batch_size = 1024
+    batch_size = 200
     n_early_stopping_epochs = 12
     for m_b in m_b_values:
-        architecture_dir_path = os.path.join(directory_name,f'architecture:{n_layers}_{m_a}_{m_b}_{m_c}')
-        if not os.path.exists(architecture_dir_path):
-            os.mkdir(architecture_dir_path)
-        all_predictions = []
-        all_labels = []
-        architecture_aucs = []
+        print(f'architecture:{n_layers}_{m_a}_{m_b}_{m_c}')
+        architecture_models = []
+        architecture_validation_predictions = []
+        architecture_validation_labels = []
+        architecture_test_predictions = []
+        architecture_test_labels = []
         for i in range(len(folds_training_dicts)):
+            print(f'fold {i}')
             tf.keras.backend.clear_session()
-            if 'model' in locals():
-                del model
-            model = utils.build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n_layers)
+            model = utils.build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n_layers,with_pesto)
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
                         loss='binary_crossentropy',
                         metrics=[tf.keras.metrics.AUC(curve='PR'), 'accuracy'])
+            
             print(m_a, m_b, m_c, n_layers,
                 n_early_stopping_epochs, batch_size, i)
             
@@ -62,41 +64,66 @@ def train_models(directory_name):
             # Convert class weights to a dictionary
             class_weight = {i: class_weights[i] for i in range(len(class_weights))}
             
+            # Create a log directory for TensorBoard
+            architecture_log_dir = os.path.join(model_log_dir, f"architecture_{n_layers}_{m_a}_{m_b}_{m_c}")
+            os.makedirs(architecture_log_dir, exist_ok=True)
+            fold_log_dir = os.path.join(architecture_log_dir, f"fold_{i}")
+            tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=fold_log_dir, histogram_freq=1)
+
             loss_metric = 'val_auc'
             model.fit(
                 [components_train, sizes_train, num_patches_train],
                 labels_train,
-                epochs=300,
+                epochs=1,
                 verbose=1,
                 validation_data=(
                     [components_validation, sizes_validation, num_patches_validation], labels_validation),
                 callbacks=[tf.keras.callbacks.EarlyStopping(monitor=loss_metric,
                                                             mode='max',
                                                             patience=n_early_stopping_epochs,
-                                                            restore_best_weights=True)],
-                batch_size=batch_size
+                                                            restore_best_weights=True),
+                                                            tensorboard_callback],
+                batch_size=batch_size,
+                class_weight=class_weight
             )
 
-            yhat_validation = model.predict(
-                [components_validation, sizes_validation, num_patches_validation])
-            precision, recall, _ = utils.precision_recall_curve(labels_validation, yhat_validation)
-            pr_auc = auc(recall, precision)
-            architecture_aucs.append(((m_a, m_b, m_c, n_layers,
-                                    n_early_stopping_epochs, batch_size, i), pr_auc))
-            all_predictions.append(yhat_validation)
-            all_labels.append(labels_validation.numpy())
-            model.save(os.path.join(architecture_dir_path, 'model'+str(i)+'.keras'))
+            yhat_validation = model.predict([components_validation, sizes_validation, num_patches_validation])
+            architecture_validation_predictions.append(yhat_validation)
+            architecture_validation_labels.append(labels_validation.numpy())
+            
+            
+            yhat_test = model.predict([components_test, sizes_test, num_patches_test])
+            architecture_test_predictions.append(yhat_test)
+            architecture_test_labels.append(labels_test.numpy())
 
-        all_labels = np.concatenate(all_labels)
-        all_predictions = np.concatenate(all_predictions)
-        precision, recall, _ = utils.precision_recall_curve(all_labels, all_predictions)
+            architecture_models.append(model)
+
+        all_architecture_labels = np.concatenate(architecture_validation_labels)
+        all_architecture_predictions = np.concatenate(architecture_validation_predictions)
+        precision, recall, _ = utils.precision_recall_curve(all_architecture_labels, all_architecture_predictions)
         pr_auc = auc(recall, precision)
-        total_aucs.append(((m_a, m_b, m_c, n_layers,
-                        n_early_stopping_epochs, batch_size), pr_auc))
-        np.save(os.path.join(architecture_dir_path,f'predictions.npy'),all_predictions)
-        np.save(os.path.join(architecture_dir_path,f'labels.npy'),all_labels)
-        save_as_pickle(architecture_aucs,os.path.join(architecture_dir_path,f'architecture_aucs.pkl'))
-    save_as_pickle(total_aucs, os.path.join(directory_name, f'totalAucs:n_layers:{str(n_layers)}_m_a:{str(m_a)}_m_c:{str(m_c)}.pkl'))
+        print(f'pr_auc is {pr_auc}')
+        
+        grid_results.append({'m_a': m_a, 'm_b': m_b, 'm_c': m_c, 'n_layers': n_layers,'batch_size':batch_size,'n_early_stopping_epochs':n_early_stopping_epochs, f'val_metric': pr_auc})
+        if pr_auc > max_pr_auc:
+            max_pr_auc = pr_auc
+            best_models = architecture_models
+            best_architecture = f'architecture:{n_layers}_{m_a}_{m_b}_{m_c}'
+            best_architecture_test_predictions = architecture_test_predictions
+            best_architecture_test_labels = architecture_test_labels
+    
+    models_architecture_folder = os.path.join(models_folder_path,best_architecture)
+    os.makedirs(models_architecture_folder,exist_ok=True)
+    results_architecture_folder = os.path.join(results_folder_path,best_architecture)
+    os.makedirs(results_architecture_folder,exist_ok=True)
+    utils.save_grid_search_results(grid_results,results_architecture_folder)
+    
+    for i in range(len(best_models)):
+        best_models[i].save(os.path.join(models_architecture_folder, f'model{i}.keras'))
+
+    utils.save_architecture_test_results(best_architecture_test_predictions,best_architecture_test_labels,results_architecture_folder)
+
+
 
 def predict_over_test_set(models_dir_path,results_dir):
     architecture_dir_path = get_best_architecture_models_path(models_dir_path,results_dir)
@@ -129,6 +156,15 @@ def predict_over_test_set(models_dir_path,results_dir):
 
 
 if __name__ == "__main__":
-    # train_models(paths.with_MSA_50_plddt_0304_models_dir)
-    predict_over_test_set(paths.with_MSA_50_plddt_0304_models_dir,paths.with_MSA_50_plddt_0304_results_dir)
+    DATE = '03_04'
+    with_pesto = False
+    with_pesto_addition = '_with_pesto' if with_pesto else ''
+    training_name = f'{DATE}{with_pesto_addition}'
+    data_for_training_folder_path = os.path.join(paths.patch_to_score_data_for_training_path, f'{training_name}')
+    models_folder_path = os.path.join(paths.patch_to_score_model_path, f'{training_name}')
+    results_folder_path = os.path.join(paths.patch_to_score_results_path, f'{training_name}')
+    
+    train_models(models_folder_path,results_folder_path,data_for_training_folder_path,with_pesto)
+    
+    # predict_over_test_set(paths.with_MSA_50_plddt_0304_models_dir,paths.with_MSA_50_plddt_0304_results_dir)
     # print('done')

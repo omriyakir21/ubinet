@@ -11,7 +11,7 @@ from sklearn.utils import compute_class_weight
 import paths
 import numpy as np
 from matplotlib import pyplot as plt
-
+import pandas as pd
 # for building linear regression models and preparing data
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.model_selection import train_test_split
@@ -274,20 +274,22 @@ def plotROC(y_probs, labels):
     plt.show()
 
 
-def plotPrecisionRecall(y_probs, labels, header):
-    precision, recall, thresholds = precision_recall_curve(labels, y_probs)
+def plot_precision_recall(y_probs, labels, header,save_path):
+    precision, recall, _ = precision_recall_curve(labels, y_probs)
     pr_auc = auc(recall, precision)
     plt.figure(figsize=(8, 6))
+    pr_auc = round(pr_auc, 3)
     plt.plot(recall, precision, label='Precision-Recall Curve, AUC =' + str(pr_auc))
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-    plt.title('Precision-Recall Curve ' + header)
+    plt.title(header)
     plt.legend()
     plt.grid(True)
-    plt.show()
+    plt.savefig(save_path)
+    plt.close()
 
 
-def build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n_layers):
+def build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n_layers,with_pesto):
     '''
     :param m_a: size of the hidden layers in the MLP of the components
     :param m_b: size of the hidden layers in the MLP of the concatenated size and number of patches
@@ -296,8 +298,9 @@ def build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n
     :return:
     '''
     # Define the input shape
-    input_shape = (maxNumberOfPatches, 4)
-    input_data = tf.keras.Input(shape=input_shape, name='sensor_input')
+
+    input_shape = (maxNumberOfPatches, 9) if with_pesto else (maxNumberOfPatches, 4) 
+    input_data = tf.keras.Input(shape=input_shape, name='patches_input')
     size_value = tf.keras.Input(shape=(1,), name='extra_value_input')
     n_patches_hot_encoded_value = tf.keras.Input(shape=(maxNumberOfPatches + 1,), name='hot_encoded_value_input')
     masked_input = tf.keras.layers.Masking(mask_value=0.0)(input_data)
@@ -441,6 +444,31 @@ def getLabelsPredictionsAndArchitectureOfBestArchitecture(gridSearchDir):
             labels = predictionsAndLabels[i][2]
             break
     return predictions, labels, bestArchitecture
+
+def save_grid_search_results(grid_results,results_folder):
+    #save the grid search results to a CSV file
+    results_df = pd.DataFrame(grid_results)
+    #sort the results by pr_auc
+    results_df = results_df.sort_values(by='val_metric', ascending=False)
+    results_df.to_csv(os.path.join(results_folder, 'grid_search_results.csv'), index=False)
+
+def save_architecture_test_results(architecture_test_predictions,architecture_test_labels,results_architecture_folder):
+    for i in range(len(architecture_test_predictions)):
+        fold_results_folder_path = os.path.join(results_architecture_folder,f'fold_{i}')
+        os.makedirs(fold_results_folder_path,exist_ok=True)
+        np.save(os.path.join(fold_results_folder_path,'predictions.npy'),architecture_test_predictions[i])
+        np.save(os.path.join(fold_results_folder_path,'labels.npy'),architecture_test_labels[i])
+        header = f'precition_recall_curve_{i}'
+        save_path = os.path.join(fold_results_folder_path, f'{header}.png')
+        plot_precision_recall(architecture_test_predictions[i], architecture_test_labels[i],header,save_path)
+    all_test_predictions = np.concatenate(architecture_test_predictions)
+    all_test_labels = np.concatenate(architecture_test_labels)
+    
+    header = 'precition_recall_curve'
+    save_path = os.path.join(results_architecture_folder, f'{header}.png')
+    plot_precision_recall(all_test_predictions, all_test_labels,header,save_path)
+    np.save(os.path.join(results_architecture_folder,'all_predictions.npy'),all_test_predictions)
+    np.save(os.path.join(results_architecture_folder,'all_labels.npy'),all_test_labels)
 
 
 # def createCSVFileFromResults(gridSearchDir, trainingDictsDir, dirName):
