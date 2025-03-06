@@ -51,10 +51,10 @@ class SizeDifferentiationException(Exception):
 
 
 class Protein:
-    def __init__(self, uniprot_name, plddt_threshold, all_predictions,percentile_90):
+    def __init__(self, uniprot_name, plddt_threshold, all_predictions,percentile_90,with_pesto):
         self.uniprot_name = uniprot_name
         self.percentile_90 = percentile_90 
-        self.predictions_dict = self.fill_predictions_dict(all_predictions)
+        self.predictions_dict = self.fill_predictions_dict(all_predictions,with_pesto)
         self.source = all_predictions['dict_sources'][uniprot_name]
         self.plddt_values = self.get_plddt_values()
         self.sequence = self.get_sequence()
@@ -63,16 +63,16 @@ class Protein:
         self.create_graph(plddt_threshold)
         self.connected_components_tuples = self.create_connected_components_tuples()
 
-    def fill_predictions_dict(self,all_predictions):
+    def fill_predictions_dict(self,all_predictions,with_pesto):
         predictions_dict = {}
         predictions_dict['scanNet_ubiq'] = all_predictions['dict_predictions_ubiquitin'][self.uniprot_name]
         predictions_dict['scanNet_protein'] = all_predictions['dict_predictions_interface'][self.uniprot_name]
-        predictions_dict['pesto_protein'] = all_predictions['pesto_protein'][self.uniprot_name]
-        predictions_dict['pesto_dna_rna'] = all_predictions['pesto_dna_rna'][self.uniprot_name]
-        predictions_dict['pesto_ion'] = all_predictions['pesto_ion'][self.uniprot_name]
-        predictions_dict['pesto_ligand'] = all_predictions['pesto_ligand'][self.uniprot_name]
-        predictions_dict['pesto_lipid'] = all_predictions['pesto_lipid'][self.uniprot_name]
-
+        if with_pesto:
+            predictions_dict['pesto_protein'] = all_predictions['pesto_protein'][self.uniprot_name]
+            predictions_dict['pesto_dna_rna'] = all_predictions['pesto_dna_rna'][self.uniprot_name]
+            predictions_dict['pesto_ion'] = all_predictions['pesto_ion'][self.uniprot_name]
+            predictions_dict['pesto_ligand'] = all_predictions['pesto_ligand'][self.uniprot_name]
+            predictions_dict['pesto_lipid'] = all_predictions['pesto_lipid'][self.uniprot_name]
         return predictions_dict
 
         
@@ -191,7 +191,7 @@ def c_alpha_distance(atom1, atom2):
     return distance
 
 
-def create_patches_dict(i, dir_path, plddt_threshold, all_predictions,percentile_90):
+def create_patches_dict(i, dir_path, plddt_threshold, all_predictions,percentile_90,with_pesto):
     indexes_path = os.path.join(dir_path, 'indexes.pkl')
     if not os.path.exists(indexes_path):
         indexes = list(range(0, len(all_predictions['dict_resids']) + 1, 1500)) + [len(all_predictions['dict_resids'])]
@@ -204,7 +204,7 @@ def create_patches_dict(i, dir_path, plddt_threshold, all_predictions,percentile
     for key in all_keys:
         print("i= ", i, " cnt = ", cnt, " key = ", key)
         cnt += 1
-        patches_dict[key] = Protein(key, plddt_threshold, all_predictions, percentile_90)
+        patches_dict[key] = Protein(key, plddt_threshold, all_predictions, percentile_90,with_pesto)
     save_as_pickle(patches_dict, os.path.join(os.path.join(dir_path, 'proteinObjectsWithEvoluion' + str(i))))
 
 
@@ -447,6 +447,9 @@ def create_dummy_pr_plot(dirPath, predictions, labels, header):
 
 
 def plot_dummy_prauc(allPredictions):
+    """
+    Plot the PRAUC of the dummy model (protein prediction is the prediction of the highest amino acid prediction)
+    """
     dict_sources = allPredictions['dict_sources']
     dict_predictions_ubiquitin = allPredictions['dict_predictions_ubiquitin']
     labels = np.array([0 if dict_sources[key] in NEGATIVE_SOURCES else 1 for key in dict_sources.keys()])

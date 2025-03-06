@@ -88,8 +88,8 @@ def normalize_and_save_data(data_for_training_folder_path, proteins, sequences, 
 
 if __name__ == "__main__":
     
-    DATE = '0304'
-    with_pesto = True
+    DATE = '03_04'
+    with_pesto = False
     with_pesto_addition = '_with_pesto' if with_pesto else ''
     training_name = f'{DATE}{with_pesto_addition}'
     all_predictions_path = os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl')
@@ -104,50 +104,54 @@ if __name__ == "__main__":
     else:
         all_predictions = load_as_pickle(all_predictions_path)
     
+    # SAVE THE 90'TH PERCENTILE OF UBIQUITIN BINDING PREDICTIONS FROM SCANNET,
+    # WE WILL USE IT LATER AS A THRESHOLD AN AMINO ACID IN ORDER TO BE IN A PATCH 
     percentile_90_path = os.path.join(patches_dict_folder_path, 'percentile_90.pkl')
     if not os.path.exists(percentile_90_path):
         dev_utils.create_90_percentile(all_predictions_path,percentile_90_path)
     percentile_90 = load_as_pickle(percentile_90_path)
-    print(percentile_90)
-    create_patches(all_predictions,patches_dict_folder_path,percentile_90)   
 
+    # CREATING THE PATCHES IN BATCHES OF 1500 PROTEINS. SEE SCRIPTS/RUN_DATA_DEVELOPMENT.SH 
+    # WE CAN RUN THIS ON CPU'S (CAN DO MULTIPLE AT A TIME)
+    create_patches(all_predictions,patches_dict_folder_path,percentile_90,with_pesto)   
+
+    #MERGE THE PATCHES AFTER CREATING THEM
     merged_dict = create_merged_protein_object_dict(patches_dict_folder_path)
     merged_dict_path = os.path.join(patches_dict_folder_path, 'merged_protein_objects.pkl')
     if not os.path.exists(merged_dict_path):
         save_as_pickle(merged_dict, merged_dict_path)
     merged_dict = load_as_pickle(merged_dict_path)
 
-    # small_sample_dict_path = os.path.join(patches_dict_folder_path, 'small_sample_dict.pkl')
-    # if not os.path.exists(small_sample_dict_path):
-    #     merged_dict = create_small_sample_dict(merged_dict,small_sample_dict_path)
-    # else:
-    #     merged_dict = load_as_pickle(small_sample_dict_path)
+    #CREATE SMALL SAMPLE FOR TESTING
+    small_sample_dict_path = os.path.join(patches_dict_folder_path, 'small_sample_dict.pkl')
+    if not os.path.exists(small_sample_dict_path):
+        merged_dict = create_small_sample_dict(merged_dict,small_sample_dict_path)
+    else:
+        merged_dict = load_as_pickle(small_sample_dict_path)
     
     # GET RELEVANT INFO FROM PROTEIN OBJECTS
-
     proteins = [protein for _, protein in merged_dict.items()]
     uniprots, sequences, protein_paths, data_components_flattend, data_protein_size,data_number_of_components, data_components, sources = create_data_relevant_for_training(
        dev_utils.MAX_NUMBER_OF_COMPONENTS, merged_dict,patches_dict_folder_path)
-    # # # CREATE AND FIT SCALERS
+    
+    # CREATE AND FIT SCALERS
     patch_to_score_model_path =os.path.join(paths.patch_to_score_model_path, f'{training_name}') 
     scalers_folder_path = os.path.join(patch_to_score_model_path, 'scalers')
     os.makedirs(scalers_folder_path, exist_ok=True)
-
     dev_utils.fit_protein_data(np.array(data_components_flattend), np.array(data_protein_size),  np.array(data_number_of_components),
                               scalers_folder_path, dev_utils.MAX_NUMBER_OF_COMPONENTS)
 
 
-    # # SAVE DATA FOR TRAINING
+    # SAVE DATA FOR TRAINING
     normalize_and_save_data(data_for_training_folder_path, proteins, sequences, sources, uniprots, protein_paths)
 
-    # # PARTIOTION THE DATA BY SEQUENCE LIKELIHOOD
+    # PARTIOTION THE DATA BY SEQUENCE LIKELIHOOD
     partition_utils.partition_to_folds_and_save(sequences,data_for_training_folder_path)
     
-    # # # CREATE UNIPROTS SETS
+    # CREATE UNIPROTS SETS (WE ARE USING IT LATER IN RESULTS ANALYSIS)
     partition_utils.create_uniprots_sets(data_for_training_folder_path)
     
 
-    # PLOT DUMMY BASELINE FOR AGGREGATE SCORING FUNCTION
-    # plotDummyPRAUC(allPredictions)
+    # PLOT DUMMY BASELINE (protein prediction is the prediction of the highest amino acid prediction) FOR AGGREGATE SCORING FUNCTION
+    dev_utils.plot_dummy_prauc(all_predictions)
 
-    # !!!!

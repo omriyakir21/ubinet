@@ -48,11 +48,11 @@ def get_uniprot_indices_for_groups(clusters_participants_list, sublists, fold_nu
         uniprot_indices.append(fold_indices)
     return np.concatenate(uniprot_indices)
 
-def partition_to_folds_and_save(sequences):
+def partition_to_folds_and_save(sequences,data_for_training_folder_path):
     cluster_indices, representative_indices = cluster_sequences(sequences, seqid=0.5, coverage=0.4,
                                                                 path2mmseqstmp=paths.tmp_path,
                                                                 path2mmseqs=paths.mmseqs_exec_path)
-    save_as_pickle(cluster_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'cluster_indices.pkl'))
+    save_as_pickle(cluster_indices, os.path.join(data_for_training_folder_path, 'cluster_indices.pkl'))
     clusters_participants_list = create_cluster_participants_indices(cluster_indices)
     cluster_sizes = [l.size for l in clusters_participants_list]
     cluster_sizes_and_indices = [(i, cluster_sizes[i]) for i in range(len(cluster_sizes))]
@@ -60,26 +60,26 @@ def partition_to_folds_and_save(sequences):
     groups_indices = [get_uniprot_indices_for_groups(clusters_participants_list, sublists, fold_num) for fold_num
                       in
                       range(5)] 
-    save_as_pickle(groups_indices, os.path.join(paths.patch_to_score_data_for_training_path, 'groups_indices.pkl'))
+    save_as_pickle(groups_indices, os.path.join(data_for_training_folder_path, 'groups_indices.pkl'))
         # CREATE TRAINING DICTS
     folds_training_dicts = create_training_folds(groups_indices,
-                                                           os.path.join(paths.patch_to_score_data_for_training_path,
+                                                           os.path.join(data_for_training_folder_path,
                                                                         'scaled_sizes.tf'),
-                                                           os.path.join(paths.patch_to_score_data_for_training_path,
+                                                           os.path.join(data_for_training_folder_path,
                                                                         'scaled_components_list.tf'),
-                                                           os.path.join(paths.patch_to_score_data_for_training_path,
+                                                           os.path.join(data_for_training_folder_path,
                                                                         'encoded_components_list.tf'),
-                                                           os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots.pkl'),
-                                                           os.path.join(paths.patch_to_score_data_for_training_path, 'labels.tf'))
+                                                           os.path.join(data_for_training_folder_path, 'uniprots.pkl'),
+                                                           os.path.join(data_for_training_folder_path, 'labels.tf'))
     print(f'before saving folds dict')
-    save_as_pickle(folds_training_dicts,os.path.join(paths.patch_to_score_data_for_training_path,
-                                                                        'folds_traning_dicts.pkl'))
+    save_as_pickle(folds_training_dicts,os.path.join(data_for_training_folder_path,
+                                                                        'folds_training_dicts.pkl'))
 
-def create_uniprots_sets():
-    uniprots = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots.pkl'))
-    groups_indices = load_as_pickle(os.path.join(paths.patch_to_score_data_for_training_path, 'groups_indices.pkl'))
+def create_uniprots_sets(data_for_training_folder_path):
+    uniprots = load_as_pickle(os.path.join(data_for_training_folder_path, 'uniprots.pkl'))
+    groups_indices = load_as_pickle(os.path.join(data_for_training_folder_path, 'groups_indices.pkl'))
     uniprots_sets = []
     for i in range(5):
         uniprots_set = set([uniprots[j] for j in groups_indices[(i+1)%5]])
         uniprots_sets.append(uniprots_set)
-    save_as_pickle(uniprots_sets, os.path.join(paths.patch_to_score_data_for_training_path, 'uniprots_sets.pkl'))
+    save_as_pickle(uniprots_sets, os.path.join(data_for_training_folder_path, 'uniprots_sets.pkl'))
