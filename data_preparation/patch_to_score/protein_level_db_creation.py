@@ -103,10 +103,13 @@ if __name__ == "__main__":
     create_uniprot_names_dict()
     uniprot_names_dict = protein_db_utils.load_as_pickle(
         os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl'))
-
-
     fetch_af_models_from_user_args(uniprot_names_dict)
+    
+    #renaming for convenience
     rename_AFDB_files()
+
+    # Filter out AF structures the doesnt meet the following criteria: 
+    # minimum of 100 residues or at least 20 percent of protein residues with a PLLDT score above 90.
     PLDDT_RATIO_THRESHOLD = 0.2
     PLDDT_THRESHOLD = 90
     NUMBER_OF_RESIDUES_THRESHOLD = 100
@@ -114,7 +117,7 @@ if __name__ == "__main__":
                                                   PLDDT_RATIO_THRESHOLD)
 
 
-    # Get the evidence for GO classes (positive) for analysis
+    # Get the evidence for GO classes (positive) for later analysis
     create_evidence_dict()
     evidence_dict = protein_db_utils.load_as_pickle(
         os.path.join(paths.GO_source_patch_to_score_path, 'evidence_dict.pkl'))
