@@ -99,7 +99,7 @@ def create_csv_file_with_uniprots_info():
 
 
 if __name__ == "__main__":
-    # 
+    # Get the uniprots names for GO classes (positive) and fetch AF structures.
     create_uniprot_names_dict()
     uniprot_names_dict = protein_db_utils.load_as_pickle(
         os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl'))
@@ -114,7 +114,7 @@ if __name__ == "__main__":
                                                   PLDDT_RATIO_THRESHOLD)
 
 
-
+    # Get the evidence for GO classes (positive) for analysis
     create_evidence_dict()
     evidence_dict = protein_db_utils.load_as_pickle(
         os.path.join(paths.GO_source_patch_to_score_path, 'evidence_dict.pkl'))
@@ -123,9 +123,5 @@ if __name__ == "__main__":
     protein_db_utils.save_as_pickle(uniprotNames_evidences_list,
                                     os.path.join(paths.GO_source_patch_to_score_path,
                                                  'uniprotNames_evidences_list.pkl'))
-    # uniprots = getAllUniprotsForTraining(
-    #     os.path.join(path.aggregateFunctionMLPDir, os.path.join('dataForTraining2902', 'allInfoDicts.pkl')))
-    
-    # uniprotEvidenceDict = uniprotsEvidencesListTodict(uniprotNames_evidences_list)
-    
+
 
