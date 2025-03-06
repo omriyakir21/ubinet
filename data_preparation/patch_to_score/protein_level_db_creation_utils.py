@@ -73,9 +73,8 @@ def get_evidence_util(path):
 def download_alphafold_model(uniprot_id, dir_path):
     # Construct the URL for the AlphaFold model
     url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
-
     try:
-        print(f"Attempting to download AlphaFold model for UniProt ID: {uniprot_id}")
+        print(f"Attempting to download AlphaFold model for UniProt ID: {uniprot_id}\n url is {url}")
 
         # Send the request to fetch the model
         response = requests.get(url)

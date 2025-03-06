@@ -10,6 +10,9 @@ import re
 
 
 def create_uniprot_names_dict():
+    """
+    Use the annotation files from GO to create a dictionary with the uniprot names for each class
+    """
     uniprot_names_dict = dict()
     uniprot_names_dict['ubiquitinBinding'] = protein_db_utils.get_uniprot_ids_from_gpad_file(
         os.path.join(paths.ubiquitin_binding_path, 'ubiquitinBinding.gpad'))
@@ -22,6 +25,9 @@ def create_uniprot_names_dict():
 
 
 def fetch_af_models_from_user_args(uniprot_names_dict):
+    """
+    Fetch the AF models for a given class and range of uniprot names
+    """
     class_name = sys.argv[1]
     i = int(sys.argv[2])
     j = int(sys.argv[3])
@@ -29,6 +35,9 @@ def fetch_af_models_from_user_args(uniprot_names_dict):
 
 
 def create_evidence_dict():
+    """
+    Use the annotation files from GO to create a dictionary with the evidence for each class
+    """
     evidence_dict = dict()
     evidence_dict['ubiquitinBinding'] = protein_db_utils.get_evidence_from_gpad_file(
         os.path.join(paths.ubiquitin_binding_path, 'ubiquitinBinding.gpad'))
@@ -90,30 +99,33 @@ def create_csv_file_with_uniprots_info():
 
 
 if __name__ == "__main__":
-    # create_uniprot_names_dict()
-    # create_evidence_dict()
+    # 
+    create_uniprot_names_dict()
+    uniprot_names_dict = protein_db_utils.load_as_pickle(
+        os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl'))
 
-    # evidence_dict = protein_db_utils.load_as_pickle(
-    #     os.path.join(paths.GO_source_patch_to_score_path, 'evidence_dict.pkl'))
-    # uniprot_names_dict = protein_db_utils.load_as_pickle(
-    #     os.path.join(paths.GO_source_patch_to_score_path, 'uniprotNamesDictNew.pkl'))
 
-    # uniprotNames_evidences_list = protein_db_utils.create_uniprot_id_evidence_tuples_for_existing_examples(
-    #     uniprot_names_dict, evidence_dict)
-    # protein_db_utils.save_as_pickle(uniprotNames_evidences_list,
-    #                                 os.path.join(paths.GO_source_patch_to_score_path,
-    #                                              'uniprotNames_evidences_list.pkl'))
     fetch_af_models_from_user_args(uniprot_names_dict)
-    # rename_AFDB_files()
+    rename_AFDB_files()
     PLDDT_RATIO_THRESHOLD = 0.2
     PLDDT_THRESHOLD = 90
     NUMBER_OF_RESIDUES_THRESHOLD = 100
     save_all_valid_af_predictions_for_all_classes(PLDDT_THRESHOLD, NUMBER_OF_RESIDUES_THRESHOLD,
                                                   PLDDT_RATIO_THRESHOLD)
 
+
+
+    create_evidence_dict()
+    evidence_dict = protein_db_utils.load_as_pickle(
+        os.path.join(paths.GO_source_patch_to_score_path, 'evidence_dict.pkl'))
+    uniprotNames_evidences_list = protein_db_utils.create_uniprot_id_evidence_tuples_for_existing_examples(
+        uniprot_names_dict, evidence_dict)
+    protein_db_utils.save_as_pickle(uniprotNames_evidences_list,
+                                    os.path.join(paths.GO_source_patch_to_score_path,
+                                                 'uniprotNames_evidences_list.pkl'))
     # uniprots = getAllUniprotsForTraining(
     #     os.path.join(path.aggregateFunctionMLPDir, os.path.join('dataForTraining2902', 'allInfoDicts.pkl')))
-    #
+    
     # uniprotEvidenceDict = uniprotsEvidencesListTodict(uniprotNames_evidences_list)
-    #
+    
 
