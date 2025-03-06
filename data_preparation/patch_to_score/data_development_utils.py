@@ -607,8 +607,9 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
           scaled_components_list[0].shape if scaled_components_list else None)
     print("encoded_components_list shape:", len(encoded_components_list),
           encoded_components_list[0].shape if encoded_components_list else None)
-
-    return tf.convert_to_tensor(scaled_sizes), tf.convert_to_tensor(scaled_components_list), tf.convert_to_tensor(encoded_components_list)
+    scaled_sizes = tf.squeeze(tf.convert_to_tensor(scaled_sizes),axis=1)
+    encoded_components_list = tf.squeeze(tf.convert_to_tensor(encoded_components_list),axis=1)
+    return scaled_sizes, tf.convert_to_tensor(scaled_components_list), encoded_components_list
 
 def save_as_tensor(data, path):
     tensor = tf.convert_to_tensor(data)
