@@ -8,4 +8,6 @@
 #SBATCH --mem=32000 # CPU memory (MB)
 #SBATCH --gpus=1 # GPU cores per process
 #SBATCH --cpus-per-task=8 # CPU cores per process
-python3 /home/iscb/wolfson/omriyakir/ubinet/data_preparation/ScanNet/create_tables_and_weights.py
+
+python3 /home/iscb/wolfson/omriyakir/ubinet/models/ScanNet_Ub/check_before_changes.py
+#1SBATCH --constraint="tesla_v100|quadro_rtx_8000|geforce_rtx_3090|a100|a5000|a6000"

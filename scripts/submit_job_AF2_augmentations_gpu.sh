@@ -8,4 +8,5 @@
 #SBATCH --mem=32000 # CPU memory (MB)
 #SBATCH --gpus=1 # GPU cores per process
 #SBATCH --cpus-per-task=8 # CPU cores per process
-python3 /home/iscb/wolfson/omriyakir/ubinet/models/patch_to_score/patch_to_score_MLP.py $1 $2 $3
+# python3 /home/iscb/wolfson/omriyakir/ubinet/data_preparation/ScanNet/AF2_augmentations.py
+colabfold_batch /home/iscb/wolfson/omriyakir/ubinet/datasets/scanNet/AF2_augmentations/pdbs_with_augmentations_95/MSA_folder /home/iscb/wolfson/omriyakir/ubinet/datasets/scanNet/AF2_augmentations/pdbs_with_augmentations_95/AF2_predictions 
