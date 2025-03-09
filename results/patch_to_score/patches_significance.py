@@ -19,6 +19,7 @@ from typing import Dict, List
 import pdb
 from cut_protein import extract_patch_from_pdb
 from models.structural_aligners.TM_align.TM_aligner import align_uniprots_with_target
+import results.patch_to_score.chimera_script as chimera_script
 
 
 def str_patch_from_list_indexes(protein, list_locations):
@@ -332,8 +333,7 @@ def filter_top_examples(input_csv, output_csv):
     # Save the filtered DataFrame to the output CSV file
     df.to_csv(output_csv, index=False)
 
-def create_substructures_for_filtered(csv_file, output_dir):
-    substructures_dir = os.path.join(output_dir, 'substructures')
+def create_substructures_for_filtered(csv_file, output_dir,substructures_dir,all_predictions_ubiq,patch_number):
     if not os.path.exists(substructures_dir):
         os.makedirs(substructures_dir)
     # Read the CSV file
@@ -346,11 +346,11 @@ def create_substructures_for_filtered(csv_file, output_dir):
         str_patch = row['str_patch1']
         source = row['source']
         organism = source.split()[0]
-        
+        all_predictions_ubiq_uniprot = all_predictions_ubiq[uniprot_id]
         # Call extract_patch_from_pdb
         # Assuming input_file is handled later, using a placeholder for now
         input_file = os.path.join(paths.AFDB_source_patch_to_score_path,organism,f'{uniprot_id}.pdb')
-        residue_count = extract_patch_from_pdb(uniprot_id, str_patch, 1, input_file, substructures_dir)
+        residue_count = extract_patch_from_pdb(uniprot_id, str_patch, patch_number, input_file, substructures_dir,all_predictions_ubiq_uniprot)
         # Remove the row if residue_count is greater than 300
         if residue_count > 300:
             df.drop(index, inplace=True)
@@ -358,9 +358,8 @@ def create_substructures_for_filtered(csv_file, output_dir):
     output_path = os.path.join(output_dir, f'data_predictions_significances_final_{organism}.csv')
     df.to_csv(output_path, index=False)
 
-def tm_align_substructures(substructures_dir, output_dir):
+def tm_align_substructures(substructures_dir,aligned_pdbs_dir):
     pdb_chain_table_path = os.path.join(paths.structural_aligners_path,'pdb_chain_table_uniprot_with_classes.csv')
-    aligned_pdbs_dir = os.path.join(output_dir, 'aligned_pdbs')
     if not os.path.exists(aligned_pdbs_dir):
         os.makedirs(aligned_pdbs_dir)
     # Iterate through each substructure file in the substructures directory
@@ -368,8 +367,52 @@ def tm_align_substructures(substructures_dir, output_dir):
         # Call TM-align
         # Assuming input_file is handled later, using a placeholder for now
         target_pdb = os.path.join(substructures_dir, file)
-        align_uniprots_with_target(target_pdb, pdb_chain_table_path,aligned_pdbs_dir)
+        align_uniprots_with_target(target_pdb, pdb_chain_table_path,aligned_pdbs_dir,substructures_dir)
 
+def add_structure_info(input_folder, input_csv, output_csv,patch_number):
+    # Read the input CSV file
+    df = pd.read_csv(input_csv)
+    prefix = f'patch{patch_number}_'
+    # Initialize new columns
+    new_columns_per_patch = [
+        'pdb_id_e1', 'tm_score_e1', 'rmsd_e1', 'seq_identity_e1',
+        'pdb_id_e2', 'tm_score_e2', 'rmsd_e2', 'seq_identity_e2',
+        'pdb_id_e3|e4', 'tm_score_e3|e4', 'rmsd_e3|e4', 'seq_identity_e3|e4',
+        'pdb_id_deubiquitylase', 'tm_score_deubiquitylase', 'rmsd_deubiquitylase', 'seq_identity_deubiquitylase',
+        'pdb_id_other', 'tm_score_other', 'rmsd_other', 'seq_identity_other'
+    ]
+    new_columns = [f'{prefix}{col}' for col in new_columns_per_patch]
+    
+    for col in new_columns:
+        df[col] = None
+    
+    # Loop through each uniprot ID
+    for index, row in df.iterrows():
+        uniprot = row['uniprot']
+        sub_folder = os.path.join(input_folder, f"{uniprot}_patch{patch_number}")
+        structure_csv = os.path.join(sub_folder, f"{uniprot}_patch{patch_number}_top_scores.csv")
+        
+        if os.path.exists(structure_csv):
+            structure_df = pd.read_csv(structure_csv)
+            
+            # Extract information for each class
+            for class_name in ['e1', 'e2', 'e3|e4', 'deubiquitylase','other']:
+                class_row = structure_df[structure_df['class'] == class_name]
+                if not class_row.empty:
+                    df.at[index, f'patch{patch_number}_pdb_id_{class_name}'] = class_row['pdb_id'].values[0]
+                    df.at[index, f'patch{patch_number}_tm_score_{class_name}'] = class_row['tm_score'].values[0]
+                    df.at[index, f'patch{patch_number}_rmsd_{class_name}'] = class_row['rmsd'].values[0]
+                    df.at[index, f'patch{patch_number}_seq_identity_{class_name}'] = class_row['seq_identity'].values[0]
+        
+    df.to_csv(output_csv, index=False)
+
+
+def change_bfactor_single_chain_structure(structure, chain_id, new_bfactors):
+    for chain in structure[0]:
+        if chain.id == chain_id:
+            for residue, new_bfactor in zip(chain, new_bfactors):
+                residue['CA'].bfactor = new_bfactor
+    return structure
 
 if __name__ == '__main__':
     # all_predictions = load_as_pickle(os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'))
@@ -397,13 +440,33 @@ if __name__ == '__main__':
     #     process_top_uniprots_by_source(file_path, source, output_file_path,all_predictions_path)
 
     # add log likelihood difference significance columns
-    # input_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_Human proteome.csv')
+    input_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_Human proteome.csv')
     # calculate_significance_ll(input_path, input_path)    
 
     #filter top examples
-    # output_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_filtered_Human proteome.csv')
+    output_path = os.path.join(best_architecture_results_dir, f'data_predictions_significances_filtered_Human proteome.csv')
     # filter_top_examples(input_path, output_path)
-    # create_substructures_for_filtered(output_path, best_architecture_results_dir)
-    tm_align_substructures(os.path.join(best_architecture_results_dir, 'substructures'), best_architecture_results_dir)
+    patch_number = 1
+    substructures_dir = os.path.join(best_architecture_results_dir, 'substructures_chainsaw',f'patch_{patch_number}')
+    
+    # all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
+
+    # create_substructures_for_filtered(output_path, best_architecture_results_dir,substructures_dir,all_predictions_ubiq,patch_number)
+    aligned_pdbs_dir = os.path.join(best_architecture_results_dir, 'aligned_chainsaw_pdbs_with_ubiqs',f'patch_{patch_number}')
+    # tm_align_substructures(substructures_dir,aligned_pdbs_dir)
+
+    # #add structure info to final table
+
+    input_csv = os.path.join(best_architecture_results_dir, 'data_predictions_significances_final_Human.csv')
+    output_csv = os.path.join(best_architecture_results_dir, 'data_predictions_significances_final_Human_with_tm_info.csv')
+    add_structure_info(aligned_pdbs_dir, input_csv, output_csv,patch_number)
+
+    patch_number = 2
+    substructures_dir = os.path.join(best_architecture_results_dir, 'substructures_chainsaw',f'patch_{patch_number}')
+    aligned_pdbs_dir = os.path.join(best_architecture_results_dir, 'aligned_chainsaw_pdbs_with_ubiqs',f'patch_{patch_number}')
+    input_csv = os.path.join(best_architecture_results_dir, 'data_predictions_significances_final_Human_with_tm_info.csv')
+    output_csv = os.path.join(best_architecture_results_dir, 'data_predictions_significances_final_Human_with_tm_info.csv')
+    add_structure_info(aligned_pdbs_dir, input_csv, output_csv,patch_number)
+
 
 

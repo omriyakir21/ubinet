@@ -10,10 +10,10 @@ from sklearn.decomposition import PCA
 from sklearn.mixture import GaussianMixture
 import paths
 from data_preparation.ScanNet.LabelPropagationAlgorithm_utils import split_receptors_into_individual_chains
-from uniprot_utils import get_chain_organism
+from results.ScanNet.uniprot_utils import get_chain_organism
 
 def from_binding_residues_string_to_hot_one_encoding(binding_residues_string):
-    hot_one_encoding = np.zeros(75)
+    hot_one_encoding = np.zeros(76)
     if binding_residues_string == '\n':
         return hot_one_encoding
     binding_residues = binding_residues_string[:-1].split('+')
@@ -187,7 +187,6 @@ def find_class_for_receptor(pdb_name, chains_names, not_found_tuples_list):
             print('Exception! ')
             not_found_tuples_list.append((pdb_name_4_letters, chain_name))
     return class_dict_for_receptor
-
 
 def find_class_for_receptors(pssm_content_path,asa_content_path,mono_ubiquitin_receptors_names):
     _, _, _, chain_names, _, _ = split_receptors_into_individual_chains(

@@ -85,7 +85,8 @@ def save_pr_plot(architecture_models_dir,results_architecture_dir):
     plt.ylabel('Precision')
     plt.title('Precision-Recall curve')
     plt.legend(loc="best")
-    
+    if not os.path.exists(results_architecture_dir):
+        os.makedirs(results_architecture_dir)
     # Save the plot
     plt.savefig(os.path.join(results_architecture_dir,"pr_plot_with_auc.png"))
 

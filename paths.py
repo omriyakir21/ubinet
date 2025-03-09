@@ -5,16 +5,17 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # data preparation paths
 data_preparation_path = os.path.join(current_dir, 'data_preparation')
-#   patch_to_score
+    #   patch_to_score
 patch_to_score_path = os.path.join(data_preparation_path, 'patch_to_score')
 mmseqs_patch_to_score_path = os.path.join(patch_to_score_path, 'mmseqs')
 
-#   ScanNet
+    #   ScanNet
 ScanNet_data_preparation_path = os.path.join(data_preparation_path, 'ScanNet')
 mmseqs_scanNet_path = os.path.join(ScanNet_data_preparation_path, 'mmseqs')
 mafft_path = os.path.join(ScanNet_data_preparation_path, 'mafft')
 ASA_path = os.path.join(ScanNet_data_preparation_path, 'ASA')
 ImerFiles_path = os.path.join(ScanNet_data_preparation_path, 'ImerFiles')
+cath_intermediate_files_path = os.path.join(ScanNet_data_preparation_path, 'cath_intermediate_files')
 
 
 # datasets paths
@@ -22,7 +23,7 @@ datasets_path = os.path.join(current_dir, 'datasets')
 #   patch_to_score
 patch_to_score_dataset_path = os.path.join(datasets_path, 'patch_to_score')
 #       patches dict
-patches_dicts_path = os.path.join(patch_to_score_dataset_path, 'patches_dicts') 
+patches_dicts_path = os.path.join(patch_to_score_dataset_path, 'patches_dicts')
 #       data_for_training
 patch_to_score_data_for_training_path = os.path.join(patch_to_score_dataset_path, 'data_for_training')
 #       sources
@@ -53,8 +54,10 @@ binding_chains_pdbs_without_ubiqs_path = os.path.join(binding_chains_pdbs_path, 
 scanNet_AF2_augmentations_path = os.path.join(datasets_scanNet_path, 'AF2_augmentations')
 #           original_pdbs_with_augmentations
 original_pdbs_with_augmentations_path = os.path.join(scanNet_AF2_augmentations_path, 'original_pdbs_with_augmentations')
-#           pdbs_with_augmentations_path
-pdbs_with_augmentations_path = os.path.join(scanNet_AF2_augmentations_path, 'pdbs_with_augmentations')
+#           pdbs_with_augmentations_95_path
+pdbs_with_augmentations_95_path = os.path.join(scanNet_AF2_augmentations_path, 'pdbs_with_augmentations_95')
+#           pdbs_with_augmentations_90_path 
+pdbs_with_augmentations_90_path = os.path.join(scanNet_AF2_augmentations_path, 'pdbs_with_augmentations_90')
 
 PSSM_path = os.path.join(datasets_scanNet_path, 'PSSM')
 #       QUEEN
@@ -74,7 +77,12 @@ chosen_assemblies_path = os.path.join(scanNet_sources_path, 'chosen_assemblies')
 # models
 models_path = os.path.join(current_dir, 'models')
 QUEEN_model_path = os.path.join(models_path, 'QUEEN')
+#   scanNet
 ScanNet_Ub_module_path = os.path.join(models_path, 'ScanNet_Ub')
+#       scanNet datasets
+ScanNet_Ub_datasets = os.path.join(ScanNet_Ub_module_path,'datasets')
+#           scanNet PPBS datasets
+ScanNet_Ub_PPBS_datasets = os.path.join(ScanNet_Ub_datasets,'PPBS')
 AF2_multimer_model_path = os.path.join(models_path, 'AF2_multimer')
 #   structural_aligners
 structural_aligners_path = os.path.join(models_path, 'structural_aligners')
@@ -98,12 +106,7 @@ TM_aligner_aligned_pdbs_path = os.path.join(TM_aligner_dir_path, 'aligned_pdbs')
 TM_aligner_transformed_pdbs_path = os.path.join(TM_aligner_dir_path, 'transformed_pdbs')  
 #   patch_to_score
 patch_to_score_model_path = os.path.join(models_path, 'patch_to_score')
-#       scalers    
-scalers_path = os.path.join(patch_to_score_model_path, 'scalers')
-#       all_predictions_0304
-patch_to_score_all_predictions_0304_models_path = os.path.join(patch_to_score_model_path, 'all_predictions_0304')
-#           with_MSA_50_plddt
-with_MSA_50_plddt_0304_models_dir = os.path.join(patch_to_score_all_predictions_0304_models_path, 'with_MSA_50_plddt')
+
 
 
 # results
@@ -117,9 +120,9 @@ ScanNet_results_path = os.path.join(results_path, 'ScanNet')
 #   patch_to_score
 patch_to_score_results_path = os.path.join(results_path, 'patch_to_score')
 #       all_predictions_0304
-patch_to_score_all_predictions_0304_results_path = os.path.join(patch_to_score_results_path, 'all_predictions_0304')
+patch_to_score_all_predictions_results_path = os.path.join(patch_to_score_results_path, 'all_predictions')
 #           with_MSA_50_plddt
-with_MSA_50_plddt_0304_results_dir = os.path.join(patch_to_score_all_predictions_0304_results_path, 'with_MSA_50_plddt')
+with_MSA_50_plddt_results_dir = os.path.join(patch_to_score_all_predictions_results_path, 'with_MSA_50_plddt')
 
 
 # tmp
