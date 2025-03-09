@@ -289,7 +289,7 @@ def plot_precision_recall(y_probs, labels, header,save_path):
     plt.close()
 
 
-def build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n_layers,with_pesto):
+def build_model_concat_size_and_n_patches_same_number_of_layers(architecture_dict,with_pesto,ablation_string):
     '''
     :param m_a: size of the hidden layers in the MLP of the components
     :param m_b: size of the hidden layers in the MLP of the concatenated size and number of patches
@@ -298,16 +298,15 @@ def build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n
     :return:
     '''
     # Define the input shape
-
-    input_shape = (maxNumberOfPatches, 9) if with_pesto else (maxNumberOfPatches, 4) 
+    input_shape = (maxNumberOfPatches, ablation_string.count('1')) if with_pesto else (maxNumberOfPatches, 4) 
     input_data = tf.keras.Input(shape=input_shape, name='patches_input')
     size_value = tf.keras.Input(shape=(1,), name='extra_value_input')
     n_patches_hot_encoded_value = tf.keras.Input(shape=(maxNumberOfPatches + 1,), name='hot_encoded_value_input')
     masked_input = tf.keras.layers.Masking(mask_value=0.0)(input_data)
 
     currentOutput = masked_input
-    for i in range(n_layers):
-        dense_output = tf.keras.layers.Dense(m_a, activation='linear')(currentOutput)
+    for i in range(architecture_dict['n_layers']):
+        dense_output = tf.keras.layers.Dense(architecture_dict['m_a'], activation='linear')(currentOutput)
         batchNorm = tf.keras.layers.BatchNormalization(momentum=0.75)(dense_output)
         activation = tf.keras.layers.ReLU()(batchNorm)
         currentOutput = activation
@@ -316,8 +315,8 @@ def build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n
 
     currentOutput = tf.keras.layers.Concatenate()(
         [size_value, n_patches_hot_encoded_value])
-    for i in range(n_layers):
-        dense_output = tf.keras.layers.Dense(m_b, activation='linear')(currentOutput)
+    for i in range(architecture_dict['n_layers']):
+        dense_output = tf.keras.layers.Dense(architecture_dict['m_b'], activation='linear')(currentOutput)
         batchNorm = tf.keras.layers.BatchNormalization(momentum=0.75)(dense_output)
         activation = tf.keras.layers.ReLU()(batchNorm)
         currentOutput = activation
@@ -327,8 +326,8 @@ def build_model_concat_size_and_n_patches_same_number_of_layers(m_a, m_b, m_c, n
         [global_pooling_output, size_and_n_patches_output])
 
     currentOutput = concatenated_output
-    for i in range(n_layers):
-        dense_output = tf.keras.layers.Dense(m_c, activation='linear')(currentOutput)
+    for i in range(architecture_dict['n_layers']):
+        dense_output = tf.keras.layers.Dense(architecture_dict['m_c'], activation='linear')(currentOutput)
         batchNorm = tf.keras.layers.BatchNormalization(momentum=0.75)(dense_output)
         activation = tf.keras.layers.ReLU()(batchNorm)
         currentOutput = activation
@@ -469,6 +468,18 @@ def save_architecture_test_results(architecture_test_predictions,architecture_te
     plot_precision_recall(all_test_predictions, all_test_labels,header,save_path)
     np.save(os.path.join(results_architecture_folder,'all_predictions.npy'),all_test_predictions)
     np.save(os.path.join(results_architecture_folder,'all_labels.npy'),all_test_labels)
+
+def filter_with_ablation_string(ablation_string,components_train,components_validation,components_test):
+    mask = tf.constant([bool(int(x)) for x in ablation_string], dtype=tf.bool)
+    train_filtered_components = tf.boolean_mask(components_train, mask, axis=2)
+    validation_filtered_components = tf.boolean_mask(components_validation, mask, axis=2)
+    test_filtered_components = tf.boolean_mask(components_test, mask, axis=2)
+    return train_filtered_components,validation_filtered_components,test_filtered_components
+
+
+
+
+
 
 
 # def createCSVFileFromResults(gridSearchDir, trainingDictsDir, dirName):

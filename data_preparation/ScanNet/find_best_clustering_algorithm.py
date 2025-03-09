@@ -22,7 +22,7 @@ if __name__ == '__main__':
     dataset_date = "8_9"
     seq_id = "0.95"
     ASA_THRESHOLD_VALUE = 0.2
-    with_scanNet = False
+    with_scanNet = True
     with_scanNet_addition = '_with_scanNet_' if with_scanNet else ''
 
 

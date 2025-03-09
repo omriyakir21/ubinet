@@ -77,6 +77,7 @@ def normalize_and_save_data(data_for_training_folder_path, proteins, sequences, 
                                                 os.path.join(scalers_folder_path, 'scaler_components.pkl'),
                                                 os.path.join(scalers_folder_path, 'encoder.pkl'),
                                                 dev_utils.MAX_NUMBER_OF_COMPONENTS,with_pesto))
+    
     dev_utils.save_as_tensor(scaled_sizes, os.path.join(data_for_training_folder_path, 'scaled_sizes.tf'))
     dev_utils.save_as_tensor(scaled_components_list, os.path.join(data_for_training_folder_path, 'scaled_components_list.tf'))
     dev_utils.save_as_tensor(encoded_components_list, os.path.join(data_for_training_folder_path, 'encoded_components_list.tf'))
@@ -89,7 +90,7 @@ def normalize_and_save_data(data_for_training_folder_path, proteins, sequences, 
 if __name__ == "__main__":
     
     DATE = '03_04'
-    with_pesto = False
+    with_pesto = True
     with_pesto_addition = '_with_pesto' if with_pesto else ''
     training_name = f'{DATE}{with_pesto_addition}'
     all_predictions_path = os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl')
@@ -99,21 +100,21 @@ if __name__ == "__main__":
     os.makedirs(data_for_training_folder_path, exist_ok=True)
     pesto_predictions_path = '/home/iscb/wolfson/doririmon/home/order/ubinet/pesto/C_structured/PeSToIntegration/assets/data/pesto_inference_outputs/dict_predictions_pesto.pkl'
     merged_dict = None
-    if with_pesto:
-        all_predictions = add_pesto_predictions(all_predictions_path,pesto_predictions_path)
-    else:
-        all_predictions = load_as_pickle(all_predictions_path)
+    # if with_pesto:
+    #     all_predictions = add_pesto_predictions(all_predictions_path,pesto_predictions_path)
+    # else:
+    #     all_predictions = load_as_pickle(all_predictions_path)
     
     # SAVE THE 90'TH PERCENTILE OF UBIQUITIN BINDING PREDICTIONS FROM SCANNET,
     # WE WILL USE IT LATER AS A THRESHOLD AN AMINO ACID IN ORDER TO BE IN A PATCH 
-    percentile_90_path = os.path.join(patches_dict_folder_path, 'percentile_90.pkl')
-    if not os.path.exists(percentile_90_path):
-        dev_utils.create_90_percentile(all_predictions_path,percentile_90_path)
-    percentile_90 = load_as_pickle(percentile_90_path)
+    # percentile_90_path = os.path.join(patches_dict_folder_path, 'percentile_90.pkl')
+    # if not os.path.exists(percentile_90_path):
+    #     dev_utils.create_90_percentile(all_predictions_path,percentile_90_path)
+    # percentile_90 = load_as_pickle(percentile_90_path)
 
     # CREATING THE PATCHES IN BATCHES OF 1500 PROTEINS. SEE SCRIPTS/RUN_DATA_DEVELOPMENT.SH 
     # WE CAN RUN THIS ON CPU'S (CAN DO MULTIPLE AT A TIME)
-    create_patches(all_predictions,patches_dict_folder_path,percentile_90,with_pesto)   
+    # create_patches(all_predictions,patches_dict_folder_path,percentile_90,with_pesto)   
 
     #MERGE THE PATCHES AFTER CREATING THEM
     merged_dict = create_merged_protein_object_dict(patches_dict_folder_path)
@@ -123,11 +124,11 @@ if __name__ == "__main__":
     merged_dict = load_as_pickle(merged_dict_path)
 
     #CREATE SMALL SAMPLE FOR TESTING
-    small_sample_dict_path = os.path.join(patches_dict_folder_path, 'small_sample_dict.pkl')
-    if not os.path.exists(small_sample_dict_path):
-        merged_dict = create_small_sample_dict(merged_dict,small_sample_dict_path)
-    else:
-        merged_dict = load_as_pickle(small_sample_dict_path)
+    # small_sample_dict_path = os.path.join(patches_dict_folder_path, 'small_sample_dict.pkl')
+    # if not os.path.exists(small_sample_dict_path):
+    #     merged_dict = create_small_sample_dict(merged_dict,small_sample_dict_path)
+    # else:
+    #     merged_dict = load_as_pickle(small_sample_dict_path)
     
     # GET RELEVANT INFO FROM PROTEIN OBJECTS
     proteins = [protein for _, protein in merged_dict.items()]
@@ -153,5 +154,5 @@ if __name__ == "__main__":
     
 
     # PLOT DUMMY BASELINE (protein prediction is the prediction of the highest amino acid prediction) FOR AGGREGATE SCORING FUNCTION
-    dev_utils.plot_dummy_prauc(all_predictions)
+    # dev_utils.plot_dummy_prauc(all_predictions)
 
