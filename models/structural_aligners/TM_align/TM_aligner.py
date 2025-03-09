@@ -19,7 +19,7 @@ from tmtools.helpers import transform_structure
 from tmtools.testing import get_pdb_path
 from tmtools import tm_align
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle
-from ubinet.results.patch_to_score.chimera_script import create_chimera_script
+from results.patch_to_score.chimera_script import create_chimera_script
 
 def calculate_sequence_identity_between_aligned_seqs(mobile_aligned_seq,guide_aligned_seq):
     assert (len(mobile_aligned_seq) == len(guide_aligned_seq))
@@ -32,8 +32,11 @@ def calculate_sequence_identity_between_aligned_seqs(mobile_aligned_seq,guide_al
                 matches += 1
     return matches/length
 
+def calculate_weighted_score(tm_score,seq_identity):
+    return tm_score + 0.5 *seq_identity
 
-def align_uniprots_with_target(target_pdb, pdb_chain_table_path, output_dir_path):
+
+def align_uniprots_with_target(target_pdb, pdb_chain_table_path, output_dir_path,structure_dir):
     print(f'target_pdb: {target_pdb}')
     mobile_struct = get_structure(target_pdb)
     mobile_coords, mobile_seq = get_residue_data(next(mobile_struct.get_chains()))
@@ -42,10 +45,10 @@ def align_uniprots_with_target(target_pdb, pdb_chain_table_path, output_dir_path
         reader = csv.DictReader(file)
         rows = list(reader)
     # Define the classes
-    classes = ['e1', 'e2', 'e3|e4', 'deubiquitylase']
+    classes = ['e1', 'e2', 'e3|e4', 'deubiquitylase','other']
     
     # Dictionary to store the top TM score, corresponding uniprot, and alignment for each class
-    top_scores = {class_name: {'tm_score':0.0,'pdb_id':None} for class_name in classes}
+    top_scores = {class_name: {'score':0.0,'tm_score':0.0,'pdb_id':None} for class_name in classes}
     
     # Iterate over each class
     for class_name in classes:
@@ -59,7 +62,7 @@ def align_uniprots_with_target(target_pdb, pdb_chain_table_path, output_dir_path
             chain_id = row['CHAIN_ID']
             if len(chain_id) > 1:
                 continue
-            pdb_id = f'{pdb_id}_{chain_id}'
+            pdb_id = f'{pdb_id}_{chain_id}'     
             if pdb_id == '7mex_D':
                 continue
             pdb_path = os.path.join(paths.binding_chains_pdbs_without_ubiqs_path, f'{pdb_id}.pdb')
@@ -67,17 +70,24 @@ def align_uniprots_with_target(target_pdb, pdb_chain_table_path, output_dir_path
                 continue
             guide_struct = get_structure(pdb_path)
             print(f'pdb_id: {pdb_id}')
-            guide_coords, guide_seq = get_residue_data(next(guide_struct.get_chains()))
+            try:
+                guide_coords, guide_seq = get_residue_data(next(guide_struct.get_chains()))
+            except Exception as e:
+                print(f'Error in {pdb_id}, {e}')
+                continue
             res = tm_align(mobile_coords, guide_coords, mobile_seq, guide_seq)
             tm_score = res.tm_norm_chain1  # Adjust based on result format
             rmsd = res.rmsd
-            
+            seq_identity = calculate_sequence_identity_between_aligned_seqs(res.seqxA,res.seqyA)
+            score = calculate_weighted_score(tm_score,seq_identity)
             # Update the top score if the current score is higher
-            if tm_score > top_scores[class_name]['tm_score']:
+            if score > top_scores[class_name]['score']:
+                top_scores[class_name]['score'] = score
                 top_scores[class_name]['tm_score'] = tm_score
                 top_scores[class_name]['pdb_id'] = pdb_id
                 top_scores[class_name]['res'] = res
                 top_scores[class_name]['rmsd'] = rmsd 
+                top_scores[class_name]['seq_identity'] = seq_identity
                 print(f'{class_name} {pdb_id} tm_score: {tm_score:.3f} rmsd: {rmsd:.3f}')
     
     mobile_folder = os.path.join(output_dir_path, mobile_name)
@@ -86,7 +96,7 @@ def align_uniprots_with_target(target_pdb, pdb_chain_table_path, output_dir_path
     # Save the top scores and correspondence to a CSV file
     output_csv_path = os.path.join(mobile_folder,f'{mobile_name}_top_scores.csv')
     with open(output_csv_path, 'w', newline='') as csvfile:
-        fieldnames = ['class','pdb_id','tm_score','rmsd','seq_identity']
+        fieldnames = ['class','pdb_id','tm_score','rmsd','seq_identity','score']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for class_name, score_data in top_scores.items():            
@@ -95,13 +105,16 @@ def align_uniprots_with_target(target_pdb, pdb_chain_table_path, output_dir_path
                 'pdb_id': score_data['pdb_id'],
                 'tm_score': score_data['tm_score'],
                 'rmsd': score_data['rmsd'],
-                'seq_identity' : calculate_sequence_identity_between_aligned_seqs(res.seqxA,res.seqyA)
+                'seq_identity' : score_data['seq_identity'],
+                'score': score_data['score']
+
                 
             })
             guide_name = score_data['pdb_id']
             tm_score = f"{score_data['tm_score']:.3f}"
             rmsd = f"{score_data['rmsd']:.3f}"
-            aligned_folder = os.path.join(mobile_folder,f"{class_name}_tm_score_{tm_score}_rmsd_{rmsd}")
+            seq_identity = f"{score_data['seq_identity']:.3f}"
+            aligned_folder = os.path.join(mobile_folder,f"{class_name}_tm_score_{tm_score}_rmsd_{rmsd}_seq_identity_{seq_identity}")
             if not os.path.exists(aligned_folder):
                 os.mkdir(aligned_folder)
             res = score_data['res']

@@ -26,7 +26,7 @@ def find_class_for_chain(pdb_name, chain_name):
 def update_csv_with_classes(input_csv, output_csv):
     with open(input_csv, mode='r') as infile, open(output_csv, mode='w', newline='') as outfile:
         reader = csv.DictReader(infile)
-        fieldnames = reader.fieldnames + ['e1', 'e2', 'e3|e4', 'deubiquitylase']
+        fieldnames = reader.fieldnames + ['e1', 'e2', 'e3|e4', 'deubiquitylase', 'other']
         writer = csv.DictWriter(outfile, fieldnames=fieldnames)
         
         writer.writeheader()
@@ -34,6 +34,13 @@ def update_csv_with_classes(input_csv, output_csv):
             pdb_id = row['PDB_ID']
             chain_id = row['CHAIN_ID']
             class_dict = find_class_for_chain(pdb_id, chain_id)
+            
+            # Determine if 'other' should be true
+            if not any(class_dict.get(key) for key in ['e1', 'e2', 'e3|e4', 'deubiquitylase']):
+                class_dict['other'] = True
+            else:
+                class_dict['other'] = False
+            
             row.update(class_dict)
             writer.writerow(row)
 
@@ -114,9 +121,9 @@ def replace_nan_with_pdb_chain(input_file: str):
 
 
 if __name__ == '__main__':
-    # input_csv = os.path.join(paths.scanNet_AF2_augmentations_path,'pdb_chain_table_uniprot.csv')
-    # output_csv = os.path.join(paths.structural_aligners_path,'pdb_chain_table_uniprot_with_classes.csv')
-    # # update_csv_with_classes(input_csv, output_csv)
+    input_csv = os.path.join(paths.original_pdbs_with_augmentations_path,'pdb_chain_table_uniprot.csv')
+    output_csv = os.path.join(paths.structural_aligners_path,'pdb_chain_table_uniprot_with_classes.csv')
+    update_csv_with_classes(input_csv, output_csv)
     # download_all_uniprot_models_from_csv()
     # create_missing_uniprots_fasta_files(os.path.join(paths.scanNet_AF2_augmentations_path,'pdb_chain_table_uniprot.csv'))
     # copy_pdb_files()
