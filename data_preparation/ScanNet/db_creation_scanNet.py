@@ -167,7 +167,7 @@ if __name__ == "__main__":
     NUM_SUBLISTS = 40
     chosen_assemblies = db_utils.load_as_pickle(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
     print(len(chosen_assemblies))
-    # run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'), NUM_SUBLISTS)
+    run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'), NUM_SUBLISTS)
     integrate_all_files(NUM_SUBLISTS)  
     # copy_files_to_new_folder(chosen_assemblies, paths.chosen_assemblies_path)
     # rename_cif_files(paths.chosen_assemblies_path)

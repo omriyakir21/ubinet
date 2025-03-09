@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from models.ScanNet_Ub.preprocessing.sequence_utils import load_FASTA, num2seq
 import pdb
+from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle
 
 
 def split_receptors_into_individual_chains(pssm_content_file_path, asa_pssm_content_file_path):
@@ -65,6 +66,48 @@ def split_receptors_into_individual_chains(pssm_content_file_path, asa_pssm_cont
     f.close()
     return chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values
 
+def split_receptors_into_individual_chains_only_PSSM(pssm_content_file_path):
+    f = open(pssm_content_file_path, 'r')
+    lines = f.readlines()
+    chains_keys = []
+    chains_sequences = []
+    chains_labels = []
+    chain_names = []
+    chain_key = lines[0][1:-1]
+    chains_keys.append(chain_key)
+    chain_seq = ''
+    chain_labels = []
+    chain_name = None
+    for i in range(1, len(lines)):
+        line = lines[i]
+        if line[0] == '>':
+            chains_sequences.append(chain_seq)
+            chains_labels.append(chain_labels)
+            chain_seq = ''
+            chain_labels = []
+            chain_key = line[1:-1]
+            chains_keys.append(chain_key)
+            continue
+        elif chains_keys[len(chains_keys) - 1] + '$' + line.split(" ")[0] != chain_name:
+            if len(chain_seq) > 0:
+                chains_sequences.append(chain_seq)
+                chains_labels.append(chain_labels)
+                chain_seq = ''
+                chain_labels = []
+            chain_name = chains_keys[len(chains_keys) - 1] + '$' + line.split(" ")[0]
+            chain_names.append(chain_name)
+
+        if line[-1]!="\n":
+            line+="\n"
+        amino_acid_info = line.split(" ")
+        chain_seq += (amino_acid_info[2])
+        chain_labels.append(amino_acid_info[3][:-1])
+
+    chains_sequences.append(chain_seq)
+    chains_labels.append(chain_labels)
+    assert (len(chain_names) == len(chains_sequences) == len(chains_labels))
+    f.close()
+    return chains_keys, chains_sequences, chains_labels, chain_names, lines
 
 def create_cluster_participants_indexes(cluster_indexes):
     clusters_participants_list = []
@@ -148,15 +191,25 @@ def create_propagated_labels_for_cluster(index, chains_labels, cluster_participa
                 labels_after_aligment[i][j] = int(current_labels[indexs_of_parcipitant[j]])
 
     consensus = [max([labels_after_aligment[i][j] for i in range(number_of_participants)]) for j in range(msa_length)]
+    column_max_asa_value = []
+    for j in range(msa_length):
+        max_asa = 0
+        for i in range(number_of_participants):
+            chain_index = cluster_participants_list[i]
+            participant_chain_asa_values =chains_asa_values[chain_index] 
+            print(len(participant_chain_asa_values))
+            index_of_participant = index[i]
+            if index_of_participant[j] != -1:
+                max_asa = max(max_asa,participant_chain_asa_values[index_of_participant[j]])
+        column_max_asa_value.append(max_asa)
+    column_thresholds = [min(asa_threshold_value, 0.75 * column_max_asa_value[j]) for j in range(msa_length)]
     for i in range(number_of_participants):
         chain_index = cluster_participants_list[i]
         indexs_of_parcipitant = index[i]
-        threshold = min(asa_threshold_value, 0.75 * max(chains_asa_values[chain_index]))
-        # print("i = ", i)
+        # threshold = min(asa_threshold_value, 0.75 * max(chains_asa_values[chain_index]))
         for j in range(msa_length):
-            # print("j = ", j)
             if indexs_of_parcipitant[j] != -1:  # not a gap
-                if chains_asa_values[chain_index][len(new_labels[i])] > threshold:
+                if chains_asa_values[chain_index][len(new_labels[i])] > column_thresholds[j]:
                     new_labels[i].append(consensus[j])
                 else:
                     new_labels[i].append(chains_labels[chain_index][len(new_labels[i])])
@@ -182,6 +235,7 @@ def create_propagated_pssm_file(clusters_dict, chains_labels, clusters_participa
     num_of_chains = len(chains_sequences)
     new_labels = [None for i in range(num_of_chains)]
     clusters_chains_names = find_chain_names_for_clusters(clusters_participants_list, chain_names)
+    print(f'clusters_chains_names: {clusters_chains_names}')
     # clustersIndexes = [findIndexesForCluster(clusterChainNames) for clusterChainNames in clusters_chains_names]
     for i in range(num_of_clusters):
         cluster_new_labels = create_propagated_labels_for_cluster(clusters_dict['indexes'][i], chains_labels,
@@ -225,6 +279,7 @@ def create_quantile_asa_dicts(lines):
         quantile5 = np.percentile(amino_acid_asa_dict[amino_acid_char], 5)
         quantile95 = np.percentile(amino_acid_asa_dict[amino_acid_char], 95)
         quentile_asa_amino_acid_dict[amino_acid_char] = (quantile5, quantile95)
+    save_as_pickle(quentile_asa_amino_acid_dict, os.path.join(paths.ASA_path, 'quentile_asa_amino_acid_dict.pkl'))
     return quentile_asa_amino_acid_dict
 
 

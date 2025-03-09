@@ -3,7 +3,8 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import paths
 import csv
-from results.ScanNet.orientation_based_performence_analysis import split_receptors_into_individual_chains,make_chain_dict
+from results.ScanNet.orientation_based_performence_analysis import make_chain_dict
+from data_preparation.ScanNet.LabelPropagationAlgorithm_utils import split_receptors_into_individual_chains
 import shutil
 from Bio.PDB.SASA import ShrakeRupley
 from Bio.Blast import NCBIWWW
@@ -18,7 +19,7 @@ from Bio.PDB import MMCIFParser, MMCIFIO, Select,PDBParser,PDBIO
 import pandas as pd
 import csv
 from Bio import SeqIO
-import biotite.application.muscle as muscle
+from biotite.application.muscle import Muscle5App
 from biotite.sequence import ProteinSequence
 from biotite.sequence.io.fasta import FastaFile
 from data_preparation.patch_to_score.data_development_utils import get_str_seq_of_chain
@@ -184,6 +185,7 @@ def run_blast_online(query_sequence, db, output, evalue=1e-5,hitlist_size=50,ent
 def find_all_close_homologs(input_folder,seq_id):
     cnt = 0
     homologs_set = set()
+    sequences_set = set()
     for subfolder in os.listdir(input_folder):
         subfolder_path = os.path.join(input_folder, subfolder)
         if os.path.isdir(subfolder_path):
@@ -196,7 +198,7 @@ def find_all_close_homologs(input_folder,seq_id):
             #     cnt+=1 
                 # continue
                 try:
-                    find_close_homologs(subfolder, sequence, subfolder_path,seq_id,homologs_set)
+                    find_close_homologs(subfolder, sequence, subfolder_path,seq_id,homologs_set,sequences_set)
                     logging.info(f"Processed {subfolder}, cnt: {cnt}")
                 except Exception as e:
                     logging.error(f"Error processing {subfolder}: {e}", exc_info=True)
@@ -209,16 +211,34 @@ def create_fasta_file(sequence, id,output_folder):
     return fasta_file
 
 
-def find_close_homologs(id,sequence, output_folder,seq_id,homologs_set):
+def find_close_homologs(id,sequence, output_folder,seq_id,homologs_set,sequences_set):
     logging.info(f"Finding close homologs for {id}, with sequence {sequence}")
     input_file = create_fasta_file(sequence, id, output_folder)
-    output_file = os.path.join(output_folder, f"{id}_homologs.fasta")
+    output_file_colabfold = os.path.join(output_folder, f"{id}_homologs_colabfold.fasta")
+    output_file_uniprot = os.path.join(output_folder, f"{id}_homologs_uniprot.fasta")
+    call_mmseqs(
+        input_file,
+        output_file_colabfold,
+        # database = 'UniProtKB',
+        database = 'colabfold_envdb_202108_db',
+        nthreads = 128,
+        filtermsa = True,
+        cov = 0.9,
+        qid = seq_id,
+        maxseqid = 1.1,
+        gapopen = 11,
+        gapextend = 1,
+        s = 5.7000,
+        num_iterations = 1,
+        maxseqs = 100000,
+        overwrite = True,
+        report=None
+    )
 
     call_mmseqs(
         input_file,
-        output_file,
+        output_file_uniprot,
         database = 'UniProtKB',
-        # database = 'colabfold_envdb_202108',
         nthreads = 128,
         filtermsa = True,
         cov = 0.9,
@@ -237,25 +257,50 @@ def find_close_homologs(id,sequence, output_folder,seq_id,homologs_set):
     all_sequences = []
     all_definitions = []
     all_uniprots = []
-    with open(output_file, "r") as f:
-        lines = f.readlines()
-        if len(lines) <= 2:
-            with open(output_csv_file, "w") as csvfile:
-                csvfile.write("sequence,uniprot,definition\n")
-            logging.info(f"No homologs found for {id}")
-            return None
-        for i in range(2, len(lines), 2):  # Skip the first sequence
-            if lines[i].startswith('>'):
-                definition = lines[i].strip()
-                hit_sequence = lines[i + 1].strip().replace('-', '')
-                uniprot = definition.split('|')[1]
-                if sequence != hit_sequence:
-                    all_definitions.append(definition)
-                    all_sequences.append(hit_sequence)
-                    all_uniprots.append(uniprot)
+    with open(output_csv_file, "w") as csvfile:
+        cnt_sequences = 0
+        with open(output_file_colabfold, "r") as f:
+            lines_colabfold = f.readlines()
+            for i in range(2, len(lines_colabfold), 2):  # Skip the first sequence
+                if lines_colabfold[i].startswith('>'):
+                    definition = lines_colabfold[i].strip()
+                    hit_sequence = lines_colabfold[i + 1].strip().replace('-', '')
+                    if not hit_sequence.isupper():
+                        continue
+                    if '|' in definition:
+                        uniprot = definition.split('|')[1]
+                    else:
+                        uniprot = definition.split(' ')[0]
+                    if uniprot.startswith('>'):
+                        uniprot = uniprot[1:]
+                    if sequence != hit_sequence and sequence not in all_sequences and 'X' not in sequence:
+                        all_definitions.append(definition)
+                        all_sequences.append(hit_sequence)
+                        all_uniprots.append(uniprot)
+                        cnt_sequences += 1
+            logging.info(f"cnt_sequences {cnt_sequences} found in the colabfoldDB search")
+        cnt_sequences = 0
+        with open(output_file_uniprot, "r") as f:
+            lines_uniprot = f.readlines()
+            for i in range(2, len(lines_uniprot), 2):  # Skip the first sequence
+                if lines_uniprot[i].startswith('>'):
+                    definition = lines_uniprot[i].strip()
+                    hit_sequence = lines_uniprot[i + 1].strip().replace('-', '')
+                    if not hit_sequence.isupper():
+                        continue
+                    if '|' in definition:
+                        uniprot = definition.split('|')[1]
+                    else:
+                        uniprot = definition.split(' ')[0]
+                    if uniprot.startswith('>'):
+                        uniprot = uniprot[1:]
+                    if sequence != hit_sequence and sequence not in all_sequences and 'X' not in sequence:
+                        all_definitions.append(definition)
+                        all_sequences.append(hit_sequence)
+                        all_uniprots.append(uniprot)
+                        cnt_sequences += 1
 
-        
-        logging.info(f"Found {len(all_sequences)} homologs for {id}")
+            logging.info(f"cnt_sequences {cnt_sequences} found in the uniprotDB search")
         # Cluster the sequences and take cluster representatives
         cluster_indices, representative_indices = cluster_sequences(all_sequences,
                                                         seqid=0.98,coverage=0.9, covmode='0')
@@ -275,14 +320,14 @@ def find_close_homologs(id,sequence, output_folder,seq_id,homologs_set):
             for idx in cluster_members:
                 if homologs_set is None:
                     raise Exception('homologos set is None')
-                logging.info(f'homologos set size is {len(homologs_set)}')
-                if all_uniprots[idx] not in homologs_set:
+                if all_uniprots[idx] not in homologs_set and 'X' not in all_sequences[idx] and all_sequences[idx] not in sequences_set:
                     top_representatives.append(idx)
                     homologs_set.add(all_uniprots[idx])
+                    sequences_set.add(all_sequences[idx])
                     break
             if len(top_representatives) >= 10:
                 break
-
+        logging.info(f'homologos set size is {len(homologs_set)}')
         homologs = [all_sequences[i] for i in top_representatives]
         definitions = [all_definitions[i] for i in top_representatives]
         uniprots = [all_uniprots[i] for i in top_representatives]
@@ -354,7 +399,7 @@ def create_msas_from_folder(folder_path):
             sub_msa_out.write(structure_seq + '\n')
         return None 
         
-    muscle_app = muscle.Muscle5App(sequences)
+    muscle_app = Muscle5App(sequences)
     muscle_app.start()
     muscle_app.join()
     alignment = muscle_app.get_alignment()
@@ -499,7 +544,7 @@ def find_initial_index_of_uniprot(chain_sequence, sequence):
             return i
     
 
-def create_label_files_for_folder(folder_path,chain_dict):
+def create_label_files_for_folder(folder_path,chain_dict,asa_thereshold):
     folder_name = os.path.basename(folder_path)
     # percentile_5, percentile_95 = find_5_and_95_percentiles_for_folder(folder_path)
     quantile_dict = load_as_pickle(os.path.join(paths.ASA_path, 'quentile_asa_amino_acid_dict.pkl'))
@@ -507,8 +552,8 @@ def create_label_files_for_folder(folder_path,chain_dict):
     msa_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_msa.txt")
 
     key = f"{pdb_id}_{chain_id}"
-    if key != '1nbf_A':
-        return
+    # if key != '1nbf_A':
+    #     return
     print(f'in {key}')
     original_sequence_normalized_asa_values = chain_dict[key]['asa_values']
     original_sequence_labels = chain_dict[key]['labels']
@@ -543,7 +588,7 @@ def create_label_files_for_folder(folder_path,chain_dict):
                         first_index_of_uniprot = start_index
                         normalized_asa_values = calculate_ASAF(chain_aa,quantile_dict)
                         chain_id = chain.id[0]
-                        header = f">{uniprot_id}_{model.id}-{chain_id}\n"
+                        header = f">|{uniprot_id}|_{model.id}-{chain_id}\n"
                         write_lines.append(header)
                         last_index_of_uniprot = -1
                         for i in range(len(sequence)):
@@ -558,7 +603,7 @@ def create_label_files_for_folder(folder_path,chain_dict):
                                     if first_index_of_uniprot == start_index:
                                         first_index_of_uniprot = uniprot_aa_index
                                     if original_sequence[i] != '-':
-                                        if normalized_asa_values[uniprot_aa_index] > min(0.2,0.75*float(original_sequence_normalized_asa_values[original_sequence_index])):
+                                        if normalized_asa_values[uniprot_aa_index] > min(asa_thereshold,0.75*float(original_sequence_normalized_asa_values[original_sequence_index])):
                                             label = original_sequence_labels[original_sequence_index]
                                         else:
                                             label = 0
@@ -577,9 +622,15 @@ def create_label_files_for_folder(folder_path,chain_dict):
                         io = PDBIO()
                         io.set_structure(structure)
                         io.save(os.path.join(folder_path, f"{uniprot_id}_cutted.pdb"), CuttedChainSelect(first_index_of_uniprot,last_index_of_uniprot,chain_aa[0].get_id()[1]))
-    augmentations_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_augmentations.txt")
+    augmentations_file = os.path.join(folder_path, f"{pdb_id}_{chain_id}_augmentations_asaThreshold_{asa_thereshold}.txt")
+
     with open(augmentations_file, 'w') as aug_file:
         aug_file.writelines(write_lines)
+
+    with open(augmentations_file, 'r') as aug_file:
+        cnt = sum(1 for line in aug_file if line.startswith('>'))
+    logging.info(f"Number of augmentations: {cnt}")
+    return cnt
 
                                    
 
@@ -587,18 +638,21 @@ def create_label_files_for_folder(folder_path,chain_dict):
 
 
 
-def create_label_files_for_augmentations(parent_folder,chain_dict):
+def create_label_files_for_augmentations(parent_folder,chain_dict,asa_thereshold):
     cnt = 0
+    all_augmentations = 0
     for item in os.listdir(parent_folder):
         folder_path = os.path.join(parent_folder, item)
         if os.path.isdir(folder_path):
             try:
                 logging.info(f"Processing {folder_path}, cnt={cnt}")
-                create_label_files_for_folder(folder_path,chain_dict)
-                logging.info(f"Processed {folder_path}, cnt={cnt}")
+                new_augmentations = create_label_files_for_folder(folder_path,chain_dict,asa_thereshold)
+                all_augmentations += new_augmentations
+                logging.info(f"Processed {folder_path}, added {new_augmentations} augmentations, cnt={cnt}")
             except Exception as e:
                 logging.error(f"Error processing {folder_path}: {e}")
             cnt += 1
+    logging.info(f"Total number of augmentations: {all_augmentations}")
 
 
 
@@ -616,6 +670,16 @@ def create_chain_dict_with_all_info(chains_keys, chains_sequences, chains_labels
         chain_dict[id]['asa_not_normalized_values'] = chains_asa_not_normalized_values[i]
     return chain_dict
 
+def create_chain_dict_with_all_info_only_pssm(chains_sequences, chains_labels, chain_names, lines):
+    chain_dict = {}
+    for i in range(len(chain_names)):
+        id  =chain_names[i]
+        id = id.split('_')[0] + '_' + id.split('_')[1].split('$')[-1]
+        chain_dict[id] = {}
+        chain_dict[id]['sequences'] = chains_sequences[i]
+        chain_dict[id]['labels'] = chains_labels[i]
+        chain_dict[id]['lines'] = lines[i]
+    return chain_dict
 
 def create_fasta_homologs_folder(input_folder, output_folder):
     # Ensure the output folder exists
@@ -645,14 +709,18 @@ def create_fasta_homologs_folder(input_folder, output_folder):
                             fasta_file.write(fasta_content)
 
 
-def fetch_AF2_structures(folder_path, AF2_structures_path):
+def AFfetch_AF2_structures(folder_path, AF2_structures_path):
     cnt = 0
     for subdir, _, files in os.walk(folder_path):
         logging.info(f"Processing {subdir}, cnt={cnt}")
         for file in files:
             if file.endswith('homologs_representatives.csv'):
                 csv_path = os.path.join(subdir, file)
-                df = pd.read_csv(csv_path)
+                try:
+                    df = pd.read_csv(csv_path)
+                except Exception as e:
+                    logging.error(f"Error reading {csv_path}: {e}")
+                    continue
                 uniprot_ids = df['uniprot'].tolist()
                 
                 for uniprot_id in uniprot_ids:
@@ -704,57 +772,92 @@ def write_augmentation_file(file_path, augmentations):
             for index, (chain, aa_type, label) in sorted(values.items()):
                 f.write(f"{chain} {index} {aa_type} {label}\n")
 
-def unite_augmentations(folder):
-    subfolders = [os.path.join(folder, subfolder) for subfolder in os.listdir(folder) if os.path.isdir(os.path.join(folder, subfolder))]
-    processed_augmentations = set()
+def create_pdb_chain_to_fold_dict(folder,with_scanNet_addition):
+    pdb_dict = {}
+    for i in range(5):
+        file_path = os.path.join(folder, f'PSSM{with_scanNet_addition}{i}.txt')
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            for j in range(len(lines)) :
+                line = lines[j]
+                if line.startswith('>'):
+                    pdb_chains = []
+                    pdb_name = line[1:5]
+                else:
+                    chain = line.split()[0]
+                    if chain not in pdb_chains:
+                        pdb_name_and_chain = f"{pdb_name}_{chain}"
+                        pdb_dict[pdb_name_and_chain] = i
+                        pdb_chains.append(chain)
+    return pdb_dict
 
-    for subfolder in subfolders:
-        augmentations_in_subfolder = []
-        for file in os.listdir(subfolder):
-            if file.endswith("_augmentations.txt"):
-                file_path = os.path.join(subfolder, file)
-                augmentations = parse_augmentation_file(file_path)
-                augmentations_in_subfolder.append((file_path, augmentations))
+def merge_pssm_with_augmentations(PSSM_folder, augmentations_folder, seq_id, ASA_threshold,with_scanNet_addition):
+    specific_PSSM_folder = os.path.join(PSSM_folder, f'seq_id_{seq_id}_asaThreshold_{ASA_threshold}')
+    pdb_to_fold_dict = create_pdb_chain_to_fold_dict(specific_PSSM_folder,with_scanNet_addition) 
+    output_files = [open(os.path.join(specific_PSSM_folder, f'PSSM{i}{with_scanNet_addition}_with_augmentations.txt'), 'w') for i in range(5)]
+    number_of_augmentations = 0
+    try:
+        for i in range(5):
+            pssm_file_path = os.path.join(specific_PSSM_folder, f'PSSM{with_scanNet_addition}{i}.txt')
+            with open(pssm_file_path, 'r') as pssm_file:
+                output_files[i].write(pssm_file.read())
         
-        united_augmentations = defaultdict(dict)
-        for file_path, augmentation in augmentations_in_subfolder:
-            for key, values in augmentation.items():
-                if key not in processed_augmentations:
-                    processed_augmentations.add(key)
-                    all_augmentations = [values]
-                    other_files = []
-                    for other_subfolder in subfolders:
-                        if other_subfolder != subfolder:
-                            for other_file in os.listdir(other_subfolder):
-                                if other_file.endswith("_augmentations.txt"):
-                                    other_file_path = os.path.join(other_subfolder, other_file)
-                                    other_augmentations = parse_augmentation_file(other_file_path)
-                                    if key in other_augmentations:
-                                        all_augmentations.append(other_augmentations[key])
-                                        other_files.append(other_file_path)
-                    if len(all_augmentations) > 1:
-                        print(f"Merging augmentation {key} from {file_path} with {other_files}")
-                        merged_augmentation = merge_augmentations([dict({key: aug}) for aug in all_augmentations])
-                        united_augmentations[key] = merged_augmentation[key]
-                    else:
-                        united_augmentations[key] = values
+        for subfolder in os.listdir(augmentations_folder):
+            subfolder_path = os.path.join(augmentations_folder, subfolder)
+            if os.path.isdir(subfolder_path):
+                fold_num = pdb_to_fold_dict.get(subfolder)
+                if fold_num is None:
+                    logging.error(f"Could not find fold number for {subfolder}")
+                else:
+                    augmentations_file_path = 'not found'
+                    for file in os.listdir(subfolder_path):
+                        if file.endswith(f'augmentations_asaThreshold_{ASA_THRESHOLD_VALUE}.txt'):
+                            augmentations_file_path = os.path.join(subfolder_path, file)
+                            break
+                    if os.path.exists(augmentations_file_path):
+                        with open(augmentations_file_path, 'r') as aug_file:
+                            cnt = sum(1 for line in aug_file if line.startswith('>'))
+                            number_of_augmentations += cnt
+                    
+                        with open(augmentations_file_path, 'r') as aug_file:
+                            output_files[fold_num].write(aug_file.read())
+    finally:
+        for file in output_files:
+            file.close()
+    logging.info(f"Number of augmentations: {number_of_augmentations}")
+
+def create_cutted_augmentations_folder(augmentations_folder):
+    # Create the new folder
+    cutted_augmentations_folder = os.path.join(augmentations_folder, 'cutted_augmentations')
+    os.makedirs(cutted_augmentations_folder, exist_ok=True)
+    
+    # Iterate over all subfolders in augmentations_folder
+    for root, dirs, files in os.walk(augmentations_folder):
+        # Skip the new folder to avoid infinite recursion
+        if root == cutted_augmentations_folder:
+            continue
         
-        output_file_path = os.path.join(subfolder, f"{os.path.basename(subfolder)}_augmentations_united.txt")
-        write_augmentation_file(output_file_path, united_augmentations)
-
-
+        for file in files:
+            if file.endswith('cutted.pdb'):
+                # Copy the file to the new folder
+                src_file = os.path.join(root, file)
+                dst_file = os.path.join(cutted_augmentations_folder, file)
+                shutil.copy2(src_file, dst_file)
+    
 
 if __name__ == '__main__':
     DATE = '8_9'
     seq_id = '0.95'
-    augmentations_path = paths.pdbs_with_augmentations_95_path
-    # augmentations_path = paths.pdbs_with_augmentations_90_path
-    # if not os.path.exists(augmentations_path):
-    #     os.makedirs(augmentations_path)
+    ASA_THRESHOLD_VALUE = 0.1
+    with_scanNet = True
+    with_scanNet_addition = '_with_scanNet_' if with_scanNet else ''
+    augmentations_path = paths.pdbs_with_augmentations_95_path if seq_id == '0.95' else paths.pdbs_with_augmentations_90_path
+    if not os.path.exists(augmentations_path):
+        os.makedirs(augmentations_path)
     
-    # pssm_content_path = os.path.join(paths.PSSM_path,f'PSSM_{DATE}',f'seq_id_{seq_id}' ,f'propagatedPssmWithAsaFile_{seq_id}.txt')
-    # asa_content_path = os.path.join(paths.ASA_path, f'normalizedFullASAPssmContent.txt')
-    # asa_not_normalized_content_path = os.path.join(paths.ASA_path, 'Integrated_Checkchains_asa_mer.txt')
+    pssm_content_path = os.path.join(paths.PSSM_path,f'PSSM_{DATE}',f'seq_id_{seq_id}_asaThreshold_{ASA_THRESHOLD_VALUE}' ,f'propagatedPssmWithAsaFile_{seq_id}_asaThreshold_{ASA_THRESHOLD_VALUE}.txt')
+    asa_content_path = os.path.join(paths.ASA_path, f'normalizedFullASAPssmContent.txt')
+    asa_not_normalized_content_path = os.path.join(paths.ASA_path, 'Integrated_Checkchains_asa_mer.txt')
     # chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values= split_receptors_into_individual_chains(
     #     pssm_content_path, asa_content_path)
     # _,_,_,_,_,chains_asa_not_normlized_values = split_receptors_into_individual_chains(pssm_content_path,asa_not_normalized_content_path)
@@ -773,8 +876,10 @@ if __name__ == '__main__':
     # download_all_uniprots(paths.pdbs_with_augmentations_95_path)
 
 
-    # af2_predictions_path = os.path.join(augmentations_path,'AF2_predictions')
+    af2_predictions_path = os.path.join(augmentations_path,'AF2_predictions')
+    
     # fetch_AF2_structures(augmentations_path,af2_predictions_path)
     # create_msas_all_folders(augmentations_path)
-    # create_label_files_for_augmentations(augmentations_path,chain_dict)
-    # unite_augmentations(augmentations_path)
+    # create_label_files_for_augmentations(augmentations_path,chain_dict,ASA_THRESHOLD_VALUE)
+    # merge_pssm_with_augmentations(os.path.join(paths.PSSM_path,f'PSSM_{DATE}'), augmentations_path, seq_id, ASA_THRESHOLD_VALUE,with_scanNet_addition)
+    # create_cutted_augmentations_folder(augmentations_path)
