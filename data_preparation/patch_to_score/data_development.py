@@ -106,7 +106,7 @@ if __name__ == "__main__":
     #     all_predictions = load_as_pickle(all_predictions_path)
     
     # SAVE THE 90'TH PERCENTILE OF UBIQUITIN BINDING PREDICTIONS FROM SCANNET,
-    # WE WILL USE IT LATER AS A THRESHOLD AN AMINO ACID IN ORDER TO BE IN A PATCH 
+    # WE WILL USE IT LATER AS A THRESHOLD FOR AN AMINO ACID IN ORDER TO BE IN A PATCH 
     # percentile_90_path = os.path.join(patches_dict_folder_path, 'percentile_90.pkl')
     # if not os.path.exists(percentile_90_path):
     #     dev_utils.create_90_percentile(all_predictions_path,percentile_90_path)
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     partition_utils.partition_to_folds_and_save(sequences,data_for_training_folder_path)
     
     # CREATE UNIPROTS SETS (WE ARE USING IT LATER IN RESULTS ANALYSIS)
-    partition_utils.create_uniprots_sets(data_for_training_folder_path)
+    # partition_utils.create_uniprots_sets(data_for_training_folder_path)
     
 
     # PLOT DUMMY BASELINE (protein prediction is the prediction of the highest amino acid prediction) FOR AGGREGATE SCORING FUNCTION

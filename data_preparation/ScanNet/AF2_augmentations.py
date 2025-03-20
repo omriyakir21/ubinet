@@ -709,7 +709,7 @@ def create_fasta_homologs_folder(input_folder, output_folder):
                             fasta_file.write(fasta_content)
 
 
-def AFfetch_AF2_structures(folder_path, AF2_structures_path):
+def fetch_AF2_structures(folder_path, AF2_structures_path):
     cnt = 0
     for subdir, _, files in os.walk(folder_path):
         logging.info(f"Processing {subdir}, cnt={cnt}")
@@ -848,7 +848,7 @@ def create_cutted_augmentations_folder(augmentations_folder):
 if __name__ == '__main__':
     DATE = '8_9'
     seq_id = '0.95'
-    ASA_THRESHOLD_VALUE = 0.1
+    ASA_THRESHOLD_VALUE = 0.2
     with_scanNet = True
     with_scanNet_addition = '_with_scanNet_' if with_scanNet else ''
     augmentations_path = paths.pdbs_with_augmentations_95_path if seq_id == '0.95' else paths.pdbs_with_augmentations_90_path
@@ -858,10 +858,10 @@ if __name__ == '__main__':
     pssm_content_path = os.path.join(paths.PSSM_path,f'PSSM_{DATE}',f'seq_id_{seq_id}_asaThreshold_{ASA_THRESHOLD_VALUE}' ,f'propagatedPssmWithAsaFile_{seq_id}_asaThreshold_{ASA_THRESHOLD_VALUE}.txt')
     asa_content_path = os.path.join(paths.ASA_path, f'normalizedFullASAPssmContent.txt')
     asa_not_normalized_content_path = os.path.join(paths.ASA_path, 'Integrated_Checkchains_asa_mer.txt')
-    # chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values= split_receptors_into_individual_chains(
-    #     pssm_content_path, asa_content_path)
-    # _,_,_,_,_,chains_asa_not_normlized_values = split_receptors_into_individual_chains(pssm_content_path,asa_not_normalized_content_path)
-    # chain_dict = create_chain_dict_with_all_info(chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values, chains_asa_not_normlized_values)
+    chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values= split_receptors_into_individual_chains(
+        pssm_content_path, asa_content_path)
+    _,_,_,_,_,chains_asa_not_normlized_values = split_receptors_into_individual_chains(pssm_content_path,asa_not_normalized_content_path)
+    chain_dict = create_chain_dict_with_all_info(chains_keys, chains_sequences, chains_labels, chain_names, lines, chains_asa_values, chains_asa_not_normlized_values)
     # chain_names_dict = make_chain_dict(chain_names)
     # from_chains_dict_to_pdb_chain_table(chain_names_dict,augmentations_path,seq_id)
     # process_pdb_chain_table(os.path.join(augmentations_path,f'pdb_chain_table_{seq_id}.csv'), paths.chosen_assemblies_path, augmentations_path)
@@ -871,7 +871,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename=log_file, level=logging.INFO, 
                         format='%(asctime)s %(levelname)s:%(message)s')
     # find_all_close_homologs(augmentations_path,float(seq_id)) 
-    create_fasta_homologs_folder(augmentations_path,os.path.join(augmentations_path,'fasta_folder'))
+    # create_fasta_homologs_folder(augmentations_path,os.path.join(augmentations_path,'fasta_folder'))
     
     # download_all_uniprots(paths.pdbs_with_augmentations_95_path)
 
@@ -880,6 +880,6 @@ if __name__ == '__main__':
     
     # fetch_AF2_structures(augmentations_path,af2_predictions_path)
     # create_msas_all_folders(augmentations_path)
-    # create_label_files_for_augmentations(augmentations_path,chain_dict,ASA_THRESHOLD_VALUE)
+    create_label_files_for_augmentations(augmentations_path,chain_dict,ASA_THRESHOLD_VALUE)
     # merge_pssm_with_augmentations(os.path.join(paths.PSSM_path,f'PSSM_{DATE}'), augmentations_path, seq_id, ASA_THRESHOLD_VALUE,with_scanNet_addition)
     # create_cutted_augmentations_folder(augmentations_path)
