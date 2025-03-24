@@ -105,56 +105,58 @@ def run_cross_validationlidation(models_folder_path,results_folder_path,
 
 
 if __name__ == "__main__":
-    hypothesis = 'pesto_scores_ablation_reproduce'
-    experiment = '111111111'
+    hypothesis = sys.argv[1]
+    experiments = os.listdir(f'configurations/data/{hypothesis}')
+    for experiment in experiments[::-1]:  # TODO : solve bug over first experiment of pesto
+        print('experiment:', experiment)
 
-    with open(f'/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/configurations/data/{hypothesis}/{experiment}.json', 'r') as f:
-        train_configuration = json.load(f)
+        with open(f'/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/configurations/data/{hypothesis}/{experiment}', 'r') as f:
+            train_configuration = json.load(f)
 
-    DATE = '03_04'
-    with_pesto = train_configuration['data']['use_pesto']
-    # ABLATION STRING[i] = 1 MEANS THAT WE ARE USING THE I'TH FEATURE FROM THIS LIST OF FEATURES:
-    # [patch size , scanNet_ubiq , scanNet_protein , pesto_protein , pesto_dna_rna , pesto_ion , pesto_ligand , pesto_lipid , average_plddt]
-    ablation_string = train_configuration['data']['ablation_string']
+        DATE = '03_04'
+        with_pesto = train_configuration['data']['use_pesto']
+        # ABLATION STRING[i] = 1 MEANS THAT WE ARE USING THE I'TH FEATURE FROM THIS LIST OF FEATURES:
+        # [patch size , scanNet_ubiq , scanNet_protein , pesto_protein , pesto_dna_rna , pesto_ion , pesto_ligand , pesto_lipid , average_plddt]
+        ablation_string = train_configuration['data']['ablation_string']
 
-    with_pesto_addition = f'_with_pesto' if with_pesto else ''
-    training_name = f'{DATE}{with_pesto_addition}'
-    print(training_name)
-    training_name += f'_{ablation_string}'
-    
-    hypothesis_name = train_configuration['hypothesis']
-    experiment_name = train_configuration['experiment']
-    random_id = uuid.uuid4().hex[:10]
-    
-    models_folder_path = os.path.join(paths.patch_to_score_model_path, f'{training_name}')
-    results_folder_path = os.path.join(paths.patch_to_score_results_path, 'hypotheses', hypothesis_name, experiment_name, random_id)
-    model_log_dir = os.path.join(models_folder_path, 'logs')
+        with_pesto_addition = f'_with_pesto' if with_pesto else ''
+        training_name = f'{DATE}{with_pesto_addition}'
+        print(training_name)
+        training_name += f'_{ablation_string}'
+        
+        hypothesis_name = train_configuration['hypothesis']
+        experiment_name = train_configuration['experiment']
+        random_id = uuid.uuid4().hex[:10]
+        
+        models_folder_path = os.path.join(paths.patch_to_score_model_path, f'{training_name}')
+        results_folder_path = os.path.join(paths.patch_to_score_results_path, 'hypotheses', hypothesis_name, experiment_name, random_id)
+        model_log_dir = os.path.join(models_folder_path, 'logs')
 
-    for path in [models_folder_path, results_folder_path, model_log_dir]:
-        os.makedirs(path,exist_ok=True)
+        for path in [models_folder_path, results_folder_path, model_log_dir]:
+            os.makedirs(path,exist_ok=True)
 
-    with open(f'{results_folder_path}/configuration.json', 'w') as f:
-        json.dump(train_configuration, f)
+        with open(f'{results_folder_path}/configuration.json', 'w') as f:
+            json.dump(train_configuration, f)
 
-    print('models path:', models_folder_path)
-    print('results path:', results_folder_path)
+        print('models path:', models_folder_path)
+        print('results path:', results_folder_path)
 
-    model_configuration = train_configuration['model']
-    
-    model = build_model_from_configuration(**model_configuration)
-    optimizer = build_optimizer_from_configuration(**train_configuration['compile']['optimizer'])
-    loss = build_loss_from_configuration(**train_configuration['compile']['loss'])
+        model_configuration = train_configuration['model']
+        
+        model = build_model_from_configuration(**model_configuration)
+        optimizer = build_optimizer_from_configuration(**train_configuration['compile']['optimizer'])
+        loss = build_loss_from_configuration(**train_configuration['compile']['loss'])
 
-    model_kwargs = model_configuration['kwargs']
-    fit_kwargs = train_configuration['fit']
-    compile_configuration = train_configuration['compile']
-    architecture_log_dir = os.path.join(model_log_dir,
-                    f"architecture_{model_kwargs['n_layers']}_{model_kwargs['m_a']}_{model_kwargs['m_b']}_{model_kwargs['m_c']}")
-    
-    cross_validation_dataset = PatchToScoreCrossValidationDataset(**train_configuration['data'])
+        model_kwargs = model_configuration['kwargs']
+        fit_kwargs = train_configuration['fit']
+        compile_configuration = train_configuration['compile']
+        architecture_log_dir = os.path.join(model_log_dir,
+                        f"architecture_{model_kwargs['n_layers']}_{model_kwargs['m_a']}_{model_kwargs['m_b']}_{model_kwargs['m_c']}")
+        
+        cross_validation_dataset = PatchToScoreCrossValidationDataset(**train_configuration['data'])
 
-    run_cross_validationlidation(models_folder_path,results_folder_path,
-                 model, optimizer, loss,
-                 model_kwargs, fit_kwargs, 
-                 architecture_log_dir,
-                 cross_validation_dataset)
+        run_cross_validationlidation(models_folder_path,results_folder_path,
+                    model, optimizer, loss,
+                    model_kwargs, fit_kwargs, 
+                    architecture_log_dir,
+                    cross_validation_dataset)
