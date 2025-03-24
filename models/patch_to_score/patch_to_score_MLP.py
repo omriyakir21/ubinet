@@ -107,7 +107,7 @@ def run_cross_validationlidation(models_folder_path,results_folder_path,
 if __name__ == "__main__":
     hypothesis = sys.argv[1]
     experiments = os.listdir(f'configurations/data/{hypothesis}')
-    for experiment in experiments[::-1]:  # TODO : solve bug over first experiment of pesto
+    for experiment in experiments:
         print('experiment:', experiment)
 
         with open(f'/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/configurations/data/{hypothesis}/{experiment}', 'r') as f:
