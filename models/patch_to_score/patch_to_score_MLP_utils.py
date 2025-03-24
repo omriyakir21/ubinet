@@ -23,7 +23,6 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, GlobalAveragePooling1D, Reshape, Masking
 
-maxNumberOfPatches = 10
 from data_preparation.patch_to_score.data_development_utils import NEGATIVE_SOURCES,POSITIVE_SOURCES
 from tensorflow.keras import backend
 
@@ -253,13 +252,6 @@ def divideXData(x):
     return components, sizes, n_patches
 
 
-def hotOneEncodeNPatches(n_patches_array):
-    encoded = np.zeros((n_patches_array.shape[0], maxNumberOfPatches + 1))
-    encoded[np.arange(n_patches_array.size), np.minimum(n_patches_array,
-                                                        np.full(n_patches_array.shape, maxNumberOfPatches))] = 1
-    return encoded
-
-
 def plotROC(y_probs, labels):
     fpr, tpr, thresholds = roc_curve(labels, y_probs)
     auc = roc_auc_score(labels, y_probs)
@@ -289,7 +281,8 @@ def plot_precision_recall(y_probs, labels, header,save_path):
     plt.close()
 
 
-def build_model_concat_size_and_n_patches_same_number_of_layers(architecture_dict,with_pesto,ablation_string):
+def build_model_concat_size_and_n_patches_same_number_of_layers(architecture_dict, input_shape, 
+                                                                max_number_of_patches: int):
     '''
     :param m_a: size of the hidden layers in the MLP of the components
     :param m_b: size of the hidden layers in the MLP of the concatenated size and number of patches
@@ -297,11 +290,10 @@ def build_model_concat_size_and_n_patches_same_number_of_layers(architecture_dic
     :param n_layers: number of layers in each of the MLPs
     :return:
     '''
-    # Define the input shape
-    input_shape = (maxNumberOfPatches, ablation_string.count('1')) if with_pesto else (maxNumberOfPatches, 4) 
+    # Define the input shape 
     input_data = tf.keras.Input(shape=input_shape, name='patches_input')
     size_value = tf.keras.Input(shape=(1,), name='extra_value_input')
-    n_patches_hot_encoded_value = tf.keras.Input(shape=(maxNumberOfPatches + 1,), name='hot_encoded_value_input')
+    n_patches_hot_encoded_value = tf.keras.Input(shape=(max_number_of_patches+ 1,), name='hot_encoded_value_input')
     masked_input = tf.keras.layers.Masking(mask_value=0.0)(input_data)
 
     currentOutput = masked_input
@@ -468,18 +460,6 @@ def save_architecture_test_results(architecture_test_predictions,architecture_te
     plot_precision_recall(all_test_predictions, all_test_labels,header,save_path)
     np.save(os.path.join(results_architecture_folder,'all_predictions.npy'),all_test_predictions)
     np.save(os.path.join(results_architecture_folder,'all_labels.npy'),all_test_labels)
-
-def filter_with_ablation_string(ablation_string,components_train,components_validation,components_test):
-    mask = tf.constant([bool(int(x)) for x in ablation_string], dtype=tf.bool)
-    train_filtered_components = tf.boolean_mask(components_train, mask, axis=2)
-    validation_filtered_components = tf.boolean_mask(components_validation, mask, axis=2)
-    test_filtered_components = tf.boolean_mask(components_test, mask, axis=2)
-    return train_filtered_components,validation_filtered_components,test_filtered_components
-
-
-
-
-
 
 
 # def createCSVFileFromResults(gridSearchDir, trainingDictsDir, dirName):
