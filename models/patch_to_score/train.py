@@ -58,7 +58,7 @@ def train(fold_index, dataset: PatchToScoreDataset,
 
 
 
-def run_cross_validationlidation(models_folder_path,results_folder_path,
+def run_cross_validation(models_folder_path,results_folder_path,
                  model: tf.keras.Model, optimizer: tf.keras.Optimizer, loss: tf.keras.Loss,
                  model_kwargs: dict, fit_kwargs: dict, 
                  architecture_log_dir: str,
@@ -155,7 +155,7 @@ if __name__ == "__main__":
         
         cross_validation_dataset = PatchToScoreCrossValidationDataset(**train_configuration['data'])
 
-        run_cross_validationlidation(models_folder_path,results_folder_path,
+        run_cross_validation(models_folder_path,results_folder_path,
                     model, optimizer, loss,
                     model_kwargs, fit_kwargs, 
                     architecture_log_dir,
