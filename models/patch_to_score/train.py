@@ -110,7 +110,7 @@ if __name__ == "__main__":
     for experiment in experiments:
         print('experiment:', experiment)
 
-        with open(f'/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/configurations/data/{hypothesis}/{experiment}', 'r') as f:
+        with open(f'configurations/data/{hypothesis}/{experiment}', 'r') as f:
             train_configuration = json.load(f)
 
         DATE = '03_04'
