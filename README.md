@@ -1,6 +1,8 @@
 # UbiNet
 
 ## Conda
+
+### ubinet - still not working
 All code should run using the ```ubinet``` conda environment. <br>
 In order to build the environment, run:
 ```
@@ -8,6 +10,13 @@ conda create -n ubinet
 conda activate ubinet
 conda install numpy pandas scikit-learn matplotlib plotly seaborn
 pip install -U tensorflow keras biopython networkx
+```
+
+### ubinet_experiment - recommended
+```
+conda create -n "ubinet_experiment" python=3.10.12
+conda activate ubinet_experiment
+pip install -r requirements.txt
 ```
 
 ## Patch2Score
