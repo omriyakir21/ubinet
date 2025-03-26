@@ -55,6 +55,7 @@ class PatchToScoreCrossValidationDataset:
 
         for i, fold in enumerate(self.fold_dicts):
             if (self.max_folds is not None) and ((i + 1) > self.max_folds):
+                print('Got to max folds - cutting cross validation dataset')
                 break
             fold_dataset = PatchToScoreDataset(fold, self.use_pesto, self.ablation_string)
             self.fold_datasets.append(fold_dataset)
