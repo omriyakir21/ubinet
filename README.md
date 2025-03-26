@@ -2,7 +2,7 @@
 
 ## Conda
 
-### ubinet - still not working
+### ubinet - non-exact matching
 All code should run using the ```ubinet``` conda environment. <br>
 In order to build the environment, run:
 ```
@@ -16,7 +16,13 @@ pip install -U tensorflow keras biopython networkx
 ```
 conda create -n "ubinet_experiment" python=3.10.12
 conda activate ubinet_experiment
-pip install -r requirements.txt
+pip install -r requirements_clean.txt
+```
+
+### experiment - need to check
+```
+conda env create -f environment.yml python=3.10.12
+conda activate experiment
 ```
 
 ## Patch2Score
