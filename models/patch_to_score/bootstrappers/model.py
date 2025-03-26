@@ -1,7 +1,7 @@
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-import patch_to_score_MLP_utils as utils
+import utils
 import tensorflow as tf
 
 def bootstrap_patch_to_score_original(n_layers: int, m_a: int, m_b: int, m_c: int, 

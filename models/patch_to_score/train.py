@@ -7,7 +7,7 @@ import uuid
 import numpy as np    
 from sklearn.metrics import auc
 import paths
-import patch_to_score_MLP_utils as utils
+import utils
 import tensorflow as tf
 from data_preparation.ScanNet.db_creation_scanNet_utils import load_as_pickle
 from models.patch_to_score.bootstrappers.loss import build_loss_from_configuration
