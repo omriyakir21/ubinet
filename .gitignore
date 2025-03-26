@@ -4,7 +4,6 @@
 *.pyc
 *.save
 *.pkl
-*.txt
 *.png
 *.csv
 datasets/
