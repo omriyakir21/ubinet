@@ -32,7 +32,8 @@ python3 models/patch_to_score/train.py pesto_scores_ablation_reproduce
 Such a run will take all experiments under the hypothesis stated, and will run each of them seperately.
 
 ### Results
-Results will be saved under ```results/patch_to_score/hypotheses/<hypothesis_name>/<experiment_name>/```
+Results will be saved under ```results/patch_to_score/hypotheses/<hypothesis_name>/<experiment_name>/<random_id>```.<br>
+The ```<random_id>``` is added so several runs of the same experiment won't override each other.
 
 ### TODO
 1. Option to run single experiment
