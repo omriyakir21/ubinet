@@ -105,9 +105,16 @@ def run_cross_validation(models_folder_path,results_folder_path,
 
 
 if __name__ == "__main__":
-    experiment_configuration_file = sys.argv[1]
-    print('experiment configuration file:', experiment_configuration_file)
-    with open(experiment_configuration_file, 'r') as f:
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    parser.add_argument("-c", "--config", dest="configuration_path",
+                        help="path to configuration file")
+    args = parser.parse_args()
+
+    configuration_path = args.configuration_path
+    print('experiment configuration file:', configuration_path)
+    with open(configuration_path, 'r') as f:
         train_configuration = json.load(f)
 
     DATE = '03_04'
