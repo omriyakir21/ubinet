@@ -92,9 +92,9 @@ def run_cross_validation(models_folder_path,results_folder_path,
     
     architecture_name = f"architecture:{architecture_dict['n_layers']}_{architecture_dict['m_a']}_{architecture_dict['m_b']}_{architecture_dict['m_c']}"
 
-    models_architecture_folder = os.path.join(models_folder_path,architecture_name)+'_second'
+    models_architecture_folder = os.path.join(models_folder_path,architecture_name)
     os.makedirs(models_architecture_folder,exist_ok=True)
-    results_architecture_folder = os.path.join(results_folder_path,architecture_name)+'_second'
+    results_architecture_folder = os.path.join(results_folder_path,architecture_name)
     os.makedirs(results_architecture_folder,exist_ok=True)
     utils.save_grid_search_results(grid_results,results_architecture_folder)
     
@@ -105,6 +105,12 @@ def run_cross_validation(models_folder_path,results_folder_path,
 
 
 if __name__ == "__main__":
+
+    # TODO : clean file
+    # TODO : model re-initialize per fold
+    # TODO : model output path -> results
+    # TODO : re-run reproduce results
+
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
