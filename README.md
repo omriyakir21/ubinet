@@ -54,8 +54,3 @@ The ```<random_id>``` is added so several runs of the same experiment won't over
 #### PeSTo ablation
 ABLATION STRING[i] = 1 MEANS THAT WE ARE USING THE I'TH FEATURE FROM THIS LIST OF FEATURES:<br>
 [patch size , scanNet_ubiq , scanNet_protein , pesto_protein , pesto_dna_rna , pesto_ion , pesto_ligand , pesto_lipid , average_plddt]
-
-
-### TODO
-1. Option to run single experiment
-2. Slurm job support
