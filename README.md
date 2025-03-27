@@ -50,6 +50,12 @@ Such a run will take all experiments under the hypothesis stated, and will run e
 Results will be saved under ```results/patch_to_score/hypotheses/<hypothesis_name>/<experiment_name>/<random_id>```.<br>
 The ```<random_id>``` is added so several runs of the same experiment won't override each other.
 
+### Specific Experiments
+#### PeSTo ablation
+ABLATION STRING[i] = 1 MEANS THAT WE ARE USING THE I'TH FEATURE FROM THIS LIST OF FEATURES:<br>
+[patch size , scanNet_ubiq , scanNet_protein , pesto_protein , pesto_dna_rna , pesto_ion , pesto_ligand , pesto_lipid , average_plddt]
+
+
 ### TODO
 1. Option to run single experiment
 2. Slurm job support
