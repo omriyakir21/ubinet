@@ -58,7 +58,7 @@ def train(fold_index, dataset: PatchToScoreDataset,
 
 
 
-def run_cross_validation(models_folder_path,results_folder_path,
+def run_cross_validation(results_folder_path,
                  model: tf.keras.Model, optimizer: tf.keras.Optimizer, loss: tf.keras.Loss,
                  model_kwargs: dict, fit_kwargs: dict, 
                  architecture_log_dir: str,
@@ -92,14 +92,12 @@ def run_cross_validation(models_folder_path,results_folder_path,
     
     architecture_name = f"architecture:{architecture_dict['n_layers']}_{architecture_dict['m_a']}_{architecture_dict['m_b']}_{architecture_dict['m_c']}"
 
-    models_architecture_folder = os.path.join(models_folder_path,architecture_name)
-    os.makedirs(models_architecture_folder,exist_ok=True)
     results_architecture_folder = os.path.join(results_folder_path,architecture_name)
     os.makedirs(results_architecture_folder,exist_ok=True)
     utils.save_grid_search_results(grid_results,results_architecture_folder)
     
     for i in range(len(architecture_models)):
-        architecture_models[i].save(os.path.join(models_architecture_folder, f'model{i}.keras'))
+        architecture_models[i].save(os.path.join(results_architecture_folder, f'model{i}.keras'))
 
     utils.save_architecture_test_results(architecture_test_predictions, architecture_test_labels,results_architecture_folder)
 
@@ -108,7 +106,6 @@ if __name__ == "__main__":
 
     # TODO : clean file
     # TODO : model re-initialize per fold
-    # TODO : model output path -> results
     # TODO : re-run reproduce results
 
     from argparse import ArgumentParser
@@ -138,17 +135,15 @@ if __name__ == "__main__":
     experiment_name = train_configuration['experiment']
     random_id = uuid.uuid4().hex[:10]
     
-    models_folder_path = os.path.join(paths.patch_to_score_model_path, f'{training_name}')
     results_folder_path = os.path.join(paths.patch_to_score_results_path, 'hypotheses', hypothesis_name, experiment_name, random_id)
-    model_log_dir = os.path.join(models_folder_path, 'logs')
+    model_log_dir = os.path.join(results_folder_path, 'logs')
 
-    for path in [models_folder_path, results_folder_path, model_log_dir]:
+    for path in [results_folder_path, model_log_dir]:
         os.makedirs(path,exist_ok=True)
 
     with open(f'{results_folder_path}/configuration.json', 'w') as f:
         json.dump(train_configuration, f)
 
-    print('models path:', models_folder_path)
     print('results path:', results_folder_path)
 
     model_configuration = train_configuration['model']
@@ -165,7 +160,7 @@ if __name__ == "__main__":
     
     cross_validation_dataset = PatchToScoreCrossValidationDataset(**train_configuration['data'])
 
-    run_cross_validation(models_folder_path,results_folder_path,
+    run_cross_validation(results_folder_path,
                 model, optimizer, loss,
                 model_kwargs, fit_kwargs, 
                 architecture_log_dir,
