@@ -53,4 +53,6 @@ The ```<random_id>``` is added so several runs of the same experiment won't over
 ### Specific Experiments
 #### PeSTo ablation
 ABLATION STRING[i] = 1 MEANS THAT WE ARE USING THE I'TH FEATURE FROM THIS LIST OF FEATURES:<br>
-[patch size , scanNet_ubiq , scanNet_protein , pesto_protein , pesto_dna_rna , pesto_ion , pesto_ligand , pesto_lipid , average_plddt]
+[patch size , scanNet_ubiq , scanNet_protein , pesto_protein , pesto_dna_rna , pesto_ion , pesto_ligand , pesto_lipid , average_plddt]<br>
+Ablation results:
+![PeSTo ablation ROCs](./assets/plots/pesto_ablation.png)
