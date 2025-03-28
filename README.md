@@ -9,7 +9,7 @@ In order to build the environment, run:
 conda create -n ubinet
 conda activate ubinet
 conda install numpy pandas scikit-learn matplotlib plotly seaborn
-pip install -U tensorflow keras biopython networkx
+pip install -U tensorflow keras biopython networkx nbformat
 ```
 
 ### ubinet_experiment - recommended
