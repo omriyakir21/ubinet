@@ -4,11 +4,12 @@ import os
 import sys
 
 from typing import Tuple, List
+from datetime import datetime
 from argparse import Namespace, ArgumentParser
 
 import numpy as np
 import tensorflow as tf
-from sklearn.metrics import auc
+from sklearn.metrics import roc_curve, precision_recall_curve, auc
 
 from models.patch_to_score.dataset import PatchToScoreCrossValidationDataset, PatchToScoreDataset
 from models.patch_to_score.bootstrappers.optimizer import build_optimizer_from_configuration
@@ -68,52 +69,41 @@ def bootstrap_train(train_configuration: dict) -> Tuple[tf.keras.Model, tf.keras
     return model, optimizer, loss
 
 
+def inference(model: tf.keras.Model, dataset: PatchToScoreDataset) -> dict:
+    name_to_set = {
+        'train': {'data': [dataset.train_set, dataset.train_sizes, dataset.train_num_patch], 'labels': dataset.train_labels},
+        'validation': {'data': [dataset.validation_set, dataset.validation_sizes, dataset.validation_num_patch], 'labels': dataset.validation_labels},
+        'test': {'data': [dataset.test_set, dataset.test_sizes, dataset.test_num_patch], 'labels': dataset.test_labels}}
+    name_to_yhat = {name: {'predictions': model.predict(set['data']), 'labels': set['labels'].numpy()} for name, set in name_to_set.items()}
+    return name_to_yhat
+
+
+def save_inference_results(inference_results: dict, path: str):
+    for set_name, set_dict in inference_results.items():
+        set_path = os.path.join(path, set_name)
+        os.makedirs(set_path, exist_ok=True)
+        
+        predictions = set_dict['predictions']
+        labels = set_dict['labels']
+        np.save(os.path.join(set_path, 'predictions.npy'), predictions)
+        np.save(os.path.join(set_path, 'labels.npy'), labels)
+    
+    
 def run_cross_validation(results_folder_path: str,
                          train_configuration: dict,
                          model_kwargs: dict,
-                         cross_validation_dataset: PatchToScoreCrossValidationDataset) -> None:
-    grid_results = []
-    architecture_models = []
-    architecture_validation_predictions = []
-    architecture_validation_labels = []
-    architecture_test_predictions = []
-    architecture_test_labels = []
+                         cross_validation_dataset: PatchToScoreCrossValidationDataset) -> None:    
+    all_inference_results = []
     for i, dataset in enumerate(cross_validation_dataset.fold_datasets):
         model, optimizer, loss = bootstrap_train(train_configuration)
         model = train(i, dataset, model, optimizer, loss,
                       train_configuration['fit'], results_folder_path)
-        yhat_validation = model.predict(
-            [dataset.validation_set, dataset.validation_sizes, dataset.validation_num_patch])
-        architecture_validation_predictions.append(yhat_validation)
-        architecture_validation_labels.append(
-            dataset.validation_labels.numpy())
-
-        yhat_test = model.predict(
-            [dataset.test_set, dataset.test_sizes, dataset.test_num_patch])
-        architecture_test_predictions.append(yhat_test)
-        architecture_test_labels.append(dataset.test_labels.numpy())
-        architecture_models.append(model)
-
-    all_architecture_labels = np.concatenate(architecture_validation_labels)
-    all_architecture_predictions = np.concatenate(
-        architecture_validation_predictions)
-    precision, recall, _ = utils.precision_recall_curve(
-        all_architecture_labels, all_architecture_predictions)
-    pr_auc = auc(recall, precision)
-    print(f'pr_auc is {pr_auc}')
-
-    architecture_dict = {**model_kwargs, **train_configuration['fit']}
-    architecture_dict['val_metric'] = pr_auc
-    grid_results.append(architecture_dict)
-
-    utils.save_grid_search_results(grid_results, results_folder_path)
-
-    for i in range(len(architecture_models)):
-        architecture_models[i].save(os.path.join(
-            results_folder_path, f'model{i}.keras'))
-
-    utils.save_architecture_test_results(
-        architecture_test_predictions, architecture_test_labels, results_folder_path)
+        inference_results = inference(model, dataset)
+        
+        fold_path = os.path.join(results_folder_path, f'fold_{i}') 
+        os.makedirs(fold_path, exist_ok=True)
+        model.save(os.path.join(fold_path, f'model.keras'))
+        save_inference_results(inference_results, fold_path)
 
 
 def load_configuration() -> dict:
@@ -132,7 +122,7 @@ if __name__ == "__main__":
     train_configuration = load_configuration()
     hypothesis_name = train_configuration['hypothesis']
     experiment_name = train_configuration['experiment']
-    random_id = uuid.uuid4().hex[:10]
+    random_id = str(datetime.now()).split(' ')[0] + '_' + uuid.uuid4().hex[:10]
     
     results_folder_path = os.path.join(
         paths.patch_to_score_results_path, 'hypotheses', hypothesis_name, experiment_name, random_id)
