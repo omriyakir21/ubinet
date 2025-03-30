@@ -3,10 +3,7 @@ import json
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(
-    __file__), '..', '..'))  # TODO : clean
-
-from typing import Tuple
+from typing import Tuple, List
 from argparse import Namespace, ArgumentParser
 
 import numpy as np
@@ -132,8 +129,6 @@ def load_configuration() -> dict:
 
 
 if __name__ == "__main__":
-    # TODO : re-run reproduce results
-
     train_configuration = load_configuration()
     hypothesis_name = train_configuration['hypothesis']
     experiment_name = train_configuration['experiment']

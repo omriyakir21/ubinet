@@ -1,30 +1,25 @@
-# for array computations and loading data
 import math
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import csv
+import pickle
 
-from PIL.ImageOps import pad
-from sklearn.utils import compute_class_weight
-
-import paths
+import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
-import pandas as pd
-# for building linear regression models and preparing data
+from PIL.ImageOps import pad
+from sklearn.utils import compute_class_weight
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, classification_report, roc_auc_score, roc_curve, precision_recall_curve, \
-    auc
-import pickle
-# for building and training neural networks
+from sklearn.metrics import mean_squared_error, classification_report, roc_auc_score, roc_curve, precision_recall_curve, auc
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
+from tensorflow.keras import backend
 from tensorflow.keras.layers import Dense, GlobalAveragePooling1D, Reshape, Masking
 
 from data_preparation.patch_to_score.data_development_utils import NEGATIVE_SOURCES,POSITIVE_SOURCES
-from tensorflow.keras import backend
+import paths
+
 
 @tf.keras.utils.register_keras_serializable(package="MyCustomLayers")
 class GlobalSumPooling(GlobalAveragePooling1D):
@@ -51,7 +46,6 @@ class GlobalSumPooling(GlobalAveragePooling1D):
             "keepdims": self.keepdims
         })
         return config
-    
 
 
 def plotPrecisionRecall(y_probs, labels):

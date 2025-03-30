@@ -9,4 +9,4 @@
 #SBATCH --mem=32000 # CPU memory (MB)
 #SBATCH --gpus=1 # GPU cores per process
 #SBATCH --cpus-per-task=8 # CPU cores per process
-python3 models/patch_to_score/train.py --config $1
+python3 -m models.patch_to_score.train --config $1

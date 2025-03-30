@@ -1,7 +1,5 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-
 from typing import Union
 import tensorflow as tf
 from data_preparation.ScanNet.db_creation_scanNet_utils import load_as_pickle
