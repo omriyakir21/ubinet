@@ -20,9 +20,9 @@ import paths
 
 
 def train(fold_index, dataset: PatchToScoreDataset,
-          model: tf.keras.Model, optimizer: tf.keras.Optimizer, loss: tf.keras.Loss,
+          model: tf.keras.models.Model, optimizer: tf.keras.optimizers.Optimizer, loss: tf.keras.losses.Loss,
           fit_kwargs: dict,
-          results_folder_path: str) -> tf.keras.Model:
+          results_folder_path: str) -> tf.keras.models.Model:
     print(f'fold {fold_index}')
     tf.keras.backend.clear_session()
 
@@ -60,7 +60,7 @@ def train(fold_index, dataset: PatchToScoreDataset,
     return model
 
 
-def bootstrap_train(train_configuration: dict) -> Tuple[tf.keras.Model, tf.keras.Optimizer, tf.keras.Loss]:
+def bootstrap_train(train_configuration: dict) -> Tuple[tf.keras.models.Model, tf.keras.optimizers.Optimizer, tf.keras.losses.Loss]:
     model = build_model_from_configuration(**train_configuration['model'])
     optimizer = build_optimizer_from_configuration(
         **train_configuration['compile']['optimizer'])
@@ -69,7 +69,7 @@ def bootstrap_train(train_configuration: dict) -> Tuple[tf.keras.Model, tf.keras
     return model, optimizer, loss
 
 
-def inference(model: tf.keras.Model, dataset: PatchToScoreDataset) -> dict:
+def inference(model: tf.keras.models.Model, dataset: PatchToScoreDataset) -> dict:
     name_to_set = {
         'train': {'data': [dataset.train_set, dataset.train_sizes, dataset.train_num_patch], 'labels': dataset.train_labels},
         'validation': {'data': [dataset.validation_set, dataset.validation_sizes, dataset.validation_num_patch], 'labels': dataset.validation_labels},
@@ -119,6 +119,9 @@ def load_configuration() -> dict:
 
 
 if __name__ == "__main__":
+    devices = tf.config.list_physical_devices('GPU')
+    print(devices)
+    
     train_configuration = load_configuration()
     hypothesis_name = train_configuration['hypothesis']
     experiment_name = train_configuration['experiment']
@@ -128,6 +131,7 @@ if __name__ == "__main__":
         paths.patch_to_score_results_path, 'hypotheses', hypothesis_name, experiment_name, random_id)
     os.makedirs(results_folder_path, exist_ok=True)
     print('results path:', results_folder_path)
+    print('Num GPUs Available:', len(tf.config.list_physical_devices('GPU')))
     
     with open(f'{results_folder_path}/configuration.json', 'w') as f:
         json.dump(train_configuration, f)

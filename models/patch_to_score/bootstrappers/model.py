@@ -4,7 +4,7 @@ from models.patch_to_score import utils
 import tensorflow as tf
 
 def bootstrap_patch_to_score_original(n_layers: int, m_a: int, m_b: int, m_c: int, 
-                                      max_number_of_patches: int, input_shape: int) -> tf.keras.Model:
+                                      max_number_of_patches: int, input_shape: int) -> tf.keras.models.Model:
     architecture_dict = {
         'm_a': m_a, 
         'm_b': m_b, 
@@ -20,7 +20,7 @@ model_to_bootstrapper = {
     'patch_to_score_original': bootstrap_patch_to_score_original
 }
 
-def build_model_from_configuration(name: str, kwargs: dict) -> tf.keras.Model:
+def build_model_from_configuration(name: str, kwargs: dict) -> tf.keras.models.Model:
     supported_models = list(model_to_bootstrapper.keys())
     if name not in model_to_bootstrapper.keys():
         raise Exception(f'model: {name} not supported. supported models: {supported_models}')

@@ -17,8 +17,8 @@ optimizer_to_bootstrapper = {
     'adamw': bootstrap_adamw   
 }
 
-def build_optimizer_from_configuration(name: str, kwargs: dict) -> tf.keras.Model:
+def build_optimizer_from_configuration(name: str, kwargs: dict) -> tf.keras.optimizers.Optimizer:
     supported_optimizers = list(optimizer_to_bootstrapper.keys())
     if name not in optimizer_to_bootstrapper.keys():
-        raise Exception(f'model: {name} not supported. supported models: {supported_optimizers}')
+        raise Exception(f'optimizer: {name} not supported. supported optimizers: {supported_optimizers}')
     return optimizer_to_bootstrapper[name](**kwargs)
