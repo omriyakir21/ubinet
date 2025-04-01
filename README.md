@@ -2,6 +2,22 @@
 
 ## Conda
 
+### ubinet-gpu - recommended
+The specifics here are important on two fronts:<br>
+1. Match tensorflow's compatability constraints: https://www.tensorflow.org/install/source#gpu
+2. Overcome an open bug in tensorflow's compatability with anaconda: https://github.com/tensorflow/tensorflow/issues/52988
+```
+conda create --name ubinet-gpu python=3.10
+conda activate ubinet-gpu
+conda install conda-forge::cudatoolkit=11.2
+conda install conda-forge::cudnn=8.1
+pip install tensorflow-gpu==2.11.0
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64/:$CONDA_PREFIX/lib
+conda install numpy pandas scikit-learn matplotlib plotly seaborn
+pip install biopython networkx nbformat
+pip install numpy==1.24.2
+```
+
 ### ubinet - non-exact matching
 All code should run using the ```ubinet``` conda environment. <br>
 In order to build the environment, run:
@@ -10,16 +26,21 @@ conda create -n ubinet
 conda activate ubinet
 conda install numpy pandas scikit-learn matplotlib plotly seaborn
 pip install -U tensorflow keras biopython networkx nbformat
+
+
+conda install conda-forge::cudatoolkit=12.5
+conda install conda-forge::cudnn=9.3
+pip install tensorflow-gpu==2.19.0
 ```
 
-### ubinet_experiment - recommended
+### ubinet_experiment - currently not working
 ```
 conda create -n "ubinet_experiment" python=3.10.12
 conda activate ubinet_experiment
 pip install -r requirements_clean.txt
 ```
 
-### experiment - need to check
+### experiment - currently not working
 ```
 conda env create -f environment.yml python=3.10.12
 conda activate experiment
