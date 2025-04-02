@@ -14,7 +14,7 @@ conda install conda-forge::cudnn=8.1
 pip install tensorflow-gpu==2.11.0
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64/:$CONDA_PREFIX/lib
 conda install numpy pandas scikit-learn matplotlib plotly seaborn
-pip install biopython networkx nbformat
+pip install biopython networkx nbformat tqdm
 pip install numpy==1.24.2
 ```
 
