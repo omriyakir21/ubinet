@@ -65,66 +65,6 @@ def plot_precision_recall(y_probs, labels, header, save_path):
     plt.close()
 
 
-def build_model_concat_size_and_n_patches_same_number_of_layers(architecture_dict, input_shape,
-                                                                max_number_of_patches: int):
-    '''
-    :param m_a: size of the hidden layers in the MLP of the components
-    :param m_b: size of the hidden layers in the MLP of the concatenated size and number of patches
-    :param m_c: size of the hidden layers in the MLP of the concatenated global sum output and size + n_patches MLP output
-    :param n_layers: number of layers in each of the MLPs
-    :return:
-    '''
-    # Define the input shape
-    input_data = tf.keras.Input(shape=input_shape, name='patches_input')
-    size_value = tf.keras.Input(shape=(1,), name='extra_value_input')
-    n_patches_hot_encoded_value = tf.keras.Input(
-        shape=(max_number_of_patches + 1,), name='hot_encoded_value_input')
-    masked_input = tf.keras.layers.Masking(mask_value=0.0)(input_data)
-
-    currentOutput = masked_input
-    for i in range(architecture_dict['n_layers']):
-        dense_output = tf.keras.layers.Dense(
-            architecture_dict['m_a'], activation='linear')(currentOutput)
-        batchNorm = tf.keras.layers.BatchNormalization(
-            momentum=0.75)(dense_output)
-        activation = tf.keras.layers.ReLU()(batchNorm)
-        currentOutput = activation
-
-    global_pooling_output = GlobalSumPooling(
-        data_format='channels_last')(currentOutput)
-
-    currentOutput = tf.keras.layers.Concatenate()(
-        [size_value, n_patches_hot_encoded_value])
-    for i in range(architecture_dict['n_layers']):
-        dense_output = tf.keras.layers.Dense(
-            architecture_dict['m_b'], activation='linear')(currentOutput)
-        batchNorm = tf.keras.layers.BatchNormalization(
-            momentum=0.75)(dense_output)
-        activation = tf.keras.layers.ReLU()(batchNorm)
-        currentOutput = activation
-    size_and_n_patches_output = currentOutput
-
-    concatenated_output = tf.keras.layers.Concatenate()(
-        [global_pooling_output, size_and_n_patches_output])
-
-    currentOutput = concatenated_output
-    for i in range(architecture_dict['n_layers']):
-        dense_output = tf.keras.layers.Dense(
-            architecture_dict['m_c'], activation='linear')(currentOutput)
-        batchNorm = tf.keras.layers.BatchNormalization(
-            momentum=0.75)(dense_output)
-        activation = tf.keras.layers.ReLU()(batchNorm)
-        currentOutput = activation
-
-    before_sigmoid_output = currentOutput
-
-    output = tf.keras.layers.Dense(
-        1, activation='sigmoid')(before_sigmoid_output)
-    model = tf.keras.Model(
-        inputs=[input_data, size_value, n_patches_hot_encoded_value], outputs=output)
-    return model
-
-
 def k_computation(prediction, training_ub_ratio, with_class_weights=False):
     if with_class_weights:
         training_ub_ratio = 0.5
