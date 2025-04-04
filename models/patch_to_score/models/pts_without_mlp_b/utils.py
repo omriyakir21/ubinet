@@ -2,7 +2,7 @@ import os
 import csv
 import pickle
 
-import numpy as np
+import numpy as nps
 from matplotlib import pyplot as plt
 from sklearn.metrics import precision_recall_curve, auc
 import tensorflow as tf
@@ -10,7 +10,7 @@ from tensorflow.keras import backend
 from tensorflow.keras.layers import GlobalAveragePooling1D
 
 
-@tf.keras.utils.register_keras_serializable(package="MyCustomLayers")
+@tf.keras.utils.register_keras_serializable(package="MyCustomLayersNoMlpB")
 class GlobalSumPooling(GlobalAveragePooling1D):
     def __init__(self, data_format='channels_last', keepdims=False, **kwargs):
         super(GlobalSumPooling, self).__init__(
