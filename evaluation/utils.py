@@ -98,4 +98,4 @@ def multi_exp_data_to_fig(multi_experiments_data: dict,
             if ('Std Dev' in trace['name']):
                 trace['showlegend'] = False
 
-    return fig
+    return fig, exp_to_auc
