@@ -44,21 +44,22 @@ def build_model(hidden_sizes_mlp_a: List[Tuple[int, int]], mlp_a_dropout_rate: f
         mlp = TransformerEncoderMLP(
             hidden_units=mlp_hidden_size, dropout_rate=mlp_a_dropout_rate, activation=activation)
         current_output = mlp(current_output)
-        # TODO: apply non-linearity here?
+        current_output = tf.keras.layers.ReLU()(current_output)  # TODO: apply non-linearity here?
+    
     
     global_pooling_output = GlobalSumPooling(
         data_format='channels_last')(current_output)
 
+    
     current_output = global_pooling_output
     current_output = tf.keras.layers.Dense(
         hidden_sizes_mlp_c[0][0], activation='linear')(current_output)
-    
     
     for mlp_hidden_size in hidden_sizes_mlp_c:
         mlp = TransformerEncoderMLP(
             hidden_units=mlp_hidden_size, dropout_rate=mlp_c_dropout_rate, activation=activation)
         current_output = mlp(current_output)
-        # TODO: apply non-linearity here?
+        current_output = tf.keras.layers.ReLU()(current_output)  # TODO: apply non-linearity here?
 
     before_sigmoid_output = current_output
 
