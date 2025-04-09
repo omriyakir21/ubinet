@@ -21,7 +21,8 @@ def bootstrap_patch_to_score_original(n_layers: int, m_a: int, m_b: int, m_c: in
 
 def bootstrap_pts_without_mlp_b(n_layers: int, m_a: int, m_c: int,
                                 max_number_of_patches: int, input_shape: Tuple[int, int]) -> tf.keras.models.Model:
-    model = build_pts_wihout_mlp_b_model(m_a, m_c, n_layers, input_shape, max_number_of_patches)
+    model = build_pts_wihout_mlp_b_model(
+        m_a, m_c, n_layers, input_shape, max_number_of_patches)
     return model
 
 
@@ -30,8 +31,8 @@ def bootstrap_pts_encoder_mlps(hidden_sizes_mlp_a: List[Tuple[int, int]], mlp_a_
                                activation: str, input_shape: Tuple[int, int],
                                max_number_of_patches: int) -> tf.keras.models.Model:
     model = build_pts_encoder_mlp_model(hidden_sizes_mlp_a, mlp_a_dropout_rate,
-                                         hidden_sizes_mlp_c, mlp_c_dropout_rate,
-                                         activation, input_shape, max_number_of_patches)
+                                        hidden_sizes_mlp_c, mlp_c_dropout_rate,
+                                        activation, input_shape, max_number_of_patches)
     return model
 
 
