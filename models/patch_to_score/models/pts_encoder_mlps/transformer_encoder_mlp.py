@@ -4,7 +4,7 @@ from tensorflow.keras import layers
 
 
 class TransformerEncoderMLP(tf.keras.layers.Layer):
-    def __init__(self, hidden_units, dropout_rate=0.1, activation='relu', **kwargs):
+    def __init__(self, hidden_units, dropout_rate, activation, **kwargs):
         """
         Args:
             hidden_units: Tuple/List of two integers for the two dense layers.
@@ -12,6 +12,7 @@ class TransformerEncoderMLP(tf.keras.layers.Layer):
             activation: Activation function for the first dense layer.
         """
         super().__init__(**kwargs)
+        self.supports_masking = True  # Important! The pathces are masked
         assert len(hidden_units) == 2, "Provide two units: (first_dense_units, second_dense_units)"
         self.hidden_units = hidden_units
         self.dropout_rate = dropout_rate
@@ -26,12 +27,18 @@ class TransformerEncoderMLP(tf.keras.layers.Layer):
 
         self.layernorm = layers.LayerNormalization()
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, training=False, mask=None):
         x = self.dense1(inputs)
         x = self.activation_layer(x)
         x = self.dropout1(x, training=training)
+
         x = self.dense2(x)
         x = self.dropout2(x, training=training)
         x = x + inputs
         x = self.layernorm(x)
-        return x
+        return x  # Mask will be automatically passed if supports_masking=True
+
+    def compute_mask(self, inputs, mask=None):
+        # Just return the input mask unchanged
+        return mask
+    
