@@ -1,4 +1,4 @@
-
+import uuid
 import tensorflow as tf
 from tensorflow.keras import layers
 
@@ -35,7 +35,8 @@ class TransformerEncoderMLP(tf.keras.layers.Layer):
         # Create projection layer only if dimensions mismatch
         if input_dim != output_dim:
             print(f'initializing projection for skip connection: {input_dim} -> {output_dim}')
-            self.skip_proj = layers.Dense(output_dim)
+            random_id = str(uuid.uuid4().hex[:10])
+            self.skip_proj = layers.Dense(output_dim, name=f'skip_proj_{random_id}')  # patch for tensorflow name overlapping issue
 
         super().build(input_shape)
     
