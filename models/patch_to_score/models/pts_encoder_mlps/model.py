@@ -35,10 +35,7 @@ def build_model(hidden_sizes_mlp_a: List[Tuple[int, int]], mlp_a_dropout_rate: f
     
     concat_input_data = tf.keras.layers.Concatenate(axis=-1)([input_data, n_patches_broadcased, size_broadcased])
     masked_input = tf.keras.layers.Masking(mask_value=0.0)(concat_input_data)
-    
     current_output = masked_input
-    current_output = tf.keras.layers.Dense(
-        hidden_sizes_mlp_a[0][0], activation='linear')(current_output)
     
     for mlp_hidden_size in hidden_sizes_mlp_a:
         mlp = TransformerEncoderMLP(
@@ -46,14 +43,9 @@ def build_model(hidden_sizes_mlp_a: List[Tuple[int, int]], mlp_a_dropout_rate: f
         current_output = mlp(current_output)
         current_output = tf.keras.layers.ReLU()(current_output)  # TODO: apply non-linearity here?
     
-    
     global_pooling_output = GlobalSumPooling(
         data_format='channels_last')(current_output)
-
-    
     current_output = global_pooling_output
-    current_output = tf.keras.layers.Dense(
-        hidden_sizes_mlp_c[0][0], activation='linear')(current_output)
     
     for mlp_hidden_size in hidden_sizes_mlp_c:
         mlp = TransformerEncoderMLP(

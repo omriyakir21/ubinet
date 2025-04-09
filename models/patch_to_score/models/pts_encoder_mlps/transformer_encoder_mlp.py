@@ -14,19 +14,31 @@ class TransformerEncoderMLP(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.supports_masking = True  # Important! The pathces are masked
         assert len(hidden_units) == 2, "Provide two units: (first_dense_units, second_dense_units)"
+        
         self.hidden_units = hidden_units
         self.dropout_rate = dropout_rate
         self.activation = activation
-
         self.dense1 = layers.Dense(hidden_units[0])
         self.activation_layer = layers.Activation(activation)
         self.dropout1 = layers.Dropout(dropout_rate)
-
         self.dense2 = layers.Dense(hidden_units[1])
         self.dropout2 = layers.Dropout(dropout_rate)
-
         self.layernorm = layers.LayerNormalization()
+        
+        # Used if input and output dims don't match
+        self.skip_proj = None
 
+    def build(self, input_shape):
+        input_dim = input_shape[-1]
+        output_dim = self.hidden_units[-1]
+
+        # Create projection layer only if dimensions mismatch
+        if input_dim != output_dim:
+            print(f'initializing projection for skip connection: {input_dim} -> {output_dim}')
+            self.skip_proj = layers.Dense(output_dim)
+
+        super().build(input_shape)
+    
     def call(self, inputs, training=False, mask=None):
         x = self.dense1(inputs)
         x = self.activation_layer(x)
@@ -34,11 +46,14 @@ class TransformerEncoderMLP(tf.keras.layers.Layer):
 
         x = self.dense2(x)
         x = self.dropout2(x, training=training)
-        x = x + inputs
+        
+        # Skip connection
+        residual = inputs if self.skip_proj is None else self.skip_proj(inputs)
+        x = x + residual
+        
         x = self.layernorm(x)
         return x  # Mask will be automatically passed if supports_masking=True
 
     def compute_mask(self, inputs, mask=None):
         # Just return the input mask unchanged
         return mask
-    
