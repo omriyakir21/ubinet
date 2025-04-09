@@ -38,7 +38,7 @@ def bootstrap_pts_encoder_mlps(hidden_sizes_mlp_a: List[Tuple[int, int]], mlp_a_
 model_to_bootstrapper = {
     'patch_to_score_original': bootstrap_patch_to_score_original,  # patch_to_score original model
     'pts_without_mlp_b': bootstrap_pts_without_mlp_b,  # patch_to_score without mlp b,
-    'pts_transformer_encode_mlp': bootstrap_pts_encoder_mlps  # patch_to_score with transformer encoder mlp
+    'pts_transformer_encoder_mlp': bootstrap_pts_encoder_mlps  # patch_to_score with transformer encoder mlp
 }
 
 
