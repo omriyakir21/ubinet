@@ -11,3 +11,8 @@ The first version is named 'v0', and it's source code can be found under `data_p
 2. Data is not aggregated: predictions are saved per amino-acid, instead of average across patch.<br>
 The idea is that the aggregation step will happen in the model, which can now be more complex then average, and most importatnly - learned. 
 3. Refactor: code structure refactor, save format, etc.
+
+**Pipeline** :
+1. `create_protein_objects`
+2. `scale_proteins`
+3. `partition`
