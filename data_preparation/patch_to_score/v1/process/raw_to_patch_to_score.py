@@ -174,6 +174,9 @@ def fit_protein_data(all_data_components, all_data_protein_size, all_data_number
     return scaler_size, scaler_components, encoder
 
 
+
+# TODO: goal: function receives a list of protein ids.
+# That way, we can run it on the slurm cluster, in chunks.
 def create_pts_proteins(predictions_path: str, save_dir_path: str,
                         pdb_path: str, scannet_scores_path: str, pesto_scores_path: str) -> None:
     """
@@ -189,8 +192,7 @@ def create_pts_proteins(predictions_path: str, save_dir_path: str,
     all_predictions = load_predictions(predictions_path)
     percentile_90 = create_90_percentile(
         all_predictions, based_on='dict_predictions_ubiquitin')
-    # TODO: handle chunking & slurm cpus
-    patches = create_patches(all_predictions, percentile_90)
+    patches = create_patches(all_predictions, percentile_90)  # TODO: handle chunking & slurm cpus
     # TODO: save patches as 'merged_protein_objects.pkl'
     merged_dict = patches  # TODO: this is true after merging..
     proteins = [protein for _, protein in merged_dict.items()]
