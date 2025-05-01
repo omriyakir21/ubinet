@@ -14,5 +14,5 @@ The idea is that the aggregation step will happen in the model, which can now be
 
 **Pipeline** :
 1. `create_protein_objects`
-2. `scale_proteins`
+2. `scale`
 3. `partition`

@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import tensorflow as tf
 
 from data_preparation.patch_to_score.v1.schema.protein import Protein
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle
@@ -59,14 +58,3 @@ def extract_protein_data(proteins, max_number_of_components):
         data_number_of_components.append(len(top_components))
     return data_components_flattend, data_protein_size, data_number_of_components, data_components
 
-
-def save_as_tensor(data, path):
-    tensor = tf.convert_to_tensor(data)
-    serialized_tensor = tf.io.serialize_tensor(tensor)
-    tf.io.write_file(path, serialized_tensor)
-
-
-def load_as_tensor(path,out_type=tf.double):
-    serialized_tensor = tf.io.read_file(path)
-    tensor = tf.io.parse_tensor(serialized_tensor,out_type=out_type)  # Adjust `out_type` as needed
-    return tensor
