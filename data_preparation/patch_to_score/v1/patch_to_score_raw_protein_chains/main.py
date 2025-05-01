@@ -5,7 +5,7 @@ from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
 from Bio.PDB.Residue import Residue
 import numpy as np
-from utils import save_as_pickle, load_as_pickle
+from utils import save_as_pickle, load_as_pickle, create_paths
 from data_preparation.patch_to_score.v1.create_protein_objects.utils import create_patches_dict, create_90_percentile
 from data_preparation.ScanNet.db_creation_scanNet_utils import aa_out_of_chain, get_str_seq_of_chain
 from data_preparation.patch_to_score.v1.schema.base import PatchToScoreAminoAcid, PatchToScoreRawProteinChain
@@ -14,11 +14,6 @@ NEGATIVE_SOURCES = set(['Yeast proteome', 'Human proteome',
                        'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
 POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
 parser = PDBParser()
-
-
-def create_paths(*paths: List[str]) -> None:
-    for path in paths:
-        os.makedirs(path, exist_ok=True)
 
 
 def get_chain_predictions(uniprot_name: str, all_predictions: dict, with_pesto: bool) -> dict:
@@ -135,13 +130,15 @@ def main(all_predictions_path: str,
    :return: None
    :rtype: None
     """
-    create_paths(save_dir_path)
+    raw_protein_chains_dir = os.path.join(save_dir_path, 'objects')
+    create_paths(raw_protein_chains_dir)
     all_predictions = load_as_pickle(all_predictions_path)
 
     for uniprot_name in tqdm(uniprot_names):
         chain_save_path = os.path.join(
-            save_dir_path, uniprot_name + '.pkl')
+            raw_protein_chains_dir, uniprot_name + '.pkl')
         if not os.path.exists(chain_save_path):
             raw_protein_chain = create_raw_protein_chain(
                 uniprot_name, all_predictions, with_pesto, sources_path)
-            save_as_pickle(raw_protein_chain, chain_save_path)  # TODO: should save by full source path?
+            # TODO: should save by full source path?
+            save_as_pickle(raw_protein_chain, chain_save_path)

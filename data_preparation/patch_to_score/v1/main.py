@@ -1,6 +1,12 @@
-def main(all_predictions_path: str = '/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/results/ScanNet/all_predictions_0304_MSA_True_with_pesto.pkl', 
-         save_dir_path: str = '/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/datasets/patch_to_score/v1_small/parsed',
-         sources_path: str = '/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/datasets/patch_to_score/v1_small/sources'):
+import os
+from data_preparation.patch_to_score.v1.compute_global_values.main import main as compute_global_values
+from data_preparation.patch_to_score.v1.patch_to_score_raw_protein_chains import main as create_raw_protein_chains
+
+
+def main(all_predictions_path: str, 
+         save_dir_path: str,
+         sources_path: str,
+         with_pesto: bool = True):
     # ** inputs & outputs **
     # inputs:
     #   - all_predictions_path: path to a pickle file containing all predictions in the form of a dictionary
@@ -36,3 +42,12 @@ def main(all_predictions_path: str = '/home/iscb/wolfson/doririmon/home/order/ub
     #       saves partitions to a directory
     
     pass
+    
+#     # TODO: split to slurm jobs
+#     create_raw_protein_chains(all_predictions_path, 
+#                               os.path.join(save_dir_path, 'objects'),
+#                               sources_path,
+#                               uniprot_names,
+#                               with_pesto)
+    
+     # compute_global_values(all_predictions_path, os.path.join(save_dir_path, 'global_values'))
