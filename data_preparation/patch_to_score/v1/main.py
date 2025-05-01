@@ -17,37 +17,39 @@ def main(all_predictions_path: str,
     #   - 'folds.pkl' file, which is a dictionary, where each fold maps to a protein object
     
     # ** steps **
-    # 0. create base objects
-    #       ** slurm over batches of proteins ** 
-    #       parses single .pdb files, and predictions dictionary, to create protein objects.
-    #       output here is a directory with protein object pickles.
-    #       each protein has everything, besides pathces (set to None)
-    # 1. compute global values
-    #       ** slurm - single job, for loop ** 
+    # 0. compute global values
+    #       ** single pyton run ** 
     #       loops over all raw proteins, and computes global values over them all.
     #       for now this is the 90th percentile of the scannet ubiquitin binding score.
     #       saves to a directory. 
+    # 
+    # 1 & 2 are run together, in a slurm job, over batches of chains
+    # 1. create base objects 
+    #       parses single .pdb files, and predictions dictionary, to create protein objects.
+    #       output here is a directory with protein object pickles.
+    #       each protein has everything, besides pathces (set to None)
     # 2. create patches
-    #       ** slurm over batches of proteins **
     #       parses single parsed proteins, and the global values, to create patches.
     #       creates protein objects with patches.
     #       saves to a directory.
+    # 
+    # 3 & 4 are run together, in a slurm job, over all chains together
     # 3. scale
-    #       ** slurm over batches of proteins **
     #       loads the protein object and scales it
     #       saves it to a directory
     # 4. partition
-    #       ** slurm - single job **
     #       loads all proteins together, and partitions them
     #       saves partitions to a directory
     
     pass
-    
-#     # TODO: split to slurm jobs
-#     create_raw_protein_chains(all_predictions_path, 
-#                               os.path.join(save_dir_path, 'objects'),
-#                               sources_path,
-#                               uniprot_names,
-#                               with_pesto)
-    
-     # compute_global_values(all_predictions_path, os.path.join(save_dir_path, 'global_values'))
+     
+     # compute_global_values(all_predictions_path, os.path.join(save_dir_path, 'global_values'))    
+
+     # # TODO: split to slurm jobs
+     #     create_raw_protein_chains(all_predictions_path, 
+     #                               os.path.join(save_dir_path, 'objects'),
+     #                               sources_path,
+     #                               uniprot_names,
+     #                               with_pesto)
+     
+     
