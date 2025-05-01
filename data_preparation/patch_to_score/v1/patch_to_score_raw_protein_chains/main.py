@@ -1,13 +1,14 @@
 import os
 from typing import List
+from tqdm import tqdm
+from Bio.PDB import PDBParser
+from Bio.PDB.Structure import Structure
+from Bio.PDB.Residue import Residue
 import numpy as np
 from utils import save_as_pickle, load_as_pickle
 from data_preparation.patch_to_score.v1.create_protein_objects.utils import create_patches_dict, create_90_percentile
 from data_preparation.ScanNet.db_creation_scanNet_utils import aa_out_of_chain, get_str_seq_of_chain
 from data_preparation.patch_to_score.v1.schema.base import PatchToScoreAminoAcid, PatchToScoreRawProteinChain
-from Bio.PDB import PDBParser
-from Bio.PDB.Structure import Structure
-from Bio.PDB.Residue import Residue
 
 NEGATIVE_SOURCES = set(['Yeast proteome', 'Human proteome',
                        'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
@@ -33,16 +34,24 @@ def get_chain_predictions(uniprot_name: str, all_predictions: dict, with_pesto: 
     return predictions_dict
 
 
-def get_structure(uniprot_name: str, source: str, sources_path: str) -> Structure:
+def get_source_dir_path(source: str, sources_path: str) -> str:
     if source in NEGATIVE_SOURCES:
-        structure_path = os.path.join(f'{sources_path}/AFDB',
-                                      source.split(" ")[0],
-                                      uniprot_name + '.pdb')  # the name of the AFDB dirs doesnt end with proteome thats the reason of the split
+        source_dir_path = os.path.join(f'{sources_path}/AFDB',
+                                       source.split(" ")[0])  # the name of the AFDB dirs doesnt end with proteome thats the reason of the split
     else:
-        structure_path = os.path.join(f'{sources_path}/GO',
-                                      source,
-                                      uniprot_name + '.pdb')
-    print(structure_path)
+        source_dir_path = os.path.join(f'{sources_path}/GO',
+                                       source)
+    return source_dir_path
+
+
+def get_structure_path(uniprot_name: str, source: str, sources_path: str) -> str:
+    source_dir_path = get_source_dir_path(source, sources_path)
+    structure_path = os.path.join(source_dir_path, uniprot_name + '.pdb')
+    return structure_path
+
+
+def get_structure(uniprot_name: str, source: str, sources_path: str) -> Structure:
+    structure_path = get_structure_path(uniprot_name, source, sources_path)
     if not os.path.exists(structure_path):
         raise Exception("path does not exist")
     structure = parser.get_structure(uniprot_name, structure_path)
@@ -65,7 +74,7 @@ def get_plddt_values(structure: Structure):
         return np.array([residues[i].child_list[0].bfactor for i in range(len(residues))])
 
 
-def create_amino_acid(residue: Residue, plddt_values: np.array, index_in_chain: int, 
+def create_amino_acid(residue: Residue, plddt_values: np.array, index_in_chain: int,
                       chain_predictions: dict, with_pesto: bool) -> PatchToScoreAminoAcid:
     # TODO : better handling of with_pesto
     amino_acid = PatchToScoreAminoAcid(residue=residue,
@@ -73,12 +82,16 @@ def create_amino_acid(residue: Residue, plddt_values: np.array, index_in_chain: 
                                        scannet_protein_score=chain_predictions['scanNet_protein'][index_in_chain],
                                        scannet_ubiquitin_score=chain_predictions[
                                            'scanNet_ubiquitin'][index_in_chain],
-                                       pesto_protein_score=chain_predictions['pesto_protein'][index_in_chain] if with_pesto else None,
-                                       pesto_dna_rna_score=chain_predictions['pesto_dna_rna'][index_in_chain] if with_pesto else None,
-                                       pesto_ion_score=chain_predictions['pesto_ion'][index_in_chain] if with_pesto else None,
-                                       pesto_ligand_score=chain_predictions['pesto_ligand'][index_in_chain] if with_pesto else None,
+                                       pesto_protein_score=chain_predictions['pesto_protein'][
+                                           index_in_chain] if with_pesto else None,
+                                       pesto_dna_rna_score=chain_predictions['pesto_dna_rna'][
+                                           index_in_chain] if with_pesto else None,
+                                       pesto_ion_score=chain_predictions['pesto_ion'][
+                                           index_in_chain] if with_pesto else None,
+                                       pesto_ligand_score=chain_predictions['pesto_ligand'][
+                                           index_in_chain] if with_pesto else None,
                                        pesto_lipid_score=chain_predictions['pesto_lipid'][index_in_chain] if with_pesto else None)
-    
+
     return amino_acid
 
 
@@ -125,10 +138,10 @@ def main(all_predictions_path: str,
     create_paths(save_dir_path)
     all_predictions = load_as_pickle(all_predictions_path)
 
-    for uniprot_name in uniprot_names:
+    for uniprot_name in tqdm(uniprot_names):
         chain_save_path = os.path.join(
             save_dir_path, uniprot_name + '.pkl')
         if not os.path.exists(chain_save_path):
             raw_protein_chain = create_raw_protein_chain(
                 uniprot_name, all_predictions, with_pesto, sources_path)
-            save_as_pickle(raw_protein_chain, chain_save_path)
+            save_as_pickle(raw_protein_chain, chain_save_path)  # TODO: should save by full source path?
