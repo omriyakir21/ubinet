@@ -1,23 +1,15 @@
 from typing  import List, Union
 from dataclasses import dataclass
 import networkx as nx
+from Bio.PDB.Atom import Atom
+from Bio.PDB.Residue import Residue
+import numpy as np
 
-@dataclass
-class PatchToScoreCoordinates:
-    x: float
-    y: float
-    z: float
-
-@dataclass
-class PatchToScoreAtom:
-    coordinates: PatchToScoreCoordinates
-    name: str
 
 @dataclass
 class PatchToScoreAminoAcid:
-    name: str
+    residue: Residue
     plddt: float
-    atoms: List[PatchToScoreAtom]
     scannet_protein_score: float
     scannet_ubiquitin_score: float
     pesto_protein_score: float
@@ -27,8 +19,8 @@ class PatchToScoreAminoAcid:
     pesto_ion_score: float
 
     @property
-    def calpha_coordinates(self) -> PatchToScoreCoordinates:
-        return [atom.coordinates for atom in self.atoms if atom.name == 'CA'][0]
+    def calpha_coordinates(self) -> np.array:
+        return [atom.coord for atom in self.atoms if atom.name == 'CA'][0]
 
 @dataclass
 class PatchToScoreRawProteinChain:
@@ -38,7 +30,7 @@ class PatchToScoreRawProteinChain:
     amino_acids: List[PatchToScoreAminoAcid]
     label: bool  # True if the protein is positive - binds with ubiquitin, False if it is negative    
 
-    def number_of_amino_acids(self) -> PatchToScoreCoordinates:
+    def number_of_amino_acids(self) -> int:
         return len(self.amino_acids)
 
 @dataclass
