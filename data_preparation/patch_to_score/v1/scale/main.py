@@ -1,8 +1,10 @@
 import os
+from typing import List
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import numpy as np
 import tensorflow as tf
 from utils import save_as_pickle, load_as_pickle, create_paths
+from data_preparation.patch_to_score.v1.schema.base import PatchToScoreProteinChain
 
 
 def save_as_tensor(data, path):
@@ -107,7 +109,7 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
     return scaled_sizes, tf.convert_to_tensor(scaled_components_list), encoded_components_list
 
 
-def normalize_and_save_data(data_for_training_folder_path, proteins, sequences, sources, uniprots, protein_paths):
+def normalize_and_save_data(data_for_training_folder_path, proteins, sources):
     scaled_sizes, scaled_components_list, encoded_components_list = (
         transform_protein_data_list(proteins,
                                     os.path.join(
@@ -126,19 +128,22 @@ def normalize_and_save_data(data_for_training_folder_path, proteins, sequences, 
         data_for_training_folder_path, 'encoded_components_list.tf'))
     save_as_pickle(sources, os.path.join(
         data_for_training_folder_path, 'sources.pkl'))
-    save_as_pickle(uniprots, os.path.join(
-        data_for_training_folder_path, 'uniprots.pkl'))
-    save_as_pickle(protein_paths, os.path.join(
-        data_for_training_folder_path, 'protein_paths.pkl'))
     labels = tf.convert_to_tensor(
         [0 if source in NEGATIVE_SOURCES else 1 for source in sources])
     save_as_tensor(labels, os.path.join(
         data_for_training_folder_path, 'labels.tf'))
 
 
-def main(patch_to_score_model_path: str, scalers_folder_path: str):
+def main(patch_to_score_model_path: str, scalers_folder_path: str,
+         data_for_training_folder_path: str, 
+         protein_chains: List[PatchToScoreProteinChain], max_number_of_components: int):
+    data_components_flattend = None
+    data_protein_size = None
+    data_number_of_components = None
+    proteins, sequences = None, None
+    
     create_paths(scalers_folder_path)
     fit_protein_data(np.array(data_components_flattend), np.array(data_protein_size),  np.array(data_number_of_components),
-                     scalers_folder_path, MAX_NUMBER_OF_COMPONENTS)
+                     scalers_folder_path, max_number_of_components)
     normalize_and_save_data(data_for_training_folder_path,
-                            proteins, sequences, sources, uniprots, protein_paths)
+                            proteins, sequences)
