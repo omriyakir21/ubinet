@@ -142,7 +142,7 @@ def main(all_predictions: str,
          with_pesto: bool,
          percentile_90: float,
          plddt_threshold: float,
-         should_override: bool) -> None:
+         should_override: bool) -> List[PatchToScoreProteinChain]:
     """
     Create protein objects.
 
@@ -157,6 +157,7 @@ def main(all_predictions: str,
    :return: None
    :rtype: None
     """
+    protein_chains = []
     for uniprot_name in tqdm(uniprot_names):
         source = all_predictions['dict_sources'][uniprot_name]
         chain_save_path = os.path.join(get_source_dir_path(
@@ -165,4 +166,6 @@ def main(all_predictions: str,
             continue
         protein_chain = create_protein_chain(
             uniprot_name, all_predictions, with_pesto, sources_path, percentile_90, plddt_threshold, source)
+        protein_chains.append(protein_chain)
         save_as_pickle(protein_chain, chain_save_path)
+    return protein_chains

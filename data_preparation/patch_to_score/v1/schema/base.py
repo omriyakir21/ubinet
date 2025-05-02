@@ -39,7 +39,7 @@ class PatchToScoreProteinChain:
 
     @property
     def number_of_patches(self) -> int:
-        return len([patch for patch in self.patches if patch.exists])
+        return len(self.patches)
 
     @property
     def number_of_amino_acids(self) -> int:
