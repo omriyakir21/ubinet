@@ -13,6 +13,7 @@ The idea is that the aggregation step will happen in the model, which can now be
 3. Refactor: code structure refactor, save format, etc.
 
 **Pipeline** :
-1. `create_protein_objects`
-2. `scale`
-3. `partition`
+1. `compute_global_values` : computes the 90th percentile of scannet ubiquitin binding score 
+2. `create_protein_chains` : create unscaled `PatchToScoreProteinChain` objects
+3. `scale` : scales the `PatchToScoreProteinChain` objects
+4. `partition` : partition the chains to folds

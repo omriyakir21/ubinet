@@ -1,8 +1,7 @@
-from typing import List, Union
+from typing import List
 from dataclasses import dataclass
 import networkx as nx
 from Bio.PDB.Residue import Residue
-import numpy as np
 
 
 @dataclass
@@ -17,24 +16,15 @@ class PatchToScoreAminoAcid:
     pesto_ligand_score: float
     pesto_ion_score: float
 
-    @property
-    def calpha_coordinates(self) -> np.array:
-        return [atom.coord for atom in self.atoms if atom.name == 'CA'][0]
-
 
 @dataclass
 class PatchToScorePatch:
-    # a patch can be empty. In such case: amino_acids = None
-    amino_acids: Union[None, List[PatchToScoreAminoAcid]]
+    amino_acids: List[PatchToScoreAminoAcid]
     component_set: list
 
     @property
     def size(self) -> int:
         return len(self.amino_acids) if (self.amino_acids is not None) else 0
-
-    @property
-    def exists(self) -> bool:
-        return self.size != 0
 
 
 @dataclass

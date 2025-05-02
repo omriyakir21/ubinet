@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from utils import create_paths, save_as_pickle, load_as_pickle
+from utils import save_as_pickle, load_as_pickle
 
 
 def create_90_percentile(all_predictions: dict, by: str = 'dict_predictions_ubiquitin') -> float:
@@ -12,22 +12,23 @@ def create_90_percentile(all_predictions: dict, by: str = 'dict_predictions_ubiq
     return percentile_90
 
 
-def main(all_predictions_path: str,
-         save_dir_path: str) -> None:
+def main(all_predictions: dict,
+         save_dir_path: str,
+         should_override: bool) -> float:
     """
     Create protein objects.
 
-   :param str all_predictions_path: path to a pickle file containing all predictions in the form of a dictionary
+   :param str all_predictions: all model predictions over all proteins
    :param str save_dir_path: path to a directory where the protein objects will be saved
-   :param str sources_path: path to a directory where the source .pdb files are saved
-   :param list uniprot_names: list of unitprot names to create protein objects for
-   :param bool with_pesto: should use pesto predictions
-   :return: None
-   :rtype: None
+   :param bool should_override: should override existing global values
+   :return: percentile_90: the 90th percentile of the scannet ubiquitin binding score
+   :rtype: float
     """
-    percentile_90_dir = os.path.join(save_dir_path, 'global_values')
-    create_paths(percentile_90_dir)
-    all_predictions = load_as_pickle(all_predictions_path)
+    save_path = os.path.join(save_dir_path, 'percentile_90.pkl')
+    if os.path.exists(save_path) and (not should_override):
+        percentile_90 = load_as_pickle(save_path)
+        print('loaded pre-calculated 90 percentile:', percentile_90)
+        return percentile_90
     percentile_90 = create_90_percentile(all_predictions)
-    save_as_pickle(percentile_90, os.path.join(
-        percentile_90_dir, 'percentile_90.pkl'))
+    save_as_pickle(percentile_90, save_path)
+    return percentile_90
