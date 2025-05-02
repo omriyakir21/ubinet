@@ -1,7 +1,6 @@
-from typing  import List, Union
+from typing import List, Union
 from dataclasses import dataclass
 import networkx as nx
-from Bio.PDB.Atom import Atom
 from Bio.PDB.Residue import Residue
 import numpy as np
 
@@ -22,20 +21,11 @@ class PatchToScoreAminoAcid:
     def calpha_coordinates(self) -> np.array:
         return [atom.coord for atom in self.atoms if atom.name == 'CA'][0]
 
-@dataclass
-class PatchToScoreRawProteinChain:
-    uniprot_name: str
-    source: str
-    sequence: str
-    amino_acids: List[PatchToScoreAminoAcid]
-    label: bool  # True if the protein is positive - binds with ubiquitin, False if it is negative    
-
-    def number_of_amino_acids(self) -> int:
-        return len(self.amino_acids)
 
 @dataclass
 class PatchToScorePatch:
-    amino_acids: Union[None, List[PatchToScoreAminoAcid]]  # a patch can be empty. In such case: None
+    # a patch can be empty. In such case: amino_acids = None
+    amino_acids: Union[None, List[PatchToScoreAminoAcid]]
     component_set: list
 
     @property
@@ -46,9 +36,14 @@ class PatchToScorePatch:
     def exists(self) -> bool:
         return self.size != 0
 
+
 @dataclass
 class PatchToScoreProteinChain:
-    raw_protein_chain: PatchToScoreRawProteinChain
+    uniprot_name: str
+    source: str
+    sequence: str
+    amino_acids: List[PatchToScoreAminoAcid]
+    label: bool  # True if the protein is positive - binds with ubiquitin, False if it is negative
     graph: nx.Graph
     patches: List[PatchToScorePatch]
 
@@ -58,4 +53,4 @@ class PatchToScoreProteinChain:
 
     @property
     def number_of_amino_acids(self) -> int:
-        return sum([patch.size for patch in self.patches])
+        return len(self.amino_acids)

@@ -6,9 +6,8 @@ from Bio.PDB.Structure import Structure
 from Bio.PDB.Residue import Residue
 import numpy as np
 from utils import save_as_pickle, load_as_pickle, create_paths
-from data_preparation.patch_to_score.v1.create_protein_objects.utils import create_patches_dict, create_90_percentile
 from data_preparation.ScanNet.db_creation_scanNet_utils import aa_out_of_chain, get_str_seq_of_chain
-from data_preparation.patch_to_score.v1.schema.base import PatchToScoreAminoAcid, PatchToScoreRawProteinChain
+from data_preparation.patch_to_score.v1.schema.base import PatchToScoreAminoAcid, PatchToScoreProteinChain
 
 NEGATIVE_SOURCES = set(['Yeast proteome', 'Human proteome',
                        'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
@@ -90,28 +89,32 @@ def create_amino_acid(residue: Residue, plddt_values: np.array, index_in_chain: 
     return amino_acid
 
 
-def create_raw_protein_chain(uniprot_name: str,
-                             all_predictions: dict,
-                             with_pesto: bool,
-                             sources_path: str) -> PatchToScoreRawProteinChain:
-    chain_predictions: dict = get_chain_predictions(
-        uniprot_name, all_predictions, with_pesto)
-    source = all_predictions['dict_sources'][uniprot_name]
-    structure = get_structure(uniprot_name, source, sources_path)
-    amino_acids = aa_out_of_chain(structure)
-    sequence = get_sequence(structure)
-    plddt_values = get_plddt_values(structure)
+def create_amino_acids(with_pesto, chain_predictions, amino_acids, plddt_values) -> List[PatchToScoreAminoAcid]:
     pts_amino_acids = []
     for i, residue in enumerate(amino_acids):
         amino_acid = create_amino_acid(
             residue, plddt_values, i, chain_predictions, with_pesto)
         pts_amino_acids.append(amino_acid)
-    raw_protein_chain = PatchToScoreRawProteinChain(uniprot_name=uniprot_name,
-                                                    source=source,
-                                                    sequence=sequence,
-                                                    amino_acids=pts_amino_acids,
-                                                    label=(source in POSITIVE_SOURCES))
-    return raw_protein_chain
+    return pts_amino_acids
+
+
+def create_protein_chain(uniprot_name: str,
+                         all_predictions: dict,
+                         with_pesto: bool,
+                         sources_path: str) -> PatchToScoreProteinChain:
+    chain_predictions: dict = get_chain_predictions(uniprot_name, all_predictions, with_pesto)
+    source = all_predictions['dict_sources'][uniprot_name]
+    structure = get_structure(uniprot_name, source, sources_path)
+    amino_acids = aa_out_of_chain(structure)
+    sequence = get_sequence(structure)
+    plddt_values = get_plddt_values(structure)
+    pts_amino_acids = create_amino_acids(with_pesto, chain_predictions, amino_acids, plddt_values)
+    protein_chain = PatchToScoreProteinChain(uniprot_name=uniprot_name,  # TODO: needs mroe params
+                                             source=source,
+                                             sequence=sequence,
+                                             amino_acids=pts_amino_acids,
+                                             label=(source in POSITIVE_SOURCES))
+    return protein_chain
 
 
 def main(all_predictions_path: str,
@@ -130,15 +133,15 @@ def main(all_predictions_path: str,
    :return: None
    :rtype: None
     """
-    raw_protein_chains_dir = os.path.join(save_dir_path, 'objects')
-    create_paths(raw_protein_chains_dir)
+    protein_chains_dir = os.path.join(save_dir_path, 'objects')
+    create_paths(protein_chains_dir)
     all_predictions = load_as_pickle(all_predictions_path)
 
     for uniprot_name in tqdm(uniprot_names):
         chain_save_path = os.path.join(
-            raw_protein_chains_dir, uniprot_name + '.pkl')
+            protein_chains_dir, uniprot_name + '.pkl')
         if not os.path.exists(chain_save_path):
-            raw_protein_chain = create_raw_protein_chain(
+            protein_chain = create_protein_chain(
                 uniprot_name, all_predictions, with_pesto, sources_path)
             # TODO: should save by full source path?
-            save_as_pickle(raw_protein_chain, chain_save_path)
+            save_as_pickle(protein_chain, chain_save_path)
