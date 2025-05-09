@@ -7,6 +7,10 @@ from utils import save_as_pickle, load_as_pickle, create_paths
 from data_preparation.patch_to_score.v1.schema.base import PatchToScoreProteinChain
 
 
+NEGATIVE_SOURCES = set(
+    ['Yeast proteome', 'Human proteome', 'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
+
+
 def save_as_tensor(data, path):
     tensor = tf.convert_to_tensor(data)
     serialized_tensor = tf.io.serialize_tensor(tensor)
@@ -15,9 +19,26 @@ def save_as_tensor(data, path):
 
 def load_as_tensor(path, out_type=tf.double):
     serialized_tensor = tf.io.read_file(path)
-    # Adjust `out_type` as needed
     tensor = tf.io.parse_tensor(serialized_tensor, out_type=out_type)
     return tensor
+
+
+def extract_protein_data(protein_chains: List[PatchToScoreProteinChain]):
+    data_components_flattend = []
+    data_protein_size = []
+    data_number_of_components = []
+    for protein in protein_chains:
+        for patch in protein.patches:
+            patch_size = patch.size
+            patch_dict = patch.get_average_scores_dict()  # TODO: we don't want to average anymore
+            patch_dict_flattened = [float(val) for val in patch_dict.values()]
+            patch_flattened = [patch_size] + patch_dict_flattened
+            print(f'patch_dict : {patch_dict}')
+            print(f'patch_flattened : {patch_flattened}')
+            data_components_flattend.append(patch_flattened)
+        data_protein_size.append(protein.number_of_amino_acids)
+        data_number_of_components.append(protein.number_of_patches)
+    return data_components_flattend, data_protein_size, data_number_of_components
 
 
 def fit_protein_data(all_data_components, all_data_protein_size, all_data_number_of_components, dir_path,
@@ -109,7 +130,7 @@ def transform_protein_data_list(proteins, scaler_size_path, scaler_components_pa
     return scaled_sizes, tf.convert_to_tensor(scaled_components_list), encoded_components_list
 
 
-def normalize_and_save_data(data_for_training_folder_path, proteins, sources):
+def normalize_and_save_data(data_for_training_folder_path: str, scalers_folder_path: str, proteins, sources):
     scaled_sizes, scaled_components_list, encoded_components_list = (
         transform_protein_data_list(proteins,
                                     os.path.join(
@@ -134,16 +155,15 @@ def normalize_and_save_data(data_for_training_folder_path, proteins, sources):
         data_for_training_folder_path, 'labels.tf'))
 
 
-def main(patch_to_score_model_path: str, scalers_folder_path: str,
+def main(scalers_folder_path: str,
          data_for_training_folder_path: str, 
          protein_chains: List[PatchToScoreProteinChain], max_number_of_components: int):
-    data_components_flattend = None
-    data_protein_size = None
-    data_number_of_components = None
-    proteins, sequences = None, None
+    data_components_flattend, data_protein_size, data_number_of_components = extract_protein_data(protein_chains)
+    sequences = [chain.sequence for chain in protein_chains]
     
     create_paths(scalers_folder_path)
     fit_protein_data(np.array(data_components_flattend), np.array(data_protein_size),  np.array(data_number_of_components),
                      scalers_folder_path, max_number_of_components)
     normalize_and_save_data(data_for_training_folder_path,
-                            proteins, sequences)
+                            scalers_folder_path,
+                            protein_chains, sequences)  # TODO : this method expects old Protein class, in protein_chains
