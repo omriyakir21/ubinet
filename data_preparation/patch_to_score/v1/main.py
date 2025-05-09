@@ -2,7 +2,7 @@ import os
 from utils import load_as_pickle
 from data_preparation.patch_to_score.v1.compute_global_values.main import main as compute_global_values
 from data_preparation.patch_to_score.v1.create_protein_chains.main import main as create_protein_chains
-from data_preparation.patch_to_score.v1.top_patches.main import keep_only_top_components
+from data_preparation.patch_to_score.v1.top_patches.main import keep_only_top_components_from_list
 
 
 def main(all_predictions_path: str,
@@ -33,7 +33,7 @@ def main(all_predictions_path: str,
                                            plddt_threshold,
                                            should_override)
     
-    protein_chains = [keep_only_top_components(protein_chain, max_number_of_components) for protein_chain in protein_chains]
+    protein_chains = keep_only_top_components_from_list(protein_chains, max_number_of_components)
 
     # 3 & 4 are run together, in a slurm job, over all chains together
     # 3. scale

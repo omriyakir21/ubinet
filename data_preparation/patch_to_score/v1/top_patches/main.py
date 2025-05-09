@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List
 from data_preparation.patch_to_score.v1.schema.base import PatchToScoreProteinChain, PatchToScorePatch
 
 
@@ -12,3 +13,7 @@ def keep_only_top_components(protein_chain: PatchToScoreProteinChain, max_number
     patches = patches[:max_number_of_components]
     protein_chain.patches = patches
     return protein_chain
+
+
+def keep_only_top_components_from_list(protein_chains: List[PatchToScoreProteinChain], max_number_of_components: int) -> List[PatchToScoreProteinChain]:
+    return [keep_only_top_components(protein_chain, max_number_of_components) for protein_chain in protein_chains]
