@@ -14,7 +14,12 @@ def main(all_predictions_path: str,
          with_pesto: bool,
          plddt_threshold: float,
          should_override: float,
-         max_number_of_components: int):
+         max_number_of_components: int,
+         sequence_identity: float,
+         coverage: float,
+         folds_amount: int,
+         path2mmseqs: str,
+         path2mmseqstmp: str):
 
     # TODO: slurm
 
@@ -58,7 +63,7 @@ def main(all_predictions_path: str,
     print('----> scaling')
     # TODO: handle override
     scale(os.path.join(save_dir_path, 'scalers'),
-          os.path.join(save_dir_path, 'for_training'),
+          data_for_training_dir_path,
           protein_chains,
           max_number_of_components)
 
@@ -66,9 +71,9 @@ def main(all_predictions_path: str,
     # TODO: handle override
     # TODO: GPU
     partition(sequences=[chain.sequence for chain in protein_chains],
-              sequence_identity=0.5,
-              coverage=0.4,
-              folds_amount=5,
-              save_dir_path=os.path.join(save_dir_path, 'for_training'),
-              path2mmseqs='/home/iscb/wolfson/omriyakir/anaconda3/envs/ubinet/bin/mmseqs',
-              path2mmseqstmp='/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/tmp')
+              sequence_identity=sequence_identity,
+              coverage=coverage,
+              folds_amount=folds_amount,
+              save_dir_path=data_for_training_dir_path,
+              path2mmseqs=path2mmseqs,
+              path2mmseqstmp=path2mmseqstmp)
