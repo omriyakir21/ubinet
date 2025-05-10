@@ -1,10 +1,11 @@
 import os
-from utils import load_as_pickle
+from utils import load_as_pickle, save_as_pickle
 from data_preparation.patch_to_score.v1.compute_global_values.main import main as compute_global_values
 from data_preparation.patch_to_score.v1.create_protein_chains.main import main as create_protein_chains
 from data_preparation.patch_to_score.v1.top_patches.main import keep_only_top_components_from_list
 from data_preparation.patch_to_score.v1.create_labels.main import create_labels_from_sources
 from data_preparation.patch_to_score.v1.scale.main import main as scale
+from data_preparation.patch_to_score.v1.partition.main import partition
 
 
 def main(all_predictions_path: str,
@@ -47,6 +48,13 @@ def main(all_predictions_path: str,
     labels = create_labels_from_sources(
         protein_chains, os.path.join(save_dir_path, 'for_training'))
 
+    data_for_training_dir_path = os.path.join(save_dir_path, 'for_training')
+    
+    # TODO: handle elsewhere (probably in chains creation, if necessary)
+    save_as_pickle([chain.source for chain in protein_chains],os.path.join(data_for_training_dir_path, 'sources.pkl'))
+    save_as_pickle([chain.uniprot_name for chain in protein_chains], os.path.join(data_for_training_dir_path, 'uniprots.pkl'))
+    # save_as_pickle(protein_paths,os.path.join(data_for_training_dir_path, 'protein_paths.pkl'))
+    
     print('----> scaling')
     # TODO: handle override
     scale(os.path.join(save_dir_path, 'scalers'),
@@ -54,10 +62,13 @@ def main(all_predictions_path: str,
           protein_chains,
           max_number_of_components)
 
-    # 3 & 4 are run together, in a slurm job, over all chains together
-    # 3. scale
-    #       loads the protein object and scales it
-    #       saves it to a directory
-    # 4. partition
-    #       loads all proteins together, and partitions them
-    #       saves partitions to a directory
+    print('----> partition')
+    # TODO: handle override
+    # TODO: GPU
+    partition(sequences=[chain.sequence for chain in protein_chains],
+              sequence_identity=0.5,
+              coverage=0.4,
+              folds_amount=5,
+              save_dir_path=os.path.join(save_dir_path, 'for_training'),
+              path2mmseqs='/home/iscb/wolfson/omriyakir/anaconda3/envs/ubinet/bin/mmseqs',
+              path2mmseqstmp='/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/tmp')
