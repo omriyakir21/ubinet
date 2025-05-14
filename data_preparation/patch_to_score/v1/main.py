@@ -49,7 +49,7 @@ def main(all_predictions_path: str,
     protein_chains = keep_only_top_components_from_list(
         protein_chains, max_number_of_components)
 
-    print('----> creating labels')
+    print('----> creating labels')  # TODO: account for negatives that appear in the positive set
     labels = create_labels_from_sources(
         protein_chains, os.path.join(save_dir_path, 'for_training'))
 

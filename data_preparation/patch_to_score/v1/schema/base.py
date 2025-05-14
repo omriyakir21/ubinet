@@ -6,15 +6,32 @@ from Bio.PDB.Residue import Residue
 
 @dataclass
 class PatchToScoreAminoAcid:
-    residue: Residue
-    plddt: float
-    scannet_protein_score: float
-    scannet_ubiquitin_score: float
-    pesto_protein_score: float
-    pesto_dna_rna_score: float
-    pesto_lipid_score: float
-    pesto_ligand_score: float
-    pesto_ion_score: float
+    def __init__(self, residue: Residue, plddt: float,
+                 scannet_protein_score: float, scannet_ubiquitin_score: float,
+                 pesto_protein_score: float, pesto_dna_rna_score: float,
+                 pesto_lipid_score: float, pesto_ligand_score: float,
+                 pesto_ion_score: float):
+        self.residue = residue
+        self.plddt = plddt
+        self.scannet_protein_score = scannet_protein_score
+        self.scannet_ubiquitin_score = scannet_ubiquitin_score
+        self.pesto_protein_score = pesto_protein_score
+        self.pesto_dna_rna_score = pesto_dna_rna_score
+        self.pesto_lipid_score = pesto_lipid_score
+        self.pesto_ligand_score = pesto_ligand_score
+        self.pesto_ion_score = pesto_ion_score
+        
+        self.features = {  # this will be scaled later on
+            'plddt': plddt,
+            'scanNet_protein': scannet_protein_score,
+            'scanNet_ubiq': scannet_ubiquitin_score,
+            'pesto_protein': pesto_protein_score,
+            'pesto_dna_rna': pesto_dna_rna_score,
+            'pesto_lipid': pesto_lipid_score,
+            'pesto_ligand': pesto_ligand_score,
+            'pesto_ion': pesto_ion_score,
+            'ca_coord': residue['CA'].coord.copy(), 
+        }
     
     def get_scores_dict(self) -> Dict[str, float]:  # TODO: made for backwards compatibility
         return {
@@ -31,12 +48,15 @@ class PatchToScoreAminoAcid:
 
 @dataclass
 class PatchToScorePatch:
-    amino_acids: List[PatchToScoreAminoAcid]
-    component_set: list
-
-    @property
-    def size(self) -> int:
-        return len(self.amino_acids) if (self.amino_acids is not None) else 0
+    def __init__(self, amino_acids: List[PatchToScoreAminoAcid], component_set: list):    
+        self.amino_acids = amino_acids
+        self.component_set = component_set
+        self.size = len(self.amino_acids)
+        
+        # TODO: do we want this? we didn't have this before
+        self.features = {  # this will be scaled later on
+            'size': self.size,
+        }
     
     def get_average_scores_dict(self) -> Dict[str, float]:  # TODO: made for backwards compatibility
         average_scores = {}
@@ -53,18 +73,21 @@ class PatchToScorePatch:
 
 @dataclass
 class PatchToScoreProteinChain:
-    uniprot_name: str
-    source: str
-    sequence: str
-    amino_acids: List[PatchToScoreAminoAcid]
-    label: bool  # True if the protein is positive - binds with ubiquitin, False if it is negative
-    graph: nx.Graph
-    patches: List[PatchToScorePatch]
-
-    @property
-    def number_of_patches(self) -> int:
-        return len(self.patches)
-
-    @property
-    def number_of_amino_acids(self) -> int:
-        return len(self.amino_acids)
+    def __init__(self, uniprot_name: str, source: str, sequence: str,
+                 amino_acids: List[PatchToScoreAminoAcid], label: bool,
+                 graph: nx.Graph, patches: List[PatchToScorePatch]):
+        self.uniprot_name = uniprot_name
+        self.source = source
+        self.sequence = sequence
+        self.amino_acids = amino_acids
+        self.label = label  # True if the protein is positive - binds with ubiquitin, False if it is negative
+        self.graph = graph
+        self.patches = patches
+        
+        self.number_of_amino_acids = len(self.amino_acids)
+        self.number_of_patches = len(self.patches)
+        
+        self.features = {  # this will be scaled later on
+            'number_of_patches': self.number_of_patches,
+            'number_of_amino_acids': self.number_of_amino_acids
+        }
