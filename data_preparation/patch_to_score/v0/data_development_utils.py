@@ -16,7 +16,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 from matplotlib import pyplot as plt
 import pandas as pd
-from Bio.PDB import MMCIFParser, PDBParsers
+from Bio.PDB import MMCIFParser, PDBParser
 import seaborn as sns
 from sklearn.metrics import auc
 import paths
