@@ -94,7 +94,7 @@ class Protein:
             else:
                 structurePath = os.path.join(paths.GO_source_patch_to_score_path, self.source,
                                              self.uniprot_name + '.pdb')
-        print(structurePath)
+        # print(structurePath)
         if not os.path.exists(structurePath):
             # print(f"path does not exist for : {self.uniprot_name}")
             # structurePath2 = all_predictions['dict_pdb_files'][self.uniprot_name]
