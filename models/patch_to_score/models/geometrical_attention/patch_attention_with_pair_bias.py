@@ -25,7 +25,8 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         self.dense_pairs_heads = layers.Dense(num_heads, use_bias=False, name=f'dense_pairs_{uuid.uuid4()}')
         self.dense_output = layers.Dense(attention_dimension, use_bias=True, name=f'dense_output_{uuid.uuid4()}')
         
-        self.layernorm = layers.LayerNormalization()
+        self.pairs_layernorm = layers.LayerNormalization()
+        self.features_layernorm = layers.LayerNormalization()
 
     def build(self, input_shape):
         super().build(input_shape)
@@ -34,7 +35,7 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         F = inputs[0]
         D = inputs[1]
         
-        F = self.layernorm(F)
+        F = self.features_layernorm(F)
         
         # TODO: multihead
         Q = self.Wq(F)
@@ -42,7 +43,7 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         V = self.Wv(F)
 
         # TODO: multihead
-        B = self.layernorm(D)        
+        B = self.pairs_layernorm(D)        
         B = self.dense_pairs(B)
         B = self.dense_pairs_heads(B)
         
