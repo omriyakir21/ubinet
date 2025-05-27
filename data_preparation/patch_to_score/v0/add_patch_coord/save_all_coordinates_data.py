@@ -52,23 +52,27 @@ def get_all_patches_ca_coordinates(merged_protein_objects: Dict[str, Protein], d
     data_set_coordinates = dict()
 
     for uniprot_id, protein_object in tqdm({k: v for k, v in merged_protein_objects.items() if k in data_set_res_indexes}.items()):
-        data_set_coordinates[uniprot_id] = []
-        structure = protein_object.get_structure()
-        model = structure.child_list[0]
-        assert len(model) == 1
-        protein_indexes = data_set_res_indexes[uniprot_id]
-        
-        for i, patch_indexes in enumerate(protein_indexes):
-            data_set_coordinates[uniprot_id].append([])
-            for residue_index in patch_indexes:
-                for chain in model:
-                    coord = chain.child_list[residue_index]['CA'].coord  # TODO: is this logic correct?
-                    data_set_coordinates[uniprot_id][i].append(coord)
-        
-            if len(data_set_coordinates[uniprot_id][i]) == 0:
-                data_set_coordinates[uniprot_id][i] = None
-            else:
-                data_set_coordinates[uniprot_id][i] = np.vstack(data_set_coordinates[uniprot_id][i])
+        try:
+            data_set_coordinates[uniprot_id] = []
+            structure = protein_object.get_structure()
+            model = structure.child_list[0]
+            assert len(model) == 1
+            protein_indexes = data_set_res_indexes[uniprot_id]
+            
+            for i, patch_indexes in enumerate(protein_indexes):
+                data_set_coordinates[uniprot_id].append([])
+                for residue_index in patch_indexes:
+                    for chain in model:
+                        coord = chain.child_list[residue_index]['CA'].coord  # TODO: is this logic correct?
+                        data_set_coordinates[uniprot_id][i].append(coord)
+            
+                if len(data_set_coordinates[uniprot_id][i]) == 0:
+                    data_set_coordinates[uniprot_id][i] = None
+                else:
+                    data_set_coordinates[uniprot_id][i] = np.vstack(data_set_coordinates[uniprot_id][i])
+        except Exception as e:
+            print(f"Error processing {uniprot_id}: {e}")
+            data_set_coordinates[uniprot_id] = None
     
     return data_set_coordinates
             
