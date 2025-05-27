@@ -26,7 +26,7 @@ def create_coordinates_matrix(uniprots: List[str], patches_ca_avg_coordinates: D
 
 def load_data() -> Tuple[List[dict], Dict[str, List[Union[np.ndarray, None]]]]:
     print('loading data')
-    folds_training_dicts = load_as_pickle(f'{source_dataset_dir_path}/folds_training_dicts.pkl')
+    folds_training_dicts = load_as_pickle(f'{source_dataset_dir_path}/folds_training_dicts.pkl')  # TODO: maybe use curated dataset
     all_patches_ca_coordinates = load_as_pickle(f'{target_dataset_dir_path}/all_patches_ca_coordeinates.pkl')
     return folds_training_dicts, all_patches_ca_coordinates
 
