@@ -6,9 +6,10 @@ from data_preparation.ScanNet.db_creation_scanNet_utils import load_as_pickle
 
 
 class PatchToScoreDataset:
-    def __init__(self, fold: dict, use_pesto: bool, ablation_string: str):
+    def __init__(self, fold: dict, use_pesto: bool, ablation_string: str, use_coordinates: bool):
         self.ablation_string = ablation_string
         self.use_pesto = use_pesto
+        self.use_coordinates = use_coordinates
         self.fold = fold
 
         self.train_set = self.fold['components_train'], 
@@ -26,12 +27,16 @@ class PatchToScoreDataset:
         self.train_num_patch = self.fold['num_patches_train']
         self.validation_num_patch = self.fold['num_patches_validation']
         self.test_num_patch = self.fold['num_patches_test']
-
+            
         if self.use_pesto:
             self.train_set, self.validation_set, self.test_set = self.filter_with_ablation_string(self.ablation_string,
                                                                                                   self.fold['components_train'],
                                                                                                   self.fold['components_validation'], 
                                                                                                   self.fold['components_test'])
+        if self.use_coordinates:
+            self.train_set = [self.train_set, self.fold['coordinates_train']]
+            self.validation_set = [self.validation_set, self.fold['coordinates_validation']]
+            self.test_set = [self.test_set, self.fold['coordinates_test']]
 
     @staticmethod
     def filter_with_ablation_string(ablation_string,components_train,components_validation,components_test):
@@ -43,10 +48,11 @@ class PatchToScoreDataset:
 
 
 class PatchToScoreCrossValidationDataset:
-    def __init__(self, path: str, use_pesto: bool, ablation_string: str, max_folds: Union[None, int]):
+    def __init__(self, path: str, use_pesto: bool, ablation_string: str, max_folds: Union[None, int], use_coordinates: bool = False):
         self.path = path
         self.ablation_string = ablation_string
         self.use_pesto = use_pesto
+        self.use_coordinates = use_coordinates
         self.max_folds = max_folds
         self.fold_dicts = load_as_pickle(path)
         self.fold_datasets = []
@@ -55,7 +61,7 @@ class PatchToScoreCrossValidationDataset:
             if (self.max_folds is not None) and ((i + 1) > self.max_folds):
                 print('Got to max folds - cutting cross validation dataset')
                 break
-            fold_dataset = PatchToScoreDataset(fold, self.use_pesto, self.ablation_string)
+            fold_dataset = PatchToScoreDataset(fold, self.use_pesto, self.ablation_string, self.use_coordinates)
             self.fold_datasets.append(fold_dataset)
 
         print('folds amount:', len(self.fold_datasets))
