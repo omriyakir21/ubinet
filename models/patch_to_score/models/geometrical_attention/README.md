@@ -13,7 +13,10 @@ D : (num_proteins, 10, 10)
 ## Operation
 We can now have a graph, where every node has a vector of features, and there are distances between the nodes.
 
-Might need to transition D & F beforehand: <br>
+Optional transitions:
+1. {d_ij} <br>
+d_ij = gauss_kernel(d_ij) (optional multi gaussians)
+2. {d_ij} <br>
 d_ij = Linear(d_ij) : adds dimension (num_proteins, 10, 10, c_d) <br>
 But might be strong enough with just c_d = 1
 
