@@ -33,10 +33,15 @@ class PatchToScoreDataset:
                                                                                                   self.fold['components_train'],
                                                                                                   self.fold['components_validation'], 
                                                                                                   self.fold['components_test'])
+        # TODO: this is the current solution, instead of bootstrapping datasets 
+        self.train_set = [self.train_set]
+        self.validation_set = [self.validation_set]
+        self.test_set = [self.test_set]
+        
         if self.use_coordinates:
-            self.train_set = [self.train_set, self.fold['coordinates_train']]
-            self.validation_set = [self.validation_set, self.fold['coordinates_validation']]
-            self.test_set = [self.test_set, self.fold['coordinates_test']]
+            self.train_set.append(self.fold['coordinates_train'])
+            self.validation_set.append(self.fold['coordinates_validation'])
+            self.test_set.append(self.fold['coordinates_test'])
 
     @staticmethod
     def filter_with_ablation_string(ablation_string,components_train,components_validation,components_test):

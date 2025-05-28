@@ -41,12 +41,12 @@ def train(fold_index, dataset: PatchToScoreDataset,
 
     loss_metric = 'val_auc'
     model.fit(
-        [dataset.train_set, dataset.train_sizes, dataset.train_num_patch],
+        [*dataset.train_set, dataset.train_sizes, dataset.train_num_patch],
         dataset.train_labels.numpy(),
         epochs=fit_kwargs['epochs'],
         verbose=fit_kwargs['verbose'],
         validation_data=(
-            [dataset.validation_set, dataset.validation_sizes,
+            [*dataset.validation_set, dataset.validation_sizes,
                 dataset.validation_num_patch],
             dataset.validation_labels.numpy()),
         callbacks=[tf.keras.callbacks.EarlyStopping(monitor=loss_metric,
@@ -71,9 +71,9 @@ def bootstrap_train(train_configuration: dict) -> Tuple[tf.keras.models.Model, t
 
 def inference(model: tf.keras.models.Model, dataset: PatchToScoreDataset) -> dict:
     name_to_set = {
-        'train': {'data': [dataset.train_set, dataset.train_sizes, dataset.train_num_patch], 'labels': dataset.train_labels},
-        'validation': {'data': [dataset.validation_set, dataset.validation_sizes, dataset.validation_num_patch], 'labels': dataset.validation_labels},
-        'test': {'data': [dataset.test_set, dataset.test_sizes, dataset.test_num_patch], 'labels': dataset.test_labels}}
+        'train': {'data': [*dataset.train_set, dataset.train_sizes, dataset.train_num_patch], 'labels': dataset.train_labels},
+        'validation': {'data': [*dataset.validation_set, dataset.validation_sizes, dataset.validation_num_patch], 'labels': dataset.validation_labels},
+        'test': {'data': [*dataset.test_set, dataset.test_sizes, dataset.test_num_patch], 'labels': dataset.test_labels}}
     name_to_yhat = {name: {'predictions': model.predict(set['data']), 'labels': set['labels'].numpy()} for name, set in name_to_set.items()}
     return name_to_yhat
 
