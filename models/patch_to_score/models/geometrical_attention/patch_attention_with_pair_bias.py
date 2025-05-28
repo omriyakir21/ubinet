@@ -12,6 +12,8 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
             num_heads: Attention heads, TODO: currently only supports single head (num_heads=1)
         """
         super().__init__(**kwargs)
+        assert attention_dimension % num_heads == 0, 'Attention dimension must be divisible by number of heads.'
+        assert num_heads == 1, 'Currently only supports single head attention (num_heads=1).'  # TODO: remove after support
         self.supports_masking = True  # Important! The pathces are masked
                 
         self.pairs_dimension = pairs_dimension
