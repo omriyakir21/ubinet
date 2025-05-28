@@ -48,5 +48,5 @@ if __name__ == '__main__':
     folds_training_dicts, all_patches_ca_coordinates = load_data()
     enriched_folds = enrich_folds_with_coordinates(folds_training_dicts, all_patches_ca_coordinates)
     print('saving enriched folds')
-    save_as_pickle(folds_training_dicts, f'{target_dataset_dir_path}/folds_training_dicts.pkl')
+    save_as_pickle(enriched_folds, f'{target_dataset_dir_path}/folds_training_dicts.pkl')
     print('saved enriched folds')
