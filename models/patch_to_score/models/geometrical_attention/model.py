@@ -31,7 +31,7 @@ def create_broadcasted_features(n_patches_hot_encoded_value: tf.Tensor, max_numb
 
     concat_input_data = tf.keras.layers.Concatenate(
         axis=-1)([input_data, n_patches_broadcased, size_broadcased])
-    
+
     return concat_input_data
 
 
@@ -42,11 +42,13 @@ def mask_inputs(features: tf.Tensor, coordinates: tf.Tensor):
     return features, coordinates
 
 
-def build_model(hidden_sizes_mlp_a: List[Tuple[int, int]], mlp_a_dropout_rate: float,
-                hidden_sizes_mlp_c: List[Tuple[int, int]], mlp_c_dropout_rate: float,
+def build_model(hidden_sizes_mlp: List[Tuple[int, int]], mlp_dropout_rate: float,
                 activation: str,
                 input_shape: Tuple[int, int],
-                max_number_of_patches: int) -> tf.keras.models.Model:
+                max_number_of_patches: int,
+                pairs_dimension: int,
+                attention_dimension: int,
+                num_heads: int) -> tf.keras.models.Model:
     '''
     :param m_a: size of the hidden layers in the MLP of the components
     :param m_c: size of the hidden layers in the MLP of the concatenated global sum output and size + n_patches MLP output
@@ -60,26 +62,21 @@ def build_model(hidden_sizes_mlp_a: List[Tuple[int, int]], mlp_a_dropout_rate: f
     features = create_broadcasted_features(
         n_patches_hot_encoded_value, max_number_of_patches, size_value, input_data)
     features, coordinates = mask_inputs(features, coordinates)
-    
-    
-    # TODO: as a starting point, change MLP A to PatchAttentionWithPairBias
 
-    current_output = features
+    pairwise_distances = tf.norm(
+        tf.expand_dims(coordinates, axis=1) - tf.expand_dims(coordinates, axis=2), axis=-1)
+    patch_attention_output = PatchAttentionWithPairBias(
+        pairs_dimension, attention_dimension, num_heads)([features, pairwise_distances])
 
-    for mlp_hidden_size in hidden_sizes_mlp_a:
-        mlp = TransformerEncoderMLP(
-            hidden_units=mlp_hidden_size, dropout_rate=mlp_a_dropout_rate, activation=activation)
-        current_output = mlp(current_output)
-        current_output = tf.keras.layers.ReLU()(
-            current_output)  # TODO: apply non-linearity here?
+    current_output = patch_attention_output
 
     global_pooling_output = GlobalSumPooling(
         data_format='channels_last')(current_output)
     current_output = global_pooling_output
 
-    for mlp_hidden_size in hidden_sizes_mlp_c:
+    for mlp_hidden_size in hidden_sizes_mlp:
         mlp = TransformerEncoderMLP(
-            hidden_units=mlp_hidden_size, dropout_rate=mlp_c_dropout_rate, activation=activation)
+            hidden_units=mlp_hidden_size, dropout_rate=mlp_dropout_rate, activation=activation)
         current_output = mlp(current_output)
         current_output = tf.keras.layers.ReLU()(
             current_output)  # TODO: apply non-linearity here?
