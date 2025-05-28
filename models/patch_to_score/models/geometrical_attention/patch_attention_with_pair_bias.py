@@ -46,10 +46,10 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
 
         # TODO: multihead
         B = self.pairs_layernorm(D)        
-        B = self.dense_pairs(B)
+        B = self.dense_pairs_transition(B)
         B = self.dense_pairs_heads(B)
         
-        scalar = (1 / tf.sqrt(self.attention_dimension))
+        scalar = (1 / tf.sqrt(tf.cast(self.attention_dimension, tf.float32)))
         A = tf.matmul(Q, K, transpose_b=True)
         A += B
         A = tf.nn.softmax(scalar * A, axis=-1)

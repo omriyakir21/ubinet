@@ -14,7 +14,7 @@ def broadcast_shape(x, max_number_of_patches: int) -> tf.Tensor:
 
 def create_inputs(input_shape: Tuple[int, int], max_number_of_patches: int):
     input_data = tf.keras.Input(shape=input_shape, name='features_input')
-    input_coordinates = tf.kears.Input(
+    input_coordinates = tf.keras.Input(
         shape=(max_number_of_patches, 3), name='coordinates_input')
     size_value = tf.keras.Input(shape=(1,), name='number_of_residues_input')
     n_patches_hot_encoded_value = tf.keras.Input(
