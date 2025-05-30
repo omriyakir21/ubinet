@@ -37,11 +37,10 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         super().build(input_shape)
     
     def call(self, inputs, training=False, mask=None):
-        F = inputs[0]
-        D = inputs[1]
+        F = inputs[0]  # (num_proteins, num_patches, feature_dimension)
+        D = inputs[1]  # (num_proteins, num_patches, num_patches, pairs_dimension)
         
         B = self.pairs_layernorm(D)
-        B = tf.expand_dims(B, axis=-1)
         B = self.dense_pairs_heads(B)
         B = tf.reshape(B, (-1, B.shape[-1], B.shape[1], B.shape[2]))
 
