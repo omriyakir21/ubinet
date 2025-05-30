@@ -2,6 +2,7 @@ from typing import Tuple, List
 from models.patch_to_score import utils
 from models.patch_to_score.models.pts_without_mlp_b.model import build_model as build_pts_wihout_mlp_b_model
 from models.patch_to_score.models.pts_encoder_mlps.model import build_model as build_pts_encoder_mlp_model
+from models.patch_to_score.models.patch_attention.model import build_model as build_patch_attention_model
 import tensorflow as tf
 
 
@@ -36,10 +37,28 @@ def bootstrap_pts_encoder_mlps(hidden_sizes_mlp_a: List[Tuple[int, int]], mlp_a_
     return model
 
 
+def bootstrap_patch_attention(output_mlp_hidden_sizes: List[Tuple[int, int]], output_mlp_dropout_rate: float,
+                              attention_mlp_hidden_sizes: List[Tuple[int, int]], attention_mlp_dropout_rate: float,
+                              activation: str,
+                              input_shape: Tuple[int, int],
+                              max_number_of_patches: int,
+                              attention_dimension: int,
+                              num_heads: int) -> tf.keras.models.Model:
+    model = build_patch_attention_model(output_mlp_hidden_sizes, output_mlp_dropout_rate,
+                                        attention_mlp_hidden_sizes, attention_mlp_dropout_rate,
+                                        activation,
+                                        input_shape,
+                                        max_number_of_patches,
+                                        attention_dimension,
+                                        num_heads)
+    return model
+
+
 model_to_bootstrapper = {
-    'patch_to_score_original': bootstrap_patch_to_score_original,  # patch_to_score original model
-    'pts_without_mlp_b': bootstrap_pts_without_mlp_b,  # patch_to_score without mlp b,
-    'pts_transformer_encoder_mlp': bootstrap_pts_encoder_mlps  # patch_to_score with transformer encoder mlp
+    'patch_to_score_original': bootstrap_patch_to_score_original,
+    'pts_without_mlp_b': bootstrap_pts_without_mlp_b,  
+    'pts_transformer_encoder_mlp': bootstrap_pts_encoder_mlps,
+    'patch_attention': bootstrap_patch_attention
 }
 
 
