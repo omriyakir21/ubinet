@@ -42,11 +42,21 @@ def mask_inputs(features: tf.Tensor, coordinates: tf.Tensor):
     return features, coordinates
 
 
-def build_model(hidden_sizes_mlp: List[Tuple[int, int]], mlp_dropout_rate: float,
+def apply_mlps(current_output: tf.Tensor, hidden_sizes: List[Tuple[int, int]], dropout_rate: float, activation: str) -> tf.Tensor:
+    for hidden_size in hidden_sizes:
+        mlp = TransformerEncoderMLP(
+            hidden_units=hidden_size, dropout_rate=dropout_rate, activation=activation)
+        current_output = mlp(current_output)
+        current_output = tf.keras.layers.ReLU()(
+            current_output)
+    return current_output
+
+
+def build_model(output_mlp_hidden_sizes: List[Tuple[int, int]], output_mlp_dropout_rate: float,
+                attention_mlp_hidden_sizes: List[Tuple[int, int]], attention_mlp_dropout_rate: float,
                 activation: str,
                 input_shape: Tuple[int, int],
                 max_number_of_patches: int,
-                pairs_dimension: int,
                 attention_dimension: int,
                 num_heads: int) -> tf.keras.models.Model:
     '''
@@ -65,21 +75,18 @@ def build_model(hidden_sizes_mlp: List[Tuple[int, int]], mlp_dropout_rate: float
 
     pairwise_distances = tf.norm(
         tf.expand_dims(coordinates, axis=1) - tf.expand_dims(coordinates, axis=2), axis=-1)
-    patch_attention_output = PatchAttentionWithPairBias(
-        pairs_dimension, attention_dimension, num_heads)([features, pairwise_distances])
+    current_output = PatchAttentionWithPairBias(
+        attention_dimension, num_heads)([features, pairwise_distances])
 
-    current_output = patch_attention_output
+    current_output = apply_mlps(
+        current_output, attention_mlp_hidden_sizes, attention_mlp_dropout_rate, activation)
 
     global_pooling_output = GlobalSumPooling(
         data_format='channels_last')(current_output)
     current_output = global_pooling_output
 
-    for mlp_hidden_size in hidden_sizes_mlp:
-        mlp = TransformerEncoderMLP(
-            hidden_units=mlp_hidden_size, dropout_rate=mlp_dropout_rate, activation=activation)
-        current_output = mlp(current_output)
-        current_output = tf.keras.layers.ReLU()(
-            current_output)  # TODO: apply non-linearity here?
+    current_output = apply_mlps(
+        current_output, output_mlp_hidden_sizes, output_mlp_dropout_rate, activation)
 
     before_sigmoid_output = current_output
 

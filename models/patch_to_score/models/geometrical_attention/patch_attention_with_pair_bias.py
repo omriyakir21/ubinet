@@ -4,32 +4,36 @@ from tensorflow.keras import layers
 
 
 class PatchAttentionWithPairBias(tf.keras.layers.Layer):
-    def __init__(self, pairs_dimension: int, attention_dimension: int, num_heads: int, **kwargs):
+    def __init__(self, attention_dimension: int, num_heads: int, **kwargs):
         """
         Args:
             pairs_dimension: Hidden dimension for pairs transition
             attention_dimension: Dimension for all attention operations
-            num_heads: Attention heads, TODO: currently only supports single head (num_heads=1)
+            num_heads: Attention heads
         """
         super().__init__(**kwargs)
-        assert attention_dimension % num_heads == 0, 'Attention dimension must be divisible by number of heads.'
-        assert num_heads == 1, 'Currently only supports single head attention (num_heads=1).'  # TODO: remove after support
-        self.supports_masking = True  # Important! The pathces are masked
-                
-        self.pairs_dimension = pairs_dimension
+        
+        # TODO: change to support D matrix with channel dimension
+        
+        assert attention_dimension % num_heads == 0, "Attention dimension must be divisible by number of heads."
+        self.supports_masking = True  # Important! The pathces are masked        
+        
+        self.num_heads = num_heads
         self.attention_dimension = attention_dimension
+        self.head_dimension = self.attention_dimension // self.num_heads
         
-        self.Wk = layers.Dense(attention_dimension, use_bias=False, name=f'Wk_{uuid.uuid4()}')
-        self.Wq = layers.Dense(attention_dimension, use_bias=False, name=f'Wq_{uuid.uuid4()}')
-        self.Wv = layers.Dense(attention_dimension, use_bias=False, name=f'Wv_{uuid.uuid4()}')
         
-        self.dense_pairs_transition = layers.Dense(pairs_dimension, use_bias=True, name=f'dense_pairs_{uuid.uuid4()}')
-        self.dense_pairs_heads = layers.Dense(num_heads, use_bias=False, name=f'dense_pairs_{uuid.uuid4()}')
-        self.dense_output = layers.Dense(attention_dimension, use_bias=True, name=f'dense_output_{uuid.uuid4()}')
-        
+        self.Wk = layers.Dense(self.attention_dimension, use_bias=False, name=f'Wk_{uuid.uuid4()}')
+        self.Wq = layers.Dense(self.attention_dimension, use_bias=False, name=f'Wq_{uuid.uuid4()}')
+        self.Wv = layers.Dense(self.attention_dimension, use_bias=False, name=f'Wv_{uuid.uuid4()}')
+
+        # dense_pairs_transition = layers.Dense(pairs_dimension, use_bias=True, name=f'dense_pairs_{uuid.uuid4()}')
+        self.dense_pairs_heads = layers.Dense(self.num_heads, use_bias=False, name=f'dense_pairs_{uuid.uuid4()}')
+        self.dense_output = layers.Dense(self.attention_dimension, use_bias=True, name=f'dense_output_{uuid.uuid4()}')
+
         self.pairs_layernorm = layers.LayerNormalization()
         self.features_layernorm = layers.LayerNormalization()
-
+    
     def build(self, input_shape):
         super().build(input_shape)
     
@@ -37,31 +41,30 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         F = inputs[0]
         D = inputs[1]
         
+        B = self.pairs_layernorm(D)
+        B = tf.expand_dims(B, axis=-1)
+        B = self.dense_pairs_heads(B)
+        B = tf.reshape(B, (-1, B.shape[-1], B.shape[1], B.shape[2]))
+
         F = self.features_layernorm(F)
-        
-        # TODO: multihead
         Q = self.Wq(F)
         K = self.Wk(F)
         V = self.Wv(F)
 
-        # TODO: multihead
-        B = self.pairs_layernorm(D)
-        B = tf.expand_dims(B, axis=-1)        
-        B = self.dense_pairs_transition(B)
-        B = self.dense_pairs_heads(B)
-        
-        scalar = (1 / tf.sqrt(tf.cast(self.attention_dimension, tf.float32)))
-        A = tf.matmul(Q, K, transpose_b=True)
-        A = tf.expand_dims(A, axis=-1)  # TODO: might not be needed when having real multiehad attention
-        A += B
-        A = tf.nn.softmax(scalar * A, axis=-1)
-        
-        O = tf.matmul(A, V)
-        O = tf.math.reduce_sum(O, axis=-1)
-        
-        # TODO: multihead (concat & project out)  
-        
-        return O  # Mask will be automatically passed if supports_masking=True
+        Q_reshaped = tf.reshape(Q, (-1, self.num_heads, Q.shape[1], self.head_dimension))
+        K_reshaped = tf.reshape(K, (-1, self.num_heads, K.shape[1], self.head_dimension))
+        V_reshaped = tf.reshape(V, (-1, self.num_heads, V.shape[1], self.head_dimension))
+
+        attention_scores = tf.einsum('bhpd,bhqd->bhpq', Q_reshaped, K_reshaped)
+        attention_scores /= tf.sqrt(tf.cast(self.head_dimension, tf.float32))
+        attention_scores += B
+
+        attention_weights = tf.nn.softmax(attention_scores, axis=-1)
+        attention_output = tf.einsum('bhpp,bhpd->bhpd', attention_weights, V_reshaped)
+
+        attention_output = tf.reshape(attention_output, (-1, attention_output.shape[2], self.attention_dimension))
+        O = self.dense_output(attention_output)
+        return O
 
     def compute_mask(self, inputs, mask=None):
         # Just return the input mask unchanged
