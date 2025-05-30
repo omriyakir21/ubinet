@@ -17,7 +17,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras import backend
 from tensorflow.keras.layers import Dense, GlobalAveragePooling1D, Reshape, Masking
 
-from data_preparation.patch_to_score.data_development_utils import NEGATIVE_SOURCES,POSITIVE_SOURCES
+from data_preparation.patch_to_score.v0.data_development_utils import NEGATIVE_SOURCES,POSITIVE_SOURCES
 import paths
 
 
