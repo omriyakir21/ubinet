@@ -2,7 +2,7 @@ from typing import Tuple, List
 import tensorflow as tf
 from models.patch_to_score.models.pts_encoder_mlps.utils import GlobalSumPooling
 from models.patch_to_score.models.pts_encoder_mlps.transformer_encoder_mlp import TransformerEncoderMLP
-from models.patch_to_score.models.geometrical_attention.patch_attention_with_pair_bias import PatchAttentionWithPairBias
+from models.patch_to_score.models.patch_attention.patch_attention_with_pair_bias import PatchAttentionWithPairBias
 
 
 def broadcast_shape(x, max_number_of_patches: int) -> tf.Tensor:
