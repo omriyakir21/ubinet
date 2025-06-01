@@ -1,7 +1,7 @@
 from typing import Tuple, List
 import tensorflow as tf
-from models.patch_to_score.models.pts_encoder_mlps.utils import GlobalSumPooling
-from models.patch_to_score.models.pts_encoder_mlps.transformer_encoder_mlp import TransformerEncoderMLP
+from models.patch_to_score.models.patch_attention.utils import GlobalSumPooling
+from models.patch_to_score.models.patch_attention.transformer_encoder_mlp import TransformerEncoderMLP
 from models.patch_to_score.models.patch_attention.patch_attention_with_pair_bias import PatchAttentionWithPairBias
 
 
@@ -71,8 +71,11 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
     '''
     input_data, coordinates, size_value, n_patches_hot_encoded_value = create_inputs(
         input_shape, max_number_of_patches)
+    
+    mask_condition = tf.cast(tf.keras.layers.Masking(mask_value=0)(input_data)._keras_mask, tf.float32)    
     features = create_broadcasted_features(
         n_patches_hot_encoded_value, max_number_of_patches, size_value, input_data)
+    features = features * mask_condition[..., None]  # zero out broadcased features where mask is 0
     features, coordinates = mask_inputs(features, coordinates)
 
     pairwise_distances = tf.norm(
