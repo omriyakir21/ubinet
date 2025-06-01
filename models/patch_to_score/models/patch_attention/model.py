@@ -52,12 +52,14 @@ def apply_mlps(current_output: tf.Tensor, hidden_sizes: List[Tuple[int, int]], d
     return current_output
 
 
-def build_model(output_mlp_hidden_sizes: List[Tuple[int, int]], output_mlp_dropout_rate: float,
+def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_dropout_rate: float,
+                output_mlp_hidden_sizes: List[Tuple[int, int]], output_mlp_dropout_rate: float,
                 attention_mlp_hidden_sizes: List[Tuple[int, int]], attention_mlp_dropout_rate: float,
                 activation: str,
                 input_shape: Tuple[int, int],
                 max_number_of_patches: int,
                 attention_dimension: int,
+                pairs_channel_dimension: int,
                 num_heads: int) -> tf.keras.models.Model:
     '''
     :param m_a: size of the hidden layers in the MLP of the components
@@ -75,8 +77,14 @@ def build_model(output_mlp_hidden_sizes: List[Tuple[int, int]], output_mlp_dropo
 
     pairwise_distances = tf.norm(
         tf.expand_dims(coordinates, axis=1) - tf.expand_dims(coordinates, axis=2), axis=-1)
+    
+    F = apply_mlps(features, features_mlp_hidden_sizes, features_mlp_dropout_rate, activation)
+    D = tf.expand_dims(pairwise_distances, axis=-1)
+    D = tf.keras.layers.Dense(
+        pairs_channel_dimension, use_bias=True, name='dense_pairs')(D)
+    
     current_output = PatchAttentionWithPairBias(
-        attention_dimension, num_heads)([features, pairwise_distances])
+        attention_dimension, num_heads)([F, D])
 
     current_output = apply_mlps(
         current_output, attention_mlp_hidden_sizes, attention_mlp_dropout_rate, activation)
