@@ -41,6 +41,7 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         D = inputs[1]
         
         B = self.pairs_layernorm(D)
+        # TODO: non-linarity here?
         B = self.dense_pairs_heads(B)
         B = tf.reshape(B, (-1, B.shape[-1], B.shape[1], B.shape[2]))
 
@@ -59,6 +60,17 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         attention_scores = tf.einsum('bhpd,bhqd->bhpq', Q_reshaped, K_reshaped)
         attention_scores /= tf.sqrt(tf.cast(self.head_dimension, tf.float32))
         attention_scores += B
+
+        if mask is not None:
+            features_mask = mask[0]
+            if features_mask is not None:
+                # mask shape is (B, num_patches)
+                # attention_scores shape is (B, num_heads, num_patches, num_patches)
+                features_mask = tf.expand_dims(features_mask, axis=1)
+                features_mask = tf.expand_dims(features_mask, axis=2)
+                # Set attention scores to -inf where features_mask is False
+                # This will effectively mask out those patches in the attention mechanism
+                attention_scores = tf.where(features_mask, attention_scores, -1e9 * tf.ones_like(attention_scores))
 
         attention_weights = tf.nn.softmax(attention_scores, axis=-1)
         attention_output = tf.einsum('bhpp,bhpd->bhpd', attention_weights, V_reshaped)

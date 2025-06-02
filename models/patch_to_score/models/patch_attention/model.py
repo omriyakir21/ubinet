@@ -1,8 +1,6 @@
 from typing import Tuple, List
 import tensorflow as tf
-from models.patch_to_score.models.patch_attention.utils import GlobalSumPooling
-from models.patch_to_score.models.patch_attention.transformer_encoder_mlp import TransformerEncoderMLP
-from models.patch_to_score.models.patch_attention.patch_attention_with_pair_bias import PatchAttentionWithPairBias
+from models.patch_to_score.models.patch_attention.modules import PairsTransition, TransformerEncoderMLP, PatchAttentionWithPairBias, GlobalSumPooling
 
 
 def broadcast_shape(x, max_number_of_patches: int) -> tf.Tensor:
@@ -35,14 +33,15 @@ def create_broadcasted_features(n_patches_hot_encoded_value: tf.Tensor, max_numb
     return concat_input_data
 
 
-def mask_inputs(features: tf.Tensor, coordinates: tf.Tensor):
+def mask_inputs(features: tf.Tensor, pairwise_distances: tf.Tensor):
     features = tf.keras.layers.Masking(mask_value=0.0)(features)
-    coordinates = tf.keras.layers.Masking(
-        mask_value=0.0)(coordinates)
-    return features, coordinates
+    pairwise_distances = tf.keras.layers.Masking(
+        mask_value=0.0)(pairwise_distances)
+    return features, pairwise_distances
 
 
-def apply_mlps(current_output: tf.Tensor, hidden_sizes: List[Tuple[int, int]], dropout_rate: float, activation: str) -> tf.Tensor:
+def apply_mlps(inputs: tf.Tensor, hidden_sizes: List[Tuple[int, int]], dropout_rate: float, activation: str) -> tf.Tensor:
+    current_output = inputs
     for hidden_size in hidden_sizes:
         mlp = TransformerEncoderMLP(
             hidden_units=hidden_size, dropout_rate=dropout_rate, activation=activation)
@@ -71,38 +70,44 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
     '''
     input_data, coordinates, size_value, n_patches_hot_encoded_value = create_inputs(
         input_shape, max_number_of_patches)
+
+    mask_condition = tf.reduce_all(~tf.equal(input_data, 0), axis=-1)
+    # replace line above without using ._keras_mask
+    mask_condition = tf.cast(
+        tf.reduce_any(input_data != 0, axis=-1), tf.float32)
     
-    mask_condition = tf.cast(tf.keras.layers.Masking(mask_value=0)(input_data)._keras_mask, tf.float32)    
     features = create_broadcasted_features(
         n_patches_hot_encoded_value, max_number_of_patches, size_value, input_data)
-    features = features * mask_condition[..., None]  # zero out broadcased features where mask is 0
-    features, coordinates = mask_inputs(features, coordinates)
-
     pairwise_distances = tf.norm(
         tf.expand_dims(coordinates, axis=1) - tf.expand_dims(coordinates, axis=2), axis=-1)
-    
-    F = apply_mlps(features, features_mlp_hidden_sizes, features_mlp_dropout_rate, activation)
-    D = tf.expand_dims(pairwise_distances, axis=-1)
-    D = tf.keras.layers.Dense(
-        pairs_channel_dimension, use_bias=True, name='dense_pairs')(D)
-    
-    current_output = PatchAttentionWithPairBias(
+    pairwise_distances = tf.cast(pairwise_distances, tf.float32)
+
+    # zero out broadcased features where mask is 0
+    features = features * mask_condition[..., None]
+    pairwise_distances = pairwise_distances * mask_condition[..., None]
+
+    features, pairwise_distances = mask_inputs(features, pairwise_distances)
+
+    F = apply_mlps(features, features_mlp_hidden_sizes,
+                    features_mlp_dropout_rate, activation)
+
+    pairs_transition = PairsTransition(pairs_channel_dimension)
+    D = pairs_transition(pairwise_distances)
+
+    attention_output = PatchAttentionWithPairBias(
         attention_dimension, num_heads)([F, D])
 
-    current_output = apply_mlps(
-        current_output, attention_mlp_hidden_sizes, attention_mlp_dropout_rate, activation)
+    attention_mlp_output = apply_mlps(
+        attention_output, attention_mlp_hidden_sizes, attention_mlp_dropout_rate, activation)
 
     global_pooling_output = GlobalSumPooling(
-        data_format='channels_last')(current_output)
-    current_output = global_pooling_output
+        data_format='channels_last')(attention_mlp_output)
 
-    current_output = apply_mlps(
-        current_output, output_mlp_hidden_sizes, output_mlp_dropout_rate, activation)
-
-    before_sigmoid_output = current_output
+    output_mlp_output = apply_mlps(
+        global_pooling_output, output_mlp_hidden_sizes, output_mlp_dropout_rate, activation)
 
     output = tf.keras.layers.Dense(
-        1, activation='sigmoid')(before_sigmoid_output)
+        1, activation='sigmoid')(output_mlp_output)
     model = tf.keras.Model(
         inputs=[input_data, coordinates, size_value, n_patches_hot_encoded_value], outputs=output)
     return model
