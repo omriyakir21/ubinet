@@ -61,11 +61,17 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
                 pairs_channel_dimension: int,
                 num_heads: int) -> tf.keras.models.Model:
     '''
-    :param m_a: size of the hidden layers in the MLP of the components
-    :param m_c: size of the hidden layers in the MLP of the concatenated global sum output and size + n_patches MLP output
-    :param n_layers: number of layers in each of the MLPs
-    :param input_shape: shape of the input data (number of patches, number of features)
+    :features_mlp_hidden_sizes: size of the hidden layers in the features MLP
+    :features_mlp_dropout_rate: dropout_rate for the features MLP
+    :output_mlp_hidden_sizes: size of the hidden layers in the output MLP
+    :output_mlp_dropout_rate: dropout_rate for the output MLP
+    :attention_mlp_hidden_sizes: size of the hidden layers in the attention MLP
+    :attention_mlp_dropout_rate: dropout_rate for the attention MLP
+    :activation: activation function to use in the MLPs
+    :param input_shape: shape of the input data (number of patches, number of features) - usually (10, 9)
     :param max_number_of_patches: maximum number of patches
+    :param attention_dimension: dimension of the patch attention layer
+    :param pairs_channel_dimension: dimension of the pairs transition layer
     :return: a Keras model
     '''
     input_data, coordinates, size_value, n_patches_hot_encoded_value = create_inputs(

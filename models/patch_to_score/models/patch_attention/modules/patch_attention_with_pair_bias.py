@@ -41,7 +41,7 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         D = inputs[1]
         
         B = self.pairs_layernorm(D)
-        # TODO: non-linarity here?
+        B = tf.keras.layers.ReLU()(B)
         B = self.dense_pairs_heads(B)
         B = tf.reshape(B, (-1, B.shape[-1], B.shape[1], B.shape[2]))
 
