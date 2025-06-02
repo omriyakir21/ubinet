@@ -1,6 +1,6 @@
 from typing import Tuple, List
 import tensorflow as tf
-from models.patch_to_score.models.patch_attention.modules import PairsTransition, TransformerEncoderMLP, PatchAttentionWithPairBias, GlobalSumPooling
+from models.patch_to_score.models.modules import PairsTransition, TransformerEncoderMLP, PatchAttentionWithPairBias, GlobalSumPooling
 
 
 def broadcast_shape(x, max_number_of_patches: int) -> tf.Tensor:

@@ -1,6 +1,6 @@
 from typing import Tuple
 import tensorflow as tf
-from models.patch_to_score.models.pts_without_mlp_b.utils import GlobalSumPooling
+from models.patch_to_score.models.modules import GlobalSumPooling
 
 
 def broadcast_shape(x, max_number_of_patches: int) -> tf.Tensor:
