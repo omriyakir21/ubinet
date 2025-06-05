@@ -58,11 +58,31 @@ def bootstrap_patch_attention(features_mlp_hidden_sizes: List[Tuple[int, int]], 
     return model
 
 
+def bootstrap_patch_attention_without_bias(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_dropout_rate: float,
+                                           output_mlp_hidden_sizes: List[Tuple[int, int]], output_mlp_dropout_rate: float,
+                                           attention_mlp_hidden_sizes: List[Tuple[int, int]], attention_mlp_dropout_rate: float,
+                                           activation: str,
+                                           input_shape: Tuple[int, int],
+                                           max_number_of_patches: int,
+                                           attention_dimension: int,
+                                           num_heads: int) -> tf.keras.models.Model:
+    model = build_patch_attention_model(features_mlp_hidden_sizes, features_mlp_dropout_rate,
+                                        output_mlp_hidden_sizes, output_mlp_dropout_rate,
+                                        attention_mlp_hidden_sizes, attention_mlp_dropout_rate,
+                                        activation,
+                                        input_shape,
+                                        max_number_of_patches,
+                                        attention_dimension,
+                                        num_heads)
+    return model
+
+
 model_to_bootstrapper = {
     'patch_to_score_original': bootstrap_patch_to_score_original,
     'pts_without_mlp_b': bootstrap_pts_without_mlp_b,
     'pts_transformer_encoder_mlp': bootstrap_pts_encoder_mlps,
-    'patch_attention': bootstrap_patch_attention
+    'patch_attention': bootstrap_patch_attention,
+    'patch_attention_without_bias': bootstrap_patch_attention_without_bias
 }
 
 

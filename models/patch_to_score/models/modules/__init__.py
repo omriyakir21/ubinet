@@ -1,4 +1,5 @@
 from .transformer_encoder_mlp import TransformerEncoderMLP
 from .pairs_transition import PairsTransition
 from .patch_attention_with_pair_bias import PatchAttentionWithPairBias
+from .patch_attention_without_pair_bias import PatchAttentionWithoutPairBias
 from .global_sum_pooling import GlobalSumPooling
