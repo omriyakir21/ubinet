@@ -12,12 +12,10 @@ def broadcast_shape(x, max_number_of_patches: int) -> tf.Tensor:
 
 def create_inputs(input_shape: Tuple[int, int], max_number_of_patches: int):
     input_data = tf.keras.Input(shape=input_shape, name='features_input')
-    input_coordinates = tf.keras.Input(
-        shape=(max_number_of_patches, 3), name='coordinates_input')
     size_value = tf.keras.Input(shape=(1,), name='number_of_residues_input')
     n_patches_hot_encoded_value = tf.keras.Input(
         shape=(max_number_of_patches + 1,), name='number_of_patches_input')
-    return input_data, input_coordinates, size_value, n_patches_hot_encoded_value
+    return input_data, size_value, n_patches_hot_encoded_value
 
 
 def create_broadcasted_features(n_patches_hot_encoded_value: tf.Tensor, max_number_of_patches: int, size_value: tf.Tensor, input_data: tf.Tensor):
@@ -33,11 +31,9 @@ def create_broadcasted_features(n_patches_hot_encoded_value: tf.Tensor, max_numb
     return concat_input_data
 
 
-def mask_inputs(features: tf.Tensor, pairwise_distances: tf.Tensor):
+def mask_inputs(features: tf.Tensor):
     features = tf.keras.layers.Masking(mask_value=0.0)(features)
-    pairwise_distances = tf.keras.layers.Masking(
-        mask_value=0.0)(pairwise_distances)
-    return features, pairwise_distances
+    return features
 
 
 def apply_mlps(inputs: tf.Tensor, hidden_sizes: List[Tuple[int, int]], dropout_rate: float, activation: str) -> tf.Tensor:
@@ -51,23 +47,19 @@ def apply_mlps(inputs: tf.Tensor, hidden_sizes: List[Tuple[int, int]], dropout_r
     return current_output
 
 
-def create_masked_inputs(input_data: tf.Tensor, coordinates: tf.Tensor, size_value: tf.Tensor, n_patches_hot_encoded_value: tf.Tensor, max_number_of_patches: int) -> Tuple[tf.Tensor, tf.Tensor]:
+def create_masked_inputs(input_data: tf.Tensor, size_value: tf.Tensor, n_patches_hot_encoded_value: tf.Tensor, max_number_of_patches: int) -> Tuple[tf.Tensor, tf.Tensor]:
     mask_condition = tf.reduce_all(~tf.equal(input_data, 0), axis=-1)
     mask_condition = tf.cast(
         tf.reduce_any(input_data != 0, axis=-1), tf.float32)
 
     features = create_broadcasted_features(
         n_patches_hot_encoded_value, max_number_of_patches, size_value, input_data)
-    pairwise_distances = tf.norm(
-        tf.expand_dims(coordinates, axis=1) - tf.expand_dims(coordinates, axis=2), axis=-1)
-    pairwise_distances = tf.cast(pairwise_distances, tf.float32)
 
     # zero out broadcased features where mask is 0
     features = features * mask_condition[..., None]
-    pairwise_distances = pairwise_distances * mask_condition[..., None]
 
-    features, pairwise_distances = mask_inputs(features, pairwise_distances)
-    return features, pairwise_distances
+    features, mask_inputs(features)
+    return features
 
 
 def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_dropout_rate: float,
@@ -89,13 +81,12 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
     :param input_shape: shape of the input data (number of patches, number of features) - usually (10, 9)
     :param max_number_of_patches: maximum number of patches
     :param attention_dimension: dimension of the patch attention layer
-    :param pairs_channel_dimension: dimension of the pairs transition layer
     :return: a Keras model
     '''
-    input_data, coordinates, size_value, n_patches_hot_encoded_value = create_inputs(
+    input_data, size_value, n_patches_hot_encoded_value = create_inputs(
         input_shape, max_number_of_patches)
-    features, pairwise_distances = create_masked_inputs(
-        input_data, coordinates, size_value, n_patches_hot_encoded_value, max_number_of_patches)
+    features = create_masked_inputs(
+        input_data, size_value, n_patches_hot_encoded_value, max_number_of_patches)
     F = apply_mlps(features, features_mlp_hidden_sizes,
                    features_mlp_dropout_rate, activation)
     attention_output = PatchAttentionWithoutPairBias(
@@ -108,5 +99,5 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
         global_pooling_output, output_mlp_hidden_sizes, output_mlp_dropout_rate, activation)
     output = tf.keras.layers.Dense(1, activation='sigmoid')(output_mlp_output)
     model = tf.keras.Model(inputs=[
-                           input_data, coordinates, size_value, n_patches_hot_encoded_value], outputs=output)
+                           input_data, size_value, n_patches_hot_encoded_value], outputs=output)
     return model
