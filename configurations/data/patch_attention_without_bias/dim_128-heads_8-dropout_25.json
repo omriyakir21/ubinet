@@ -1,0 +1,63 @@
+{
+    "hypothesis": "patch_attention_without_bias",
+    "experiment": "dim_128-heads_8-dropout_25",
+    "data": {
+        "path": "/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/datasets/patch_to_score/data_for_training/03_04_with_pesto_and_coord/folds_training_dicts.pkl",
+        "use_pesto": true,
+        "ablation_string": "111111111",
+        "max_folds": null,
+        "use_coordinates": false
+    },
+    "model": {
+        "name": "patch_attention_without_bias",
+        "kwargs": {
+            "features_mlp_hidden_sizes": [
+                [
+                    512,
+                    128
+                ]
+            ],
+            "features_mlp_dropout_rate": 0.25,
+            "output_mlp_hidden_sizes": [
+                [
+                    512,
+                    128
+                ]
+            ],
+            "output_mlp_dropout_rate": 0.25,
+            "attention_mlp_hidden_sizes": [
+                [
+                    512,
+                    128
+                ]
+            ],
+            "attention_mlp_dropout_rate": 0.25,
+            "activation": "relu",
+            "input_shape": [
+                10,
+                9
+            ],
+            "max_number_of_patches": 10,
+            "attention_dimension": 128,
+            "num_heads": 8
+        }
+    },
+    "compile": {
+        "optimizer": {
+            "name": "adamw",
+            "kwargs": {
+                "learning_rate": 0.001
+            }
+        },
+        "loss": {
+            "name": "binary_cross_entropy",
+            "kwargs": {}
+        }
+    },
+    "fit": {
+        "epochs": 200,
+        "batch_size": 256,
+        "verbose": 1,
+        "n_early_stopping_epochs": 12
+    }
+}
