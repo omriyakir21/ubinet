@@ -105,7 +105,7 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         
         O = self.dense_output(attention_output)
         if features_mask is not None:
-            O = O * features_mask[..., None]
+            O = O * tf.cast(features_mask[..., None], dtype=tf.float32)
         return O
 
     def compute_mask(self, inputs, mask=None):
