@@ -35,6 +35,12 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
     
     def build(self, input_shape):
         super().build(input_shape)
+        
+    def _split_to_heads(self, tensor: tf.Tensor) -> tf.Tensor:
+        batch, num_patches, attention_dimension = tensor.shape
+        res = tf.reshape(tensor, (batch, num_patches, self.num_heads, self.head_dimension))
+        res = tf.transpose(res, perm=[0, 2, 1, 3])  # (batch, num_heads, num_patches, head_dim)
+        return res
     
     def call(self, inputs, training=False, mask=None):
         F = inputs[0]
@@ -51,10 +57,11 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         V = self.Wv(F)
         G = self.dense_gating(F)
 
-        Q_reshaped = tf.reshape(Q, (-1, self.num_heads, Q.shape[1], self.head_dimension))
-        K_reshaped = tf.reshape(K, (-1, self.num_heads, K.shape[1], self.head_dimension))
-        V_reshaped = tf.reshape(V, (-1, self.num_heads, V.shape[1], self.head_dimension))
-        G_reshaped = tf.reshape(G, (-1, self.num_heads, G.shape[1], self.head_dimension))
+        Q_reshaped = self._split_to_heads(Q)
+        K_reshaped = self._split_to_heads(K)
+        V_reshaped = self._split_to_heads(V)
+        G_reshaped = self._split_to_heads(G)
+        
         G_reshaped = tf.nn.sigmoid(G_reshaped)
 
         attention_scores = tf.einsum('bhpd,bhqd->bhpq', Q_reshaped, K_reshaped)
