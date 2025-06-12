@@ -38,18 +38,25 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         super().build(input_shape)
         
     def _split_to_heads(self, tensor: tf.Tensor) -> tf.Tensor:
-        batch, num_patches, attention_dimension = tensor.shape
+        shape = tf.shape(tensor)
+        batch = shape[0]
+        num_patches = shape[1]
+        attention_dimension = shape[2]
         res = tf.reshape(tensor, (batch, num_patches, self.num_heads, self.head_dimension))
         res = tf.transpose(res, perm=[0, 2, 1, 3])  # (batch, num_heads, num_patches, head_dim)
         return res
     
     def _concat_heads(self, tensor: tf.Tensor) -> tf.Tensor:
-        batch, num_heads, num_patches, head_dimension = tensor.shape
+        shape = tf.shape(tensor)
+        batch = shape[0]
+        num_heads = shape[1]
+        num_patches = shape[2]
+        head_dimension = shape[3]
         res = tf.transpose(tensor, perm=[0, 2, 1, 3])
         res = tf.reshape(res, (batch, num_patches, self.attention_dimension))
         return res
     
-    def _get_features_mask(mask: Union[tf.Tensor, None]) -> Union[tf.Tensor, None]:
+    def _get_features_mask(self, mask: Union[tf.Tensor, None]) -> Union[tf.Tensor, None]:
         if mask is not None:
             features_mask = mask[0]
             return features_mask
