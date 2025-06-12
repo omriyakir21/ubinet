@@ -5,7 +5,7 @@ from tensorflow.keras import layers
 
 
 class PatchAttentionWithPairBias(tf.keras.layers.Layer):
-    def __init__(self, attention_dimension: int, num_heads: int, **kwargs):
+    def __init__(self, attention_dimension: int, num_heads: int, use_pair_bias: bool, **kwargs):
         """
         Args:
             attention_dimension: Dimension for all attention operations
@@ -13,26 +13,25 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         """
         super().__init__(**kwargs)
         
-        # TODO: change to support D matrix with channel dimension
-        
         assert attention_dimension % num_heads == 0, "Attention dimension must be divisible by number of heads."
-        self.supports_masking = True  # Important! The pathces are masked        
+        self.supports_masking = True
         
         self.num_heads = num_heads
         self.attention_dimension = attention_dimension
         self.head_dimension = self.attention_dimension // self.num_heads
+        self.use_pair_bias = use_pair_bias
         
         self.Wk = layers.Dense(self.attention_dimension, use_bias=False, name=f'Wk_{uuid.uuid4()}')
         self.Wq = layers.Dense(self.attention_dimension, use_bias=False, name=f'Wq_{uuid.uuid4()}')
         self.Wv = layers.Dense(self.attention_dimension, use_bias=False, name=f'Wv_{uuid.uuid4()}')
         self.dense_gating = layers.Dense(self.attention_dimension, use_bias=True, name=f'dense_gating_{uuid.uuid4()}')
 
-        # dense_pairs_transition = layers.Dense(pairs_dimension, use_bias=True, name=f'dense_pairs_{uuid.uuid4()}')
-        self.dense_pairs_heads = layers.Dense(self.num_heads, use_bias=False, name=f'dense_pairs_{uuid.uuid4()}')
         self.dense_output = layers.Dense(self.attention_dimension, use_bias=True, name=f'dense_output_{uuid.uuid4()}')
-
-        self.pairs_layernorm = layers.LayerNormalization()
         self.features_layernorm = layers.LayerNormalization()
+
+        if self.use_pair_bias:
+            self.dense_pairs_heads = layers.Dense(self.num_heads, use_bias=False, name=f'dense_pairs_{uuid.uuid4()}')
+            self.pairs_layernorm = layers.LayerNormalization()        
     
     def build(self, input_shape):
         super().build(input_shape)
@@ -64,12 +63,13 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
     
     def call(self, inputs, training=False, mask=None):
         F = inputs[0]
-        D = inputs[1]
         
-        B = self.pairs_layernorm(D)
-        B = tf.keras.layers.ReLU()(B)
-        B = self.dense_pairs_heads(B)
-        B = tf.transpose(B, perm=[0, 3, 1, 2])
+        if self.use_pair_bias:
+            D = inputs[1]
+            B = self.pairs_layernorm(D)
+            B = tf.keras.layers.ReLU()(B)
+            B = self.dense_pairs_heads(B)
+            B = tf.transpose(B, perm=[0, 3, 1, 2])
 
         F = self.features_layernorm(F)
         Q = self.Wq(F)
@@ -86,7 +86,9 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
 
         attention_scores = tf.einsum('bhpd,bhqd->bhpq', Q_reshaped, K_reshaped)
         attention_scores /= tf.sqrt(tf.cast(self.head_dimension, tf.float32))
-        attention_scores += B
+        
+        if self.use_pair_bias:
+            attention_scores += B
 
         features_mask = self._get_features_mask(mask)
         if features_mask is not None:

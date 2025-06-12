@@ -78,7 +78,8 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
                 max_number_of_patches: int,
                 attention_dimension: int,
                 pairs_channel_dimension: int,
-                num_heads: int) -> tf.keras.models.Model:
+                num_heads: int,
+                use_pair_bias: bool) -> tf.keras.models.Model:
     '''
     :features_mlp_hidden_sizes: size of the hidden layers in the features MLP
     :features_mlp_dropout_rate: dropout_rate for the features MLP
@@ -91,6 +92,8 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
     :param max_number_of_patches: maximum number of patches
     :param attention_dimension: dimension of the patch attention layer
     :param pairs_channel_dimension: dimension of the pairs transition layer
+    :param num_heads: number of heads for multi-head attention
+    :param use_pair_bias: should use pair bias in the patch attention module 
     :return: a Keras model
     '''
     input_data, coordinates, size_value, n_patches_hot_encoded_value = create_inputs(
@@ -99,10 +102,16 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
         input_data, coordinates, size_value, n_patches_hot_encoded_value, max_number_of_patches)
     F = apply_mlps(features, features_mlp_hidden_sizes,
                    features_mlp_dropout_rate, activation)
-    pairs_transition = PairsTransition(pairs_channel_dimension)
-    D = pairs_transition(pairwise_distances)
-    attention_output = PatchAttentionWithPairBias(
-        attention_dimension, num_heads)([F, D])
+    
+    if use_pair_bias:
+        pairs_transition = PairsTransition(pairs_channel_dimension)
+        D = pairs_transition(pairwise_distances)
+        attention_output = PatchAttentionWithPairBias(
+            attention_dimension, num_heads, use_pair_bias)([F, D])
+    else:
+        attention_output = PatchAttentionWithPairBias(
+            attention_dimension, num_heads, use_pair_bias)([F])
+    
     attention_mlp_output = apply_mlps(
         attention_output, attention_mlp_hidden_sizes, attention_mlp_dropout_rate, activation)
     global_pooling_output = GlobalSumPooling(
