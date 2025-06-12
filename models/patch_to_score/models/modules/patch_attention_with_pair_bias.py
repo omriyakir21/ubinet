@@ -42,6 +42,12 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         res = tf.transpose(res, perm=[0, 2, 1, 3])  # (batch, num_heads, num_patches, head_dim)
         return res
     
+    def _concat_heads(self, tensor: tf.Tensor) -> tf.Tensor:
+        batch, num_heads, num_patches, head_dimension = tensor.shape
+        res = tf.transpose(tensor, perm=[0, 2, 1, 3])
+        res = tf.reshape(res, (batch, num_patches, self.attention_dimension))
+        return res
+    
     def call(self, inputs, training=False, mask=None):
         F = inputs[0]
         D = inputs[1]
@@ -82,8 +88,8 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         attention_weights = tf.nn.softmax(attention_scores, axis=-1)
         attention_output = tf.einsum('bhpp,bhpd->bhpd', attention_weights, V_reshaped)
         attention_output = tf.math.multiply(G_reshaped, attention_output)
-
-        attention_output = tf.reshape(attention_output, (-1, attention_output.shape[2], self.attention_dimension))
+        attention_output = self._concat_heads(attention_output)
+        
         O = self.dense_output(attention_output)
         return O
 
