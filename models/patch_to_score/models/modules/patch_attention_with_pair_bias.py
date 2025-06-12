@@ -92,11 +92,11 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         if features_mask is not None:
             # mask shape is (B, num_patches)
             # attention_scores shape is (B, num_heads, num_patches, num_patches)
-            features_mask = tf.expand_dims(features_mask, axis=1)
-            features_mask = tf.expand_dims(features_mask, axis=2)
+            attention_mask = tf.expand_dims(features_mask, axis=1)
+            attention_mask = tf.expand_dims(attention_mask, axis=2)
             # Set attention scores to -inf where features_mask is False
             # This will effectively mask out those patches in the attention mechanism
-            attention_scores = tf.where(features_mask, attention_scores, -1e9 * tf.ones_like(attention_scores))
+            attention_scores = tf.where(attention_mask, attention_scores, -1e9 * tf.ones_like(attention_scores))
 
         attention_weights = tf.nn.softmax(attention_scores, axis=-1)
         attention_output = tf.einsum('bhpq,bhqd->bhpd', attention_weights, V_reshaped)
