@@ -32,6 +32,8 @@ class PatchAttentionWithoutPairBias(tf.keras.layers.Layer):
         super().build(input_shape)
     
     def call(self, inputs, training=False, mask=None):
+        # TODO: fix changes from patch_attention_with_pair_bias
+        # TODO: change to single module, with use_bias option
         F = inputs
 
         F = self.features_layernorm(F)

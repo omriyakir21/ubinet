@@ -91,6 +91,7 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         attention_output = self._concat_heads(attention_output)
         
         O = self.dense_output(attention_output)
+        # TODO: apply mask over patches
         return O
 
     def compute_mask(self, inputs, mask=None):
