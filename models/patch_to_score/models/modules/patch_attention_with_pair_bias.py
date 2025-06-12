@@ -86,7 +86,7 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
                 attention_scores = tf.where(features_mask, attention_scores, -1e9 * tf.ones_like(attention_scores))
 
         attention_weights = tf.nn.softmax(attention_scores, axis=-1)
-        attention_output = tf.einsum('bhpp,bhpd->bhpd', attention_weights, V_reshaped)
+        attention_output = tf.einsum('bhpq,bhqd->bhpd', attention_weights, V_reshaped)
         attention_output = tf.math.multiply(G_reshaped, attention_output)
         attention_output = self._concat_heads(attention_output)
         
