@@ -153,7 +153,7 @@ def remove_short_chains(infile: str, outfile: str, min_length: int,log_path:str)
 
                 # if at least one chain survives, write header + data
                 if keep:
-                    kept_segs = [seg for seg in segments if seg.split('-')[-1] in keep]
+                    kept_segs = [seg for seg in segments if seg[2:] in keep]
                     new_header = f">{pdb_id}_{'+'.join(kept_segs)}\n"
                     out_lines.append(new_header)
                     for k in range(i+1, j):
