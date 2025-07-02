@@ -483,46 +483,6 @@ def choose_assembly(entry_assembly_dict, probabilities, ambiguous_file, not_vali
     :param probabilities: Queen algorithm predictions
     :return: The path of the most likelihood assembly
     """
-    # reference_copy_number_string = ' '.join(map(str, entry_assembly_dict['referenceCopyNumber']))
-    # assemblies_string = ' '.join(map(str, entry_assembly_dict['assemblies']))
-    # probabilities_string = ' '.join(["(" + str(INV_MAP[i]) + "," + str(probabilities[i]) + ")" for i in range(12)])
-    # if len(entry_assembly_dict['referenceCopyNumber']) == 0:  # there werent any valid assemblies
-    #     print("not valid")
-    #     print(entry_assembly_dict['entry'])
-    #     not_valid_file.write(
-    #         entry_assembly_dict['entry'] + ": There werent any valid assemblies.\n longestNonUbiqFromAsymetric: " +
-    #         entry_assembly_dict[
-    #             'reference_sequence'] + "\n ,reference CopyNumber is : " + reference_copy_number_string + "\n")
-    #     return None
-
-    # predictions = []
-    # for val in entry_assembly_dict['referenceCopyNumber']:
-    #     if val in OPPOSITE_MAP.keys():
-    #         predictions.append(probabilities[OPPOSITE_MAP[val]])
-    # if len(predictions) == 0:  # there werent any valid assemblies
-    #     not_valid_file.write(
-    #         entry_assembly_dict['entry'] + ": There werent any valid assemblies.\n longestNonUbiqFromAsymetric: " +
-    #         entry_assembly_dict['reference_sequence'] + "\n ,reference CopyNumber is : " + entry_assembly_dict[
-    #             'referenceCopyNumber'] + "\n")
-    #     return None
-    # if len(predictions) > 1:
-    #     ambiguous_file.write(entry_assembly_dict[
-    #                              'entry'] + ": valid assembly numbers are: " + assemblies_string + "\n respective copyNumbers are: "
-    #                          + reference_copy_number_string + " and respective propbabilities are :" + ' '.join(
-    #         map(str, predictions)) + "\n the total probabilities are: " + probabilities_string
-    #                          + "\n")
-    
-    # sorted_indexes = sorted(range(len(predictions)), key=lambda k: predictions[k], reverse=True)
-    # for i in range(len(sorted_indexes)):
-    #     assemblyPath = entry_assembly_dict['assemblyPathsList'][sorted_indexes[i]]
-    #     structure = parser.get_structure(entry_assembly_dict['entry'], assemblyPath)
-    #     candidate = UBD_candidate(structure)
-    #     if len(candidate.models) > 0:
-    #         return assemblyPath
-
-    # not_valid_file.write("didnt find ubiq chain in any of the assemblies for " + entry_assembly_dict['entry'] +
-    #                      "\n longestNonUbiqFromAsymetric: " + entry_assembly_dict['reference_sequence'])
-    # return None  # no valid assembly found
     reference_copy_number_string = ' '.join(map(str, entry_assembly_dict['referenceCopyNumber']))
     assemblies_string = ' '.join(map(str, entry_assembly_dict['assemblies']))
     probabilities_string = ' '.join(["(" + str(INV_MAP[i]) + "," + str(probabilities[i]) + ")" for i in range(12)])
@@ -551,13 +511,18 @@ def choose_assembly(entry_assembly_dict, probabilities, ambiguous_file, not_vali
                              + reference_copy_number_string + " and respective propbabilities are :" + ' '.join(
             map(str, predictions)) + "\n the total probabilities are: " + probabilities_string
                              + "\n")
+    
+    sorted_indexes = sorted(range(len(predictions)), key=lambda k: predictions[k], reverse=True)
+    for i in range(len(sorted_indexes)):
+        assemblyPath = entry_assembly_dict['assemblyPathsList'][sorted_indexes[i]]
+        structure = parser.get_structure(entry_assembly_dict['entry'], assemblyPath)
+        candidate = UBD_candidate(structure)
+        if len(candidate.models) > 0:
+            return assemblyPath
 
-    maxPrediction = max(predictions)
-    maxIndex = predictions.index(maxPrediction)
-    count = entry_assembly_dict['referenceCopyNumber'][maxIndex]
-    assemblyNum = entry_assembly_dict['assemblies'][maxIndex]
-    assemblyPath = entry_assembly_dict['assemblyPathsList'][maxIndex]
-    return assemblyPath
+    not_valid_file.write("didnt find ubiq chain in any of the assemblies for " + entry_assembly_dict['entry'] +
+                         "\n longestNonUbiqFromAsymetric: " + entry_assembly_dict['reference_sequence'])
+    return None  # no valid assembly found
 
 
 
