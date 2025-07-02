@@ -263,7 +263,7 @@ def create_propagated_pssm_file(clusters_dict, chains_labels, clusters_participa
     propagated_file.close()
 
 
-def create_quantile_asa_dicts(lines):
+def create_quantile_asa_dicts(lines,ASA_path):
     amino_acid_asa_dict = dict()
     for line in lines:
         if line[0] != '>':
@@ -279,7 +279,7 @@ def create_quantile_asa_dicts(lines):
         quantile5 = np.percentile(amino_acid_asa_dict[amino_acid_char], 5)
         quantile95 = np.percentile(amino_acid_asa_dict[amino_acid_char], 95)
         quentile_asa_amino_acid_dict[amino_acid_char] = (quantile5, quantile95)
-    save_as_pickle(quentile_asa_amino_acid_dict, os.path.join(paths.ASA_path, 'quentile_asa_amino_acid_dict.pkl'))
+    save_as_pickle(quentile_asa_amino_acid_dict, os.path.join(ASA_path, 'quentile_asa_amino_acid_dict.pkl'))
     return quentile_asa_amino_acid_dict
 
 
@@ -292,11 +292,11 @@ def normalize_value(current_val, quantile5, quantile95):
     return normalize_value
 
 
-def normalize_asa_data(full_asa_pssm_path, normalized_asa_path):
+def normalize_asa_data(full_asa_pssm_path, normalized_asa_path,ASA_path):
     f = open(full_asa_pssm_path, 'r')
     lines = f.readlines()
     f.close()
-    quentile_asa_amino_acid_dict = create_quantile_asa_dicts(lines)
+    quentile_asa_amino_acid_dict = create_quantile_asa_dicts(lines,ASA_path)
     normalize_asa_pssm_content_file = open(normalized_asa_path, 'w')
     for line in lines:
         if line[0] == '>':
