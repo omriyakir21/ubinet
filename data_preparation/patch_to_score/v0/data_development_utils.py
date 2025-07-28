@@ -176,8 +176,7 @@ class Protein:
         return patch_dict
 
 
-def create_90_percentile(all_predictions_path,percentile_90_path):
-    all_predictions = load_as_pickle(all_predictions_path)
+def create_90_percentile(all_predictions: dict, percentile_90_path: str):
     all_predictions_ubiq = all_predictions['dict_predictions_ubiquitin']
     all_predictions_ubiq_flatten = [value for values_list in all_predictions_ubiq.values() for value in values_list]
     percentile_90 = np.percentile(all_predictions_ubiq_flatten, 90)

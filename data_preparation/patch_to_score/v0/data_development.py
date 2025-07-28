@@ -56,7 +56,7 @@ def create_small_sample_dict(merge_dict,small_merged_dict_path):
 
 
 
-def add_pesto_predictions(all_predictions_path,pesto_predictions_path):
+def add_pesto_predictions(path_with_pesto,pesto_predictions_path):
     pesto_predictions = load_as_pickle(pesto_predictions_path)
     all_predictions = load_as_pickle(all_predictions_path)  
     scanNet_keys = all_predictions['dict_resids'].keys()
@@ -65,7 +65,6 @@ def add_pesto_predictions(all_predictions_path,pesto_predictions_path):
     pesto_predictions = {f'pesto_{class_name}': {sub_k: sub_v for sub_k, sub_v in class_dict.items() if sub_k in intersection} for class_name, class_dict in pesto_predictions.items()}
     
     all_predictions.update(pesto_predictions)
-    path_with_pesto = all_predictions_path.split(".pkl")[0]+"_with_pesto.pkl"
     save_as_pickle(all_predictions, path_with_pesto)
     return all_predictions
 
@@ -90,20 +89,23 @@ if __name__ == "__main__":
     plan_dict = {
         'date': '03_04',
         'with_pesto': True,
+        'recreate_with_pesto': False,
         'all_predictions_path': os.path.join(paths.ScanNet_results_path, 'all_predictions_0304_MSA_True.pkl'),
         'pesto_predictions_path': '/home/iscb/wolfson/doririmon/home/order/ubinet/pesto/C_structured/PeSToIntegration/assets/data/pesto_inference_outputs/dict_predictions_pesto.pkl',
         
-        'create_percentile': False,
+        'create_percentile': True,
         'create_patches': False,
         'merge_patches': False,
         'fetch_and_partition': False,
-        'create_dummy_predictor': False
+        'create_dummy_predictor': False  # stay False for now
     }
     DATE = plan_dict['date']
     with_pesto = plan_dict['with_pesto']
     with_pesto_addition = '_with_pesto' if with_pesto else ''
-    training_name = f'{DATE}{with_pesto_addition}'
+    training_name = f'{DATE}{with_pesto_addition}_trial'
     all_predictions_path = plan_dict['all_predictions_path']
+    path_with_pesto = all_predictions_path.split(".pkl")[0]+"_with_pesto.pkl"
+    
     
     patches_dict_folder_path = os.path.join(paths.patches_dicts_path, f'{training_name}')
     os.makedirs(patches_dict_folder_path, exist_ok=True)
@@ -111,8 +113,12 @@ if __name__ == "__main__":
     os.makedirs(data_for_training_folder_path, exist_ok=True)
     pesto_predictions_path = plan_dict['pesto_predictions_path']
     merged_dict = None
-    if plan_dict['with_pesto']:
-        all_predictions = add_pesto_predictions(all_predictions_path,pesto_predictions_path)
+    if plan_dict['recreate_with_pesto']:
+        all_predictions = add_pesto_predictions(path_with_pesto,pesto_predictions_path)
+    
+    elif plan_dict['with_pesto']:
+        all_predictions = load_as_pickle(path_with_pesto)
+        
     else:
         all_predictions = load_as_pickle(all_predictions_path)
     
@@ -121,7 +127,7 @@ if __name__ == "__main__":
         # WE WILL USE IT LATER AS A THRESHOLD FOR AN AMINO ACID IN ORDER TO BE IN A PATCH 
         percentile_90_path = os.path.join(patches_dict_folder_path, 'percentile_90.pkl')
         if not os.path.exists(percentile_90_path):
-            dev_utils.create_90_percentile(all_predictions_path,percentile_90_path)
+            dev_utils.create_90_percentile(all_predictions, percentile_90_path)
     percentile_90 = load_as_pickle(percentile_90_path)
 
     # CREATING THE PATCHES IN BATCHES OF 1500 PROTEINS. SEE SCRIPTS/RUN_DATA_DEVELOPMENT.SH 

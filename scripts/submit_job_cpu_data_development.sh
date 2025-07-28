@@ -2,9 +2,10 @@
 #SBATCH --job-name=predict_entries_cpu
 #SBATCH --partition=cpu-killable # (see resources section)
 #SBATCH --time=7200 # max time (minutes)
+#SBATCH --output=./slurm_output/dataset_creation/data_development_cpu/%j/logs.out
 #SBATCH --signal=USR1@120 # how to end job when time’s up
 #SBATCH --nodes=1 # number of machines
 #SBATCH --ntasks=1 # number of processes
 #SBATCH --mem=32000 # CPU memory (MB)
 #SBATCH --cpus-per-task=8 # CPU cores per process
-python3 /home/iscb/wolfson/omriyakir/ubinet/data_preparation/patch_to_score/data_development.py $1
+python3 /home/iscb/wolfson/omriyakir/ubinet/data_preparation/patch_to_score/v0/data_development.py $1
