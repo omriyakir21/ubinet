@@ -1,7 +1,7 @@
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from data_preparation.ScanNet.create_tables_and_weights import cluster_sequences
 import numpy as np
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle,load_as_pickle
