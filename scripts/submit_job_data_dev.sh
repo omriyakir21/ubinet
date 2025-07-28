@@ -9,4 +9,4 @@
 #SBATCH --mem=32000 # CPU memory (MB)
 #SBATCH --gpus=1 # GPU cores per process
 #SBATCH --cpus-per-task=8 # CPU cores per process
-python3 /home/iscb/wolfson/omriyakir/ubinet/data_preparation/v0/patch_to_score/data_development.py
+python3 /home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/data_preparation/patch_to_score/v0/data_development.py
