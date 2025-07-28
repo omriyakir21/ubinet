@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import paths
-from data_preparation.patch_to_score import data_development_utils as development_utils
+from data_preparation.patch_to_score.v0 import data_development_utils as development_utils
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle
 import data_development_utils as dev_utils
 import numpy as np
