@@ -36,11 +36,11 @@ def create_data_relevant_for_training(max_number_of_components, merged_dict, dir
     return uniprots, sequences, protein_paths, data_components_flattend, data_protein_size, data_number_of_components, data_components, sources
 
 
-def create_patches(all_predictions, dir_path, percentile_90, patch_index: int):
+def create_patches(all_predictions, dir_path: str, percentile_90: float, with_pesto: bool, patch_index: int):
     PLDDT_THRESHOLD = 50
-
+    
     dev_utils.create_patches_dict(
-        patch_index, dir_path, PLDDT_THRESHOLD, all_predictions, percentile_90)
+        patch_index, dir_path, PLDDT_THRESHOLD, all_predictions, percentile_90, with_pesto)
 
 
 def create_small_sample_dict(merge_dict, small_merged_dict_path):
