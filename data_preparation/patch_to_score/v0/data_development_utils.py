@@ -1,16 +1,9 @@
 import sys
 import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import csv
-import pickle
-from itertools import chain
-from plistlib import load
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle, \
-    THREE_LETTERS_TO_SINGLE_AA_DICT, aa_out_of_chain, get_str_seq_of_chain
+    aa_out_of_chain, get_str_seq_of_chain
 import networkx as nx
-import os
-import networkx
 from sklearn.preprocessing import KBinsDiscretizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
@@ -21,12 +14,10 @@ import seaborn as sns
 from sklearn.metrics import auc
 import paths
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
-import pickle
 import numpy as np
 import tensorflow as tf
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBIO import PDBIO
-import pdb
 
 MAX_NUMBER_OF_COMPONENTS = 10
 NEGATIVE_SOURCES = set(

@@ -1,12 +1,9 @@
 import os
-import sys
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-from data_preparation.ScanNet.create_tables_and_weights import cluster_sequences
 import numpy as np
-from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle,load_as_pickle
-from data_development_utils import create_training_folds
 import paths
+from data_preparation.ScanNet.create_tables_and_weights import cluster_sequences
+from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle,load_as_pickle
+from data_preparation.patch_to_score.v0.data_development_utils import create_training_folds
 
 
 def create_cluster_participants_indices(cluster_indices):

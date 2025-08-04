@@ -1,14 +1,11 @@
-import tensorflow as tf
-from data_preparation.ScanNet.create_tables_and_weights import cluster_sequences
-import protein_level_data_partition_utils as partition_utils
-import numpy as np
-import data_development_utils as dev_utils
-from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle
-from data_preparation.patch_to_score.v0 import data_development_utils as development_utils
 import paths
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+import numpy as np
+import tensorflow as tf
+from data_preparation.patch_to_score.v0 import data_development_utils as dev_utils
+from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle
+from data_preparation.patch_to_score.v0 import protein_level_data_partition_utils as partition_utils
 
 
 def create_merged_protein_object_dict(dir_path):
