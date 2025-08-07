@@ -53,7 +53,7 @@ def create_small_sample_dict(merge_dict, small_merged_dict_path):
     return small_dict
 
 
-def add_pesto_predictions(path_with_pesto, pesto_predictions_path):
+def add_pesto_predictions(path_with_pesto: str, pesto_predictions_path: str, all_predictions_path: str):
     pesto_predictions = load_as_pickle(pesto_predictions_path)
     all_predictions = load_as_pickle(all_predictions_path)
     scanNet_keys = all_predictions['dict_resids'].keys()
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     merged_dict = None
     if plan_dict['recreate_with_pesto']:
         all_predictions = add_pesto_predictions(
-            path_with_pesto, pesto_predictions_path)
+            path_with_pesto, pesto_predictions_path, all_predictions_path)
 
     elif plan_dict['with_pesto']:
         all_predictions = load_as_pickle(path_with_pesto)
