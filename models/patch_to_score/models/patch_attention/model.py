@@ -102,16 +102,18 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
         input_data, coordinates, size_value, n_patches_hot_encoded_value, max_number_of_patches)
     F = apply_mlps(features, features_mlp_hidden_sizes,
                    features_mlp_dropout_rate, activation)
-    
+
     if use_pair_bias:
         pairs_transition = PairsTransition(pairs_channel_dimension)
         D = pairs_transition(pairwise_distances)
-        attention_output = PatchAttentionWithPairBias(
-            attention_dimension, num_heads, use_pair_bias)([F, D])
+        patch_attention_input = [F, D]
     else:
-        attention_output = PatchAttentionWithPairBias(
-            attention_dimension, num_heads, use_pair_bias)([F])
-    
+        patch_attention_input = [F]
+
+    attention_output = PatchAttentionWithPairBias(
+        attention_dimension, num_heads, use_pair_bias)(patch_attention_input)
+    attention_output = F + attention_output  # residual connection
+
     attention_mlp_output = apply_mlps(
         attention_output, attention_mlp_hidden_sizes, attention_mlp_dropout_rate, activation)
     global_pooling_output = GlobalSumPooling(
