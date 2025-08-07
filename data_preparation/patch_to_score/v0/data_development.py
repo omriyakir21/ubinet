@@ -108,11 +108,12 @@ if __name__ == "__main__":
         'all_predictions_path': os.path.join(paths.ScanNet_results_path, 'all_predictions_2107_MSA_True.pkl'),
         'pesto_predictions_path': '/home/iscb/wolfson/doririmon/home/order/ubinet/pesto/C_structured/PeSToIntegration/assets/data/pesto_inference_outputs/dict_predictions_pesto.pkl',
         'create_percentile': False,
-        'create_patches': True,
-        'merge_patches': False,
-        'fetch_and_partition': False,
+        'create_patches': False,
+        'merge_patches': True,
+        'fetch_and_partition': True,
         'create_dummy_predictor': False  # stay False for now
     }
+    print('plan_dict:', plan_dict)
     DATE = plan_dict['date']
     with_pesto = plan_dict['with_pesto']
     with_pesto_addition = '_with_pesto' if with_pesto else ''
@@ -159,6 +160,7 @@ if __name__ == "__main__":
     if plan_dict['merge_patches']:
         merged_dict = create_merged_protein_object_dict(
             patches_dict_folder_path)
+        print('created merged_dict, len:', len(merged_dict), ' saving to:', merged_dict_path)
         if not os.path.exists(merged_dict_path):
             save_as_pickle(merged_dict, merged_dict_path)
 
@@ -170,7 +172,9 @@ if __name__ == "__main__":
     #     merged_dict = load_as_pickle(small_sample_dict_path)
 
     if plan_dict['fetch_and_partition']:
+        print('fetching merged_dict and partitioning it')
         merged_dict = load_as_pickle(merged_dict_path)
+        print('fetched, len:', len(merged_dict))
 
         # GET RELEVANT INFO FROM PROTEIN OBJECTS
         proteins = [protein for _, protein in merged_dict.items()]
