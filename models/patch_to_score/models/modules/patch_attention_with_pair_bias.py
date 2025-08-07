@@ -67,7 +67,6 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         if self.use_pair_bias:
             D = inputs[1]
             B = self.pairs_layernorm(D)
-            B = tf.keras.layers.ReLU()(B)
             B = self.dense_pairs_heads(B)
             B = tf.transpose(B, perm=[0, 3, 1, 2])
 
