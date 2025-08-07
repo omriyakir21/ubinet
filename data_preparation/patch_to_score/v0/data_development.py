@@ -104,11 +104,11 @@ if __name__ == "__main__":
     plan_dict = {
         'date': '21_07',
         'with_pesto': True,
-        'recreate_with_pesto': True,
+        'recreate_with_pesto': False,
         'all_predictions_path': os.path.join(paths.ScanNet_results_path, 'all_predictions_2107_MSA_True.pkl'),
         'pesto_predictions_path': '/home/iscb/wolfson/doririmon/home/order/ubinet/pesto/C_structured/PeSToIntegration/assets/data/pesto_inference_outputs/dict_predictions_pesto.pkl',
-        'create_percentile': True,
-        'create_patches': False,
+        'create_percentile': False,
+        'create_patches': True,
         'merge_patches': False,
         'fetch_and_partition': False,
         'create_dummy_predictor': False  # stay False for now
