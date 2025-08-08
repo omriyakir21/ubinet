@@ -64,7 +64,8 @@ def create_masked_inputs(input_data: tf.Tensor, coordinates: tf.Tensor, size_val
 
     # zero out broadcased features where mask is 0
     features = features * mask_condition[..., None]
-    pairwise_distances = pairwise_distances * mask_condition[..., None]
+    pairwise_distances = pairwise_distances * mask_condition[..., None]  # zero rows of masked patches
+    pairwise_distances = pairwise_distances * tf.expand_dims(mask_condition, axis=1)  # zero columns of masked patches
 
     features, pairwise_distances = mask_inputs(features, pairwise_distances)
     return features, pairwise_distances
