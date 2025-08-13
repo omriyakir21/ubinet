@@ -167,13 +167,16 @@ def order_paths_lists(pdbs_path, assemblies_path):
 def aa_out_of_chain(chain):
     """
     :param chain: chain object
-    :return: list of aa (not HOH molecule)
+    :return: list of aa (not HOH molecule and not HETATM residues)
     """
     my_list = []
     amino_acids = chain.get_residues()
     for aa in amino_acids:
+        # Check that the residue is a standard residue (not a hetero/residue, such as HETATM)
+        if aa.get_id()[0] != " ":
+            continue
         name = str(aa.get_resname())
-        if name in THREE_LETTERS_TO_SINGLE_AA_DICT.keys():  # amino acid and not other molecule
+        if name in THREE_LETTERS_TO_SINGLE_AA_DICT.keys():
             my_list.append(aa)
     return my_list
 

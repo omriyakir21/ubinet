@@ -150,7 +150,7 @@ def folds_joining(scan_folds, ubiq_folds, structures_scan, structures_ubiq, weig
     cross_edged_weight_folds = [cross_edged_weight_folds_dict[i] for i in range(len(scan_folds))]
     return ubiq_fold_assigments, cross_edged_weight_folds
     
-def assign_ubiq_clusters(ubiq_chain_to_cluster, scan_folds, structures_scan, structures_ubiq, weight_dict):
+def assign_ubiq_clusters(ubiq_chain_to_cluster, scan_folds, structures_scan, structures_ubiq, weight_dict,weight_bound_for_ubiq_fold):
     """
     Assign ubiq clusters to folds based on inter-source edges.
     Ties are broken using the fold with the lowest total sample weight.
@@ -173,7 +173,8 @@ def assign_ubiq_clusters(ubiq_chain_to_cluster, scan_folds, structures_scan, str
 
     # Calculate total ubiq weight and set fill threshold (22% of total)
     total_ubq_weight = sum(weight_dict[c] for chains in ubiq_clusters.values() for c in chains)
-    fill_threshold = total_ubq_weight * 0.205
+    # fill_threshold = total_ubq_weight * 0.205
+    fill_threshold = total_ubq_weight * weight_bound_for_ubiq_fold
 
     fold_ubq_weight = {f: 0.0 for f in scan_folds}
     # Sort ubiq clusters by total sample weight (descending)
@@ -266,7 +267,7 @@ def create_weight_dict(scan_pssm:str,ubiq_pssm:str,helper_dir:str, debug:bool,we
             out_f.write(line)
     combined_with_model = os.path.join(helper_dir, 'combined_pssms_with_model_num.txt')
     add_model_num_to_dataset(combined_pssm, combined_with_model)
-    list_origins, list_sequences, list_resids, list_labels = read_labels(combined_with_model)
+    list_origins, list_sequences, _, _ = read_labels(combined_with_model)
     all_weights_v0 = np.ones(len(list_sequences))
     all_weights_v1 = calculate_weights(list_sequences, resolutions=[100, 95, 90, 70])
     all_weights_v2 = calculate_weights(list_sequences, resolutions=[95])
@@ -292,9 +293,10 @@ def create_weight_dict(scan_pssm:str,ubiq_pssm:str,helper_dir:str, debug:bool,we
     
 if __name__ == '__main__':
     plan_dict = {
-        'name': "v2",
+        'name': "v4",
         'seq_id': "0.95",
         'ASA_THRESHOLD_VALUE': 0.1,
+        'weight_bound_for_ubiq_fold':0.205,
         'debug':False,
         'create_weight_table':False,
         'partition_ubiqs': 'scanNet',  # 'seperate' or 'scanNet'
@@ -312,8 +314,8 @@ if __name__ == '__main__':
     
     cath_df = cath_utils.make_cath_df_new(os.path.join(paths.cath_path, "cath_b.20230204.txt"))
     seperate_addition = "_seperate" if plan_dict['partition_ubiqs'] == 'seperate' else ""
-
-
+    bound_addition = f"_{str(plan_dict['weight_bound_for_ubiq_fold']).split('.')[1]}" if plan_dict['partition_ubiqs'] == 'scanNet' else ""
+    print(f"partitioning with params: {plan_dict}", flush=True)
 
     weight_dict_path = os.path.join(cath_intermidiate_helper_files_path, f'chain_weights{"_debug" if plan_dict["debug"] else ""}.pkl')
     if plan_dict['create_weight_table']:
@@ -333,10 +335,10 @@ if __name__ == '__main__':
         ubiq_folds,cross_edged_weight_folds = folds_joining(scan_folds, ubiq_folds, structs_scan, structs_ubiq, weight_dict)
     else:
         # Cluster & assign ScanNet (debug subset)
-        ubiq_folds,cross_edged_weight_folds = assign_ubiq_clusters(ubiq_map, scan_folds, structs_scan, structs_ubiq,weight_dict)
+        ubiq_folds,cross_edged_weight_folds = assign_ubiq_clusters(ubiq_map, scan_folds, structs_scan, structs_ubiq,weight_dict,plan_dict['weight_bound_for_ubiq_fold'])
         # scan_assign = assign_scanNet_clusters(scan_map, ubiq_folds, structs_ubiq, structs_scan,weight_dict)
     # Save partition summary
-    out_json = os.path.join(paths.cath_intermediate_files_path, f'partition_summary{seperate_addition}{debug_addition}.json')
+    out_json = os.path.join(cath_intermidiate_helper_files_path, f'partition_summary{seperate_addition}{bound_addition}{debug_addition}.json')
     save_partition_info(scan_folds, ubiq_folds,cross_edged_weight_folds,weight_dict, out_json)
 
     print('Debug partition complete. Summary at', out_json)
@@ -346,5 +348,5 @@ if __name__ == '__main__':
 
     propagated_pssm_file_path = os.path.join(PSSM_seq_id_folder, f'propagatedPssmFile_{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}{debug_addition}.txt')
     for index,keys in folds.items():
-        pssm_fold_path = os.path.join(PSSM_seq_id_folder, f'PSSM{seperate_addition}{index}{debug_addition}.txt')
+        pssm_fold_path = os.path.join(PSSM_seq_id_folder, f'PSSM{seperate_addition}{bound_addition}_{index}{debug_addition}.txt')
         filter_pssm_using_keys(propagated_pssm_file_path, keys, pssm_fold_path)

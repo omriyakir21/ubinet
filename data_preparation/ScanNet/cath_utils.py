@@ -8,8 +8,6 @@ from Bio import pairwise2
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 import pickle
-from data_preparation.ScanNet.LabelPropagationAlgorithm_utils import split_receptors_into_individual_chains_only_PSSM
-from data_preparation.ScanNet.AF2_augmentations import create_chain_dict_with_all_info_only_pssm
 import paths
 
 
@@ -37,19 +35,6 @@ def calculate_identity(seqA, seqB):
     return identity
 
 
-def keep_only_chars(string):
-    return ''.join([char for char in string if char.isalpha()])
-
-
-def list_creation_util(full_name):
-    pdb_name = full_name[0:4]
-    chains_string = full_name.split('_')[1]
-    chains_strings_list = chains_string.split('+')
-    chains_names_list = [keep_only_chars(chainString) for chainString in chains_strings_list]
-    pdb_names_with_chains_list = [pdb_name + chainName for chainName in chains_names_list]
-    return pdb_name, pdb_names_with_chains_list
-
-
 def create_dictionaries(names_list, sizes_list, sequence_lists, full_names_list, pdb_names_with_chains_lists):
     structures_dicts = {}
     for i in range(len(full_names_list)):
@@ -61,62 +46,6 @@ def create_dictionaries(names_list, sizes_list, sequence_lists, full_names_list,
         structures_dicts[full_names_list[i]] = structureDict
     return structures_dicts
 
-
-def list_creation(file_name):
-    """
-    :param file_name: PSSM file
-    :return: tuple(names_list,sizes_list)
-    names_list = list of all the chains's name in the file
-    sizes_list = list of all the chains's number of amino acids in the file
-    """
-    names_list = []
-    full_names_list = []
-    pdb_names_with_chains_lists = []
-    sizes_list = []
-    sequence_lists = [[]]
-    file1 = open(file_name, 'r')
-    last_chain_name = ''
-    line = file1.readline().split()
-    cnt = 0
-    seq = ''
-    while len(line) != 0:  # end of file
-        cnt += 1
-        if len(line) == 1:  # in chain header line
-            sequence_lists[len(sequence_lists) - 1].append(seq)
-            sizes_list.append(cnt)
-            full_name = line[0][1:]
-            full_names_list.append(full_name)
-            pdb_name, pdb_names_with_chains_list = list_creation_util(full_name)
-            names_list.append(pdb_name)
-            pdb_names_with_chains_lists.append(pdb_names_with_chains_list)
-            try:
-                if len(pdb_names_with_chains_lists) > 1:
-                    assert (len(sequence_lists[len(sequence_lists) - 1]) == len(
-                        pdb_names_with_chains_lists[len(pdb_names_with_chains_lists) - 2]))
-                    assert (sizes_list[len(sizes_list) - 1]) == sum(
-                        [len(seq) for seq in sequence_lists[len(sequence_lists) - 1]])
-            except:
-                print(pdb_names_with_chains_list)
-                print(sequence_lists[len(sequence_lists) - 1])
-                raise Exception(pdb_name)
-            sequence_lists.append([])
-            cnt = -1
-            seq = ''
-            last_chain_name = ''
-        else:
-            if last_chain_name != line[0]:  # switching chains
-                last_chain_name = line[0]
-                if len(seq) != 0:
-                    sequence_lists[len(sequence_lists) - 1].append(seq)
-                seq = ''
-            seq = seq + line[2]  # not chain's name
-        line = file1.readline().split()
-    sizes_list.append(cnt)
-    sequence_lists[len(sequence_lists) - 1].append(seq)
-    sizes_list = sizes_list[1:]  # first one is redundent
-    sequence_lists = sequence_lists[1:]
-    file1.close()
-    return names_list, sizes_list, sequence_lists, full_names_list, pdb_names_with_chains_lists
 
 def scanNet_PSSM_files_concatenation():
     list_dataset_locations = [os.path.join(paths.ScanNet_Ub_PPBS_datasets,f'labels_{dataset}.txt') for dataset in list_scanNet_datasets]
@@ -138,56 +67,15 @@ def scanNet_PSSM_files_concatenation():
     
     return output_file_path
 
-def recreate_PSSM_file_from_dict(chain_dict,PSSM_file, output_file_path):
-    with open(PSSM_file, 'r') as f:
-        lines = f.readlines()
-    save_chain = ''
-    with open(output_file_path, 'w') as f:
-        for line in lines:
-            if line[0] == '>':
-                full_name = line[1:len(line) - 1]
-                pdb = full_name[0:4]
-                amino_acid_cnt = 0
 
-            else:
-                line = line.split(' ')
-                chain = line[0]
-                if chain != save_chain:
-                    save_chain = chain
-                    amino_acid_cnt = 0
 
-                line[3] = chain_dict[f'{pdb}_{chain}']['labels'][amino_acid_cnt]
-                amino_acid_cnt += 1
-                line = " ".join(line)+'\n'
-            f.write(line)
- 
-
-def propagate_labels_of_chain(ubiq_chain_labels,scanNet_chain_labels):
-    assert len(ubiq_chain_labels) == len(scanNet_chain_labels)
-    new_labels = [str(max(int(ubiq_chain_labels[i]),int(scanNet_chain_labels[i]))) for i in range (len(ubiq_chain_labels))]
-    return new_labels
-
-def propagate_labels_and_concat(ubiq_PSSM,scanNet_PSSM,pssm_folder):
-    _, _, _, scanNet_full_names_list,_ = list_creation(scanNet_PSSM)
-    if len(scanNet_full_names_list) != len(set(scanNet_full_names_list)):
-        raise ValueError("Duplicate names found in full_names_list.")
-    
-    _, ubiq_chains_sequences, ubiq_chains_labels, ubiq_chain_names, ubiq_lines = split_receptors_into_individual_chains_only_PSSM(ubiq_PSSM)
-    _, scanNet_chains_sequences, scanNet_chains_labels, scanNet_chain_names, scanNet_lines = split_receptors_into_individual_chains_only_PSSM(scanNet_PSSM)
-    ubiq_chain_dict = create_chain_dict_with_all_info_only_pssm(ubiq_chains_sequences, ubiq_chains_labels, ubiq_chain_names, ubiq_lines)
-    scanNet_chain_dict = create_chain_dict_with_all_info_only_pssm(scanNet_chains_sequences, scanNet_chains_labels, scanNet_chain_names, scanNet_lines)
-    common_keys = set(ubiq_chain_dict.keys()).intersection(set(scanNet_chain_dict.keys()))
-    for key in common_keys:
-        ubiq_chain_labels = ubiq_chain_dict[key]['labels']
-        scanNet_chain_labels = scanNet_chain_dict[key]['labels']
-        new_labels = propagate_labels_of_chain(ubiq_chain_labels, scanNet_chain_labels)
-        ubiq_chain_dict[key]['labels'] = new_labels
-        scanNet_chain_dict[key]['labels'] = new_labels
-    scanNet_output_PSSM = os.path.join(pssm_folder, 'propagated_protein_binding_scanNet.txt')
-    ubiq_output_PSSM = os.path.join(pssm_folder, 'propagated_protein_binding_ubiq.txt')   
-    recreate_PSSM_file_from_dict(scanNet_chain_dict,scanNet_PSSM,scanNet_output_PSSM)
-    recreate_PSSM_file_from_dict(ubiq_chain_dict,ubiq_PSSM,ubiq_output_PSSM)
-    return ubiq_output_PSSM, scanNet_output_PSSM
+def concat(ubiq_PSSM, scanNet_PSSM, output_file):
+    with open(ubiq_PSSM, 'r') as f1, open(scanNet_PSSM, 'r') as f2, open(output_file, 'w') as outfile:
+        content1 = f1.read().strip()
+        content2 = f2.read().strip()
+        concatenated_content = content1 + "\n" + content2
+        outfile.write(concatenated_content)
+    return output_file
 
 def concat_and_remove_duplicates(ubiq_PSSM, scanNet_PSSM,output_file):
     with open(ubiq_PSSM, 'r') as f1, open(scanNet_PSSM, 'r') as f2, open(output_file, 'w') as outfile:
@@ -474,13 +362,13 @@ def chain_lists_to_chain_index_dict(chain_lists):
     return chain_dict
 
 
-def divide_pssm(chain_dict, full_pssm_file_path,folder_path,with_scanNet_addition):
+def divide_pssm(chain_dict, full_pssm_file_path,folder_path):
     """
     :param chain_dict: chainDict[chainName] = index of chain cluster(i if chain in ChainLists[i])
     create len(chainLists) txt files. the i txt file contains the chains in chainLists[i]
     """
 
-    filesList = [open(os.path.join(folder_path, f"PSSM{with_scanNet_addition}{str(i)}.txt"), 'w') for i in range(5)]
+    filesList = [open(os.path.join(folder_path, f"PSSM{str(i)}.txt"), 'w') for i in range(5)]
     pssm_file = open(full_pssm_file_path, 'r')
     lines = pssm_file.readlines()
     fillIndex = -1  # fillIndex = i -> we now write to PSSMi.txt
