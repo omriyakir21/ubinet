@@ -208,42 +208,65 @@ def rename_cif_files(folder_path):
 
 
 if __name__ == "__main__":
-    name = 'v1'
+    name = 'v4'
+    plan_dict = {
+        'download_assemblies_and_assymetrics': False,
+        'create_save_list_of_entry_dicts': False,
+        'unpack_queen_data': False,
+        'run_create_db_with_user_argv': False,
+        'integrate_all_files': True,
+        'remove_short_chains': True,
+        'copy_files_to_new_folder': False,
+    }
     # retrive the list of PDB names
     PDB_names_list = db_utils.read_PDB_names_from_file(UBIQ_LIST_PATH)
     # download the assemblies and assymetrics files
-    pdbs_path = os.path.join(paths.pdbs_path, name)
-    assemblies_path = os.path.join(paths.assemblies_path, name)
-    entry_dicts_path = os.path.join(paths.entry_dicts_path, name)
+    pdbs_path = os.path.join(paths.pdbs_path, 'v2')
+    assemblies_path = os.path.join(paths.assemblies_path, 'v2')
+    entry_dicts_path = os.path.join(paths.entry_dicts_path, 'v2')
     os.makedirs(pdbs_path, exist_ok=True)
     os.makedirs(assemblies_path, exist_ok=True)
     os.makedirs(entry_dicts_path, exist_ok=True)
-    # download_assemblies_and_assymetrics(PDB_names_list, pdbs_path, assemblies_path)
-    # create_save_list_of_entry_dicts(pdbs_path,assemblies_path,entry_dicts_path)
+    
+    if plan_dict['download_assemblies_and_assymetrics']:
+        download_assemblies_and_assymetrics(PDB_names_list, pdbs_path, assemblies_path)
+    
+    if plan_dict['create_save_list_of_entry_dicts']:
+        create_save_list_of_entry_dicts(pdbs_path, assemblies_path, entry_dicts_path)
     # use queen before this step
-    # chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
-    #     os.path.join(entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'), assemblies_path)
+    if plan_dict['unpack_queen_data']:
+
+        chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
+            os.path.join(entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'), assemblies_path)
+    
     # use this step with user argv
     NUM_SUBLISTS = 40
-    chosen_assemblies = db_utils.load_as_pickle(os.path.join(assemblies_path, 'chosen_assemblies.pkl'))
-    print(len(chosen_assemblies))
+    chosen_assemblies_path = os.path.join(assemblies_path, 'chosen_assemblies.pkl')
     ImerFiles_path = os.path.join(paths.ImerFiles_path, name)
     os.makedirs(ImerFiles_path, exist_ok=True)
     ASA_path = os.path.join(paths.ASA_path, name)
     os.makedirs(ASA_path, exist_ok=True)
-    # run_create_db_with_user_argv(pdbs_path,os.path.join(assemblies_path, 'chosen_assemblies.pkl'), NUM_SUBLISTS,ImerFiles_path, ASA_path)
-    # #use this step after running the previous step
-    integrate_all_files(NUM_SUBLISTS,ImerFiles_path,ASA_path)
-    MIN_LENGTH = 15 
-    remove_short_chains(os.path.join(ImerFiles_path, 'Integrated_Checkchains_mer.txt'),
-                        os.path.join(ImerFiles_path, 'Integrated_Checkchains_mer_filtered.txt'),
-                        MIN_LENGTH,
-                        os.path.join(ImerFiles_path, 'remove_short_chains_log.txt'))
-    remove_short_chains(os.path.join(ASA_path, 'Integrated_Checkchains_asa_mer.txt'),
-                        os.path.join(ASA_path, 'Integrated_Checkchains_asa_mer_filtered.txt'),
-                        MIN_LENGTH,
-                        os.path.join(ASA_path, 'remove_short_chains_asa_log.txt'))
-    chosen_assemblies_dir = os.path.join(paths.chosen_assemblies_path, name) 
-    os.makedirs(chosen_assemblies_dir, exist_ok=True)
-    copy_files_to_new_folder(chosen_assemblies, chosen_assemblies_dir)
-    rename_cif_files(chosen_assemblies_dir)
+    
+    if plan_dict['run_create_db_with_user_argv']:
+        run_create_db_with_user_argv(pdbs_path, chosen_assemblies_path, NUM_SUBLISTS, ImerFiles_path, ASA_path)
+
+    if plan_dict['integrate_all_files']:
+        integrate_all_files(NUM_SUBLISTS,ImerFiles_path,ASA_path)
+    
+    if plan_dict['remove_short_chains']:
+        MIN_LENGTH = 15 
+        
+        remove_short_chains(os.path.join(ImerFiles_path, 'Integrated_Checkchains_mer.txt'),
+                            os.path.join(ImerFiles_path, 'Integrated_Checkchains_mer_filtered.txt'),
+                            MIN_LENGTH,
+                            os.path.join(ImerFiles_path, 'remove_short_chains_log.txt'))
+        remove_short_chains(os.path.join(ASA_path, 'Integrated_Checkchains_asa_mer.txt'),
+                            os.path.join(ASA_path, 'Integrated_Checkchains_asa_mer_filtered.txt'),
+                            MIN_LENGTH,
+                            os.path.join(ASA_path, 'remove_short_chains_asa_log.txt'))
+    if plan_dict['copy_files_to_new_folder']:    
+        chosen_assemblies_dir = os.path.join(paths.chosen_assemblies_path, name) 
+        os.makedirs(chosen_assemblies_dir, exist_ok=True)
+        chosen_assemblies = db_utils.load_as_pickle(chosen_assemblies_path)
+        copy_files_to_new_folder(chosen_assemblies, chosen_assemblies_dir)
+        rename_cif_files(chosen_assemblies_dir)
