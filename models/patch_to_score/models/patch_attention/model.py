@@ -33,13 +33,6 @@ def create_broadcasted_features(n_patches_hot_encoded_value: tf.Tensor, max_numb
     return concat_input_data
 
 
-def mask_inputs(features: tf.Tensor, pairwise_distances: tf.Tensor):
-    features = tf.keras.layers.Masking(mask_value=0.0)(features)
-    pairwise_distances = tf.keras.layers.Masking(
-        mask_value=0.0)(pairwise_distances)
-    return features, pairwise_distances
-
-
 def apply_mlps(inputs: tf.Tensor, hidden_sizes: List[Tuple[int, int]], dropout_rate: float, activation: str) -> tf.Tensor:
     current_output = inputs
     for hidden_size in hidden_sizes:
@@ -64,10 +57,17 @@ def create_masked_inputs(input_data: tf.Tensor, coordinates: tf.Tensor, size_val
 
     # zero out broadcased features where mask is 0
     features = features * mask_condition[..., None]
-    pairwise_distances = pairwise_distances * mask_condition[..., None]  # zero rows of masked patches
-    pairwise_distances = pairwise_distances * tf.expand_dims(mask_condition, axis=1)  # zero columns of masked patches
 
-    features, pairwise_distances = mask_inputs(features, pairwise_distances)
+    mask_matrix = mask_condition[:, :, None] * mask_condition[:, None, :]  
+    pairwise_distances = pairwise_distances * mask_matrix  # zero out pairwise distances where mask is 0
+    mask_matrix -= 1
+    pairwise_distances = pairwise_distances + mask_matrix  # change masked values to -1 to avoid masking the diagonal
+    pairwise_distances = tf.expand_dims(pairwise_distances, axis=-1)  # add channel dimension
+
+    features = tf.keras.layers.Masking(mask_value=0.0)(features)
+    pairwise_distances = tf.keras.layers.Masking(
+        mask_value=-1.0)(pairwise_distances)
+    
     return features, pairwise_distances
 
 
