@@ -1,4 +1,5 @@
-from keras import ops
+# from keras import ops
+import tensorflow as tf
 from keras.constraints import NonNeg
 import numpy as np
 from sklearn.mixture import GaussianMixture
@@ -22,7 +23,7 @@ class ConstraintBetween(Constraint):
         self.maximum = maximum
 
     def __call__(self, w):
-        return ops.clip(w, self.minimum, self.maximum)
+        return tf.clip(w, self.minimum, self.maximum)
 
 
 class GaussianKernel(Layer):
@@ -71,21 +72,21 @@ class GaussianKernel(Layer):
 
     def call(self, inputs, mask=None):
         if self.covariance_type == 'diag':
-            activity = ops.exp(- 0.5 * ops.sum(
+            activity = tf.exp(- 0.5 * tf.math.reduce_sum(
                 (
                     (
-                        ops.expand_dims(inputs, axis=-1)
-                        - ops.reshape(self.centers,
+                        tf.expand_dims(inputs, axis=-1)
+                        - tf.reshape(self.centers,
                                       [1 for _ in range(self.nbatch_dim)] + self.center_shape)
-                    ) / ops.reshape(self.eps + self.widths, [1 for _ in range(self.nbatch_dim)] + self.width_shape)
+                    ) / tf.reshape(self.eps + self.widths, [1 for _ in range(self.nbatch_dim)] + self.width_shape)
                 )**2, axis=-2))
 
         elif self.covariance_type == 'full':
-            intermediate2 = ops.einsum('...i,lij->...lj', inputs, self.sqrt_precision) - ops.reshape(ops.einsum(
+            intermediate2 = tf.einsum('...i,lij->...lj', inputs, self.sqrt_precision) - tf.reshape(tf.einsum(
                 'ij,lij->lj', self.centers, self.sqrt_precision), [1 for _ in range(self.nbatch_dim)] + self.center_shape)
-            activity = ops.exp(- 0.5 * ops.sum(intermediate2**2, axis=-2))
+            activity = tf.exp(- 0.5 * tf.math.reduce_sum(intermediate2**2, axis=-2))
 
-        return activity
+        return activity * tf.cast(mask[..., None], activity.dtype)  # zero out masked values
 
     def compute_output_shape(self, input_shape):
         output_shape = list(input_shape[:-1]) + [self.N]
@@ -166,7 +167,7 @@ class MaskedDense(keras.layers.Dense):
 
     def call(self, inputs, mask=None):
         if mask is not None:
-            inputs = inputs * ops.expand_dims(ops.cast(mask, inputs.dtype), -1)
+            inputs = inputs * tf.expand_dims(tf.cast(mask, inputs.dtype), -1)
         outputs = super().call(inputs)
         return outputs
 

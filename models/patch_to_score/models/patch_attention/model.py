@@ -1,6 +1,8 @@
 from typing import Tuple, List
 import tensorflow as tf
-from models.patch_to_score.models.modules import PairsTransition, TransformerEncoderMLP, PatchAttentionWithPairBias, GlobalSumPooling
+import numpy as np
+from models.patch_to_score.models.modules import TransformerEncoderMLP, PatchAttentionWithPairBias, GlobalSumPooling, \
+    GaussianKernel, initialize_GaussianKernelRandom
 
 
 def broadcast_shape(x, max_number_of_patches: int) -> tf.Tensor:
@@ -71,6 +73,14 @@ def create_masked_inputs(input_data: tf.Tensor, coordinates: tf.Tensor, size_val
     return features, pairwise_distances
 
 
+def initialize_gaussian_kernel_uniform(xrange: Tuple[float, float], pairs_channel_dimension: int) -> GaussianKernel:
+    centers = np.linspace(xrange[0], xrange[1], pairs_channel_dimension)
+    widths = [((xrange[1] - xrange[0]) / (pairs_channel_dimension/ 4)) for _ in range(pairs_channel_dimension)]
+    initial_values = [np.array([centers]), np.array([widths])]
+    kernel = GaussianKernel(pairs_channel_dimension, initial_values, 'diag')
+    return kernel
+
+
 def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_dropout_rate: float,
                 output_mlp_hidden_sizes: List[Tuple[int, int]], output_mlp_dropout_rate: float,
                 attention_mlp_hidden_sizes: List[Tuple[int, int]], attention_mlp_dropout_rate: float,
@@ -105,8 +115,8 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
                    features_mlp_dropout_rate, activation)
 
     if use_pair_bias:
-        pairs_transition = PairsTransition(pairs_channel_dimension)
-        D = pairs_transition(pairwise_distances)
+        kernel = initialize_gaussian_kernel_uniform()
+        D = kernel(pairwise_distances)
         patch_attention_input = [F, D]
     else:
         patch_attention_input = [F]
