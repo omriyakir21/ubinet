@@ -1,4 +1,4 @@
-# from keras import ops
+from typing import Tuple
 import tensorflow as tf
 from keras.constraints import NonNeg
 import numpy as np
@@ -77,16 +77,18 @@ class GaussianKernel(Layer):
                     (
                         tf.expand_dims(inputs, axis=-1)
                         - tf.reshape(self.centers,
-                                      [1 for _ in range(self.nbatch_dim)] + self.center_shape)
+                                     [1 for _ in range(self.nbatch_dim)] + self.center_shape)
                     ) / tf.reshape(self.eps + self.widths, [1 for _ in range(self.nbatch_dim)] + self.width_shape)
                 )**2, axis=-2))
 
         elif self.covariance_type == 'full':
             intermediate2 = tf.einsum('...i,lij->...lj', inputs, self.sqrt_precision) - tf.reshape(tf.einsum(
                 'ij,lij->lj', self.centers, self.sqrt_precision), [1 for _ in range(self.nbatch_dim)] + self.center_shape)
-            activity = tf.exp(- 0.5 * tf.math.reduce_sum(intermediate2**2, axis=-2))
+            activity = tf.exp(- 0.5 *
+                              tf.math.reduce_sum(intermediate2**2, axis=-2))
 
-        return activity * tf.cast(mask[..., None], activity.dtype)  # zero out masked values
+        # zero out masked values
+        return activity * tf.cast(mask[..., None], activity.dtype)
 
     def compute_output_shape(self, input_shape):
         output_shape = list(input_shape[:-1]) + [self.N]
@@ -160,16 +162,9 @@ def initialize_GaussianKernelRandom(xlims, N, covariance_type):
     return initial_values
 
 
-class MaskedDense(keras.layers.Dense):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.supports_masking = True
-
-    def call(self, inputs, mask=None):
-        if mask is not None:
-            inputs = inputs * tf.expand_dims(tf.cast(mask, inputs.dtype), -1)
-        outputs = super().call(inputs)
-        return outputs
-
-    def compute_mask(self, inputs, mask=None):
-        return mask
+def initialize_gaussian_kernel_uniform(xrange: Tuple[float, float], N: int) -> GaussianKernel:
+    centers = np.linspace(xrange[0], xrange[1], N)
+    widths = [((xrange[1] - xrange[0]) / (N / 4)) for _ in range(N)]
+    initial_values = [np.array([centers]), np.array([widths])]
+    kernel = GaussianKernel(N, initial_values, 'diag')
+    return kernel

@@ -2,7 +2,7 @@ from typing import Tuple, List
 import tensorflow as tf
 import numpy as np
 from models.patch_to_score.models.modules import TransformerEncoderMLP, PatchAttentionWithPairBias, GlobalSumPooling, \
-    GaussianKernel, initialize_GaussianKernelRandom
+    GaussianKernel, initialize_gaussian_kernel_uniform
 
 
 def broadcast_shape(x, max_number_of_patches: int) -> tf.Tensor:
@@ -73,14 +73,6 @@ def create_masked_inputs(input_data: tf.Tensor, coordinates: tf.Tensor, size_val
     return features, pairwise_distances
 
 
-def initialize_gaussian_kernel_uniform(xrange: Tuple[float, float], pairs_channel_dimension: int) -> GaussianKernel:
-    centers = np.linspace(xrange[0], xrange[1], pairs_channel_dimension)
-    widths = [((xrange[1] - xrange[0]) / (pairs_channel_dimension/ 4)) for _ in range(pairs_channel_dimension)]
-    initial_values = [np.array([centers]), np.array([widths])]
-    kernel = GaussianKernel(pairs_channel_dimension, initial_values, 'diag')
-    return kernel
-
-
 def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_dropout_rate: float,
                 output_mlp_hidden_sizes: List[Tuple[int, int]], output_mlp_dropout_rate: float,
                 attention_mlp_hidden_sizes: List[Tuple[int, int]], attention_mlp_dropout_rate: float,
@@ -89,6 +81,7 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
                 max_number_of_patches: int,
                 attention_dimension: int,
                 pairs_channel_dimension: int,
+                gaussian_xrange: Tuple[float, float],
                 num_heads: int,
                 use_pair_bias: bool) -> tf.keras.models.Model:
     '''
@@ -103,6 +96,7 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
     :param max_number_of_patches: maximum number of patches
     :param attention_dimension: dimension of the patch attention layer
     :param pairs_channel_dimension: dimension of the pairs transition layer
+    :param gaussian_xrange: range of the gaussian kernel, will be initialized uniformly in range, with pairs_channel_dimension centers
     :param num_heads: number of heads for multi-head attention
     :param use_pair_bias: should use pair bias in the patch attention module 
     :return: a Keras model
@@ -115,7 +109,7 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
                    features_mlp_dropout_rate, activation)
 
     if use_pair_bias:
-        kernel = initialize_gaussian_kernel_uniform()
+        kernel = initialize_gaussian_kernel_uniform(gaussian_xrange, pairs_channel_dimension)
         D = kernel(pairwise_distances)
         patch_attention_input = [F, D]
     else:
