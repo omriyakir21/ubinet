@@ -60,17 +60,60 @@ def create_masked_inputs(input_data: tf.Tensor, coordinates: tf.Tensor, size_val
     # zero out broadcased features where mask is 0
     features = features * mask_condition[..., None]
 
-    mask_matrix = mask_condition[:, :, None] * mask_condition[:, None, :]  
-    pairwise_distances = pairwise_distances * mask_matrix  # zero out pairwise distances where mask is 0
+    mask_matrix = mask_condition[:, :, None] * mask_condition[:, None, :]
+    # zero out pairwise distances where mask is 0
+    pairwise_distances = pairwise_distances * mask_matrix
     mask_matrix -= 1
-    pairwise_distances = pairwise_distances + mask_matrix  # change masked values to -1 to avoid masking the diagonal
-    pairwise_distances = tf.expand_dims(pairwise_distances, axis=-1)  # add channel dimension
+    # change masked values to -1 to avoid masking the diagonal
+    pairwise_distances = pairwise_distances + mask_matrix
+    pairwise_distances = tf.expand_dims(
+        pairwise_distances, axis=-1)  # add channel dimension
 
     features = tf.keras.layers.Masking(mask_value=0.0)(features)
     pairwise_distances = tf.keras.layers.Masking(
         mask_value=-1.0)(pairwise_distances)
-    
+
     return features, pairwise_distances
+
+
+def patch_to_score(features: tf.Tensor, pairwise_distances: tf.Tensor,
+                   features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_dropout_rate: float,
+                   output_mlp_hidden_sizes: List[Tuple[int, int]], output_mlp_dropout_rate: float,
+                   attention_mlp_hidden_sizes: List[Tuple[int, int]], attention_mlp_dropout_rate: float,
+                   activation: str,
+                   attention_dimension: int,
+                   pairs_channel_dimension: int,
+                   gaussian_xrange: Tuple[float, float],
+                   num_heads: int,
+                   use_pair_bias: bool) -> tf.Tensor:
+
+    F = apply_mlps(features, features_mlp_hidden_sizes,
+                   features_mlp_dropout_rate, activation)
+
+    if use_pair_bias:
+        kernel = initialize_gaussian_kernel_uniform(
+            gaussian_xrange, pairs_channel_dimension)
+        D = kernel(pairwise_distances)
+        patch_attention_input = [F, D]
+    else:
+        patch_attention_input = [F]
+
+    attention_output = PatchAttentionWithPairBias(
+        attention_dimension, num_heads, use_pair_bias)(patch_attention_input)
+
+    attention_output = tf.keras.layers.Add()(
+        [F, attention_output])  # residual connection
+
+    attention_mlp_output = apply_mlps(
+        attention_output, attention_mlp_hidden_sizes, attention_mlp_dropout_rate, activation)
+
+    global_pooling_output = GlobalSumPooling(
+        data_format='channels_last')(attention_mlp_output)
+
+    output_mlp_output = apply_mlps(
+        global_pooling_output, output_mlp_hidden_sizes, output_mlp_dropout_rate, activation)
+    output = tf.keras.layers.Dense(1, activation='sigmoid')(output_mlp_output)
+    return output
 
 
 def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_dropout_rate: float,
@@ -105,27 +148,18 @@ def build_model(features_mlp_hidden_sizes: List[Tuple[int, int]], features_mlp_d
         input_shape, max_number_of_patches)
     features, pairwise_distances = create_masked_inputs(
         input_data, coordinates, size_value, n_patches_hot_encoded_value, max_number_of_patches)
-    F = apply_mlps(features, features_mlp_hidden_sizes,
-                   features_mlp_dropout_rate, activation)
 
-    if use_pair_bias:
-        kernel = initialize_gaussian_kernel_uniform(gaussian_xrange, pairs_channel_dimension)
-        D = kernel(pairwise_distances)
-        patch_attention_input = [F, D]
-    else:
-        patch_attention_input = [F]
+    output = patch_to_score(features, pairwise_distances,
+                            features_mlp_hidden_sizes, features_mlp_dropout_rate,
+                            output_mlp_hidden_sizes, output_mlp_dropout_rate,
+                            attention_mlp_hidden_sizes, attention_mlp_dropout_rate,
+                            activation,
+                            attention_dimension,
+                            pairs_channel_dimension,
+                            gaussian_xrange,
+                            num_heads,
+                            use_pair_bias)
 
-    attention_output = PatchAttentionWithPairBias(
-        attention_dimension, num_heads, use_pair_bias)(patch_attention_input)
-    attention_output = F + attention_output  # residual connection
-
-    attention_mlp_output = apply_mlps(
-        attention_output, attention_mlp_hidden_sizes, attention_mlp_dropout_rate, activation)
-    global_pooling_output = GlobalSumPooling(
-        data_format='channels_last')(attention_mlp_output)
-    output_mlp_output = apply_mlps(
-        global_pooling_output, output_mlp_hidden_sizes, output_mlp_dropout_rate, activation)
-    output = tf.keras.layers.Dense(1, activation='sigmoid')(output_mlp_output)
     model = tf.keras.Model(inputs=[
                            input_data, coordinates, size_value, n_patches_hot_encoded_value], outputs=output)
     return model
