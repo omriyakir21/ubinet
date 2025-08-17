@@ -53,7 +53,7 @@ class TransformerEncoderMLP(tf.keras.layers.Layer):
         x = x + residual
         
         x = self.layernorm(x)
-        return x  # Mask will be automatically passed if supports_masking=True
+        return x
 
     def compute_mask(self, inputs, mask=None):
         # Just return the input mask unchanged
