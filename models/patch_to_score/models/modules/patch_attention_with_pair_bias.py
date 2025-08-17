@@ -31,7 +31,7 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         self.features_layernorm = layers.LayerNormalization()
 
         if self.use_pair_bias:
-            self.dense_pairs_heads = layers.MaskedDense(self.num_heads, use_bias=False, name=f'dense_pairs_{uuid.uuid4()}')
+            self.dense_pairs_heads = MaskedDense(self.num_heads, use_bias=False, name=f'dense_pairs_{uuid.uuid4()}')
             self.pairs_layernorm = layers.LayerNormalization()        
     
     def build(self, input_shape):
