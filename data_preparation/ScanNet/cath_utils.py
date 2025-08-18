@@ -9,6 +9,8 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 import pickle
 import paths
+import concurrent.futures
+from create_tables_and_weights import cluster_sequences
 
 
 list_scanNet_datasets = [
@@ -201,41 +203,6 @@ def count_in_cath(cath_df, structures_dicts):
     return in_cath, not_in_cath, cnt
 
 
-def neighbor_mat(df, name_list, seqList, columns_number):
-    """
-    :param df: cath data frame as it return from the func make_cath_df
-    :param lst: list of chains
-    :param columns_number: the number of columns to consider with the cath classification not include the cath domain name
-    :return: matrix. mat[i][j] == 1 if there is connection between chain i and chain j
-    """
-    # generate the graph using CATH.
-    cath_columns = ["n" + str(i) for i in range(1, columns_number + 1)]
-    not_in_cath = set()
-    n = len(name_list)
-    mat = np.zeros((n, n))
-    for i in range(n):
-        for j in range(i + 1, n):
-            similarity = df[df['chain'].isin([name_list[i], name_list[j]])]
-            if len(similarity['chain'].unique()) == 1:
-                if (similarity['chain'].unique()[0] == name_list[i]):
-                    not_in_cath.add(name_list[j])
-                else:
-                    not_in_cath.add(name_list[i])
-            else:
-                similarity = similarity.groupby(by=cath_columns)
-                for name, group in similarity:
-                    if len(group['chain'].unique()) == 2:
-                        mat[i][j] = mat[j][i] = 1
-                        break
-    # calculate the sequence identity
-    for i in range(n):
-        for j in range(i + 1, n):
-            if (name_list[i] in not_in_cath):
-                score = calculate_identity(seqList[i], seqList[j])
-                mat[i][j] = mat[j][i] = 1
-    return mat
-
-
 def comapre_classifications(c1, c2):
     for i in range(len(c1)):
         if c1[i] != c2[i]:
@@ -243,7 +210,7 @@ def comapre_classifications(c1, c2):
     return True
 
 
-def is_similiar_chains(structure_dict1, structure_dict2):
+def is_similiar_chains(structure_dict1:dict, structure_dict2:dict,with_indentity:bool):
     connected = False
     for k in range(len(structure_dict1['pdbNamesWithChainsList'])):
         for l in range(len(structure_dict2['pdbNamesWithChainsList'])):
@@ -255,13 +222,13 @@ def is_similiar_chains(structure_dict1, structure_dict2):
                     for c2 in all_classifications2:
                         if comapre_classifications(c1, c2):
                             connected = True
-            else:  # at least one of the chains not in cath
+            elif with_indentity:  # at least one of the chains not in cath
                 if calculate_identity(structure_dict1['sequenceList'][k], structure_dict2['sequenceList'][l]) > 0.5:
                     connected = True
     return connected
 
 
-def neighbor_mat_new(structuers_dictionaries):
+def neighbor_mat(structuers_dictionaries:dict,ubiq:bool):
     """
     :param df: cath data frame as it return from the func make_cath_df
     :param lst: list of chains
@@ -277,8 +244,29 @@ def neighbor_mat_new(structuers_dictionaries):
         for j in range(i, n):
             structureDict1 = structuers_dictionaries_values[i]
             structureDict2 = structuers_dictionaries_values[j]
-            if is_similiar_chains(structureDict1, structureDict2):
+            if is_similiar_chains(structure_dict1=structureDict1, structure_dict2=structureDict2, with_indentity=ubiq):
                 mat[i][j] = mat[j][i] = 1
+    if ubiq:
+        return mat
+    
+    print("finished cath based, staring sequence based",flush=True)
+    seqs = []
+    for struct in structuers_dictionaries_values:
+        assert len(struct['sequenceList']) == 1, f"Each structure should have exactly one sequence.\n struct = {struct}"
+        seqs.append(struct['sequenceList'][0])
+    cluster_indices, _ = cluster_sequences(seqs,
+                                                                    seqid=0.5,
+                                                                    coverage=0.9, covmode='0',
+                                                                    path2mmseqstmp=paths.tmp_path,
+                                                                    path2mmseqs=paths.mmseqs_exec_path)
+    clusters = np.unique(cluster_indices)
+    for cluster in clusters:
+        indices = np.where(cluster_indices == cluster)[0]
+        for i in indices:
+            for j in indices:
+                if i != j:
+                    mat[i, j] = mat[j, i] = 1
+
     return mat
 
 

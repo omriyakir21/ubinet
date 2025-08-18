@@ -7,6 +7,7 @@ import numpy as np
 import cath_utils
 import paths
 import copy
+import time
 from data_preparation.ScanNet.find_best_clustering_algorithm_utils import louvain_clustering,connected_components_clustering,spectral_clustering
 from data_preparation.ScanNet.create_tables_and_weights import read_labels,add_model_num_to_dataset,calculate_weights
 from data_preparation.ScanNet.db_creation_scanNet_utils import save_as_pickle, load_as_pickle
@@ -62,13 +63,12 @@ def chain_to_cluster_dict(labels, full_names):
     return chain_to_cluster
     
 
-def cluster_chains(pssm_file,clustring_algorithm):
+def cluster_chains(pssm_file:str,clustring_algorithm:str,ubiq:bool):
     names, sizes, seqs, full_names, pdb_with_chains = list_creation(pssm_file)
     structuresDicts = cath_utils.create_dictionaries(names, sizes, seqs, full_names, pdb_with_chains)
     cath_utils.find_chains_in_cath(cath_df, structuresDicts)
     cath_utils.add_classifications_for_dict(cath_df, structuresDicts, 4)
-    
-    mat = cath_utils.neighbor_mat_new(structuresDicts)
+    mat = cath_utils.neighbor_mat(structuers_dictionaries=structuresDicts,ubiq=ubiq)
     if clustring_algorithm == "louvain":
         G = nx.from_numpy_array(mat)
         components, labels = louvain_clustering(G)
@@ -197,7 +197,7 @@ def assign_ubiq_clusters(ubiq_chain_to_cluster, scan_folds, structures_scan, str
             for fold, scan_chains in scan_folds.items():
                 for scan_chain in scan_chains:
                     struct_s = structures_scan[scan_chain]
-                    if cath_utils.is_similiar_chains(struct_s, struct_u):
+                    if cath_utils.is_similiar_chains(struct_s, struct_u,with_indentity=True):
                         counts[fold] += weight_dict[scan_chain] * weight_dict[chain]
 
         # Sort folds based on similarity counts (descending order)
@@ -292,22 +292,25 @@ def create_weight_dict(scan_pssm:str,ubiq_pssm:str,helper_dir:str, debug:bool,we
     save_as_pickle(weight_dict, weight_dict_path)
     
 if __name__ == '__main__':
+    start_time = time.time()
+    print(f"Execution started at: {start_time}", flush=True)
+
     plan_dict = {
         'name': "v4",
         'seq_id': "0.95",
         'ASA_THRESHOLD_VALUE': 0.1,
-        'weight_bound_for_ubiq_fold':0.205,
-        'debug':False,
-        'create_weight_table':False,
+        'weight_bound_for_ubiq_fold': 0.21,
+        'debug': False,
+        'create_weight_table': False,
         'partition_ubiqs': 'scanNet',  # 'seperate' or 'scanNet'
-        }
+    }
     os.makedirs(paths.cath_intermediate_files_path, exist_ok=True)
     cath_intermediate_files_path = os.path.join(paths.cath_intermediate_files_path, plan_dict['name'])
     os.makedirs(cath_intermediate_files_path, exist_ok=True)
-    cath_intermidiate_helper_files_path = os.path.join(cath_intermediate_files_path,'helper_files')
+    cath_intermidiate_helper_files_path = os.path.join(cath_intermediate_files_path, 'helper_files')
     os.makedirs(cath_intermidiate_helper_files_path, exist_ok=True)
     PSSM_path = os.path.join(paths.PSSM_path, plan_dict['name'])
-    PSSM_seq_id_folder = os.path.join(PSSM_path,f'seq_id_{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}')
+    PSSM_seq_id_folder = os.path.join(PSSM_path, f'seq_id_{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}')
     debug_addition = "_debug" if plan_dict['debug'] else ""
     scan_pssm = os.path.join(PSSM_seq_id_folder, f'propagatedPssmFile_scanNet_non_ubiq_homologs{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}{debug_addition}.txt')
     ubiq_pssm = os.path.join(PSSM_seq_id_folder, f'propagatedPssmFile_ubiqs_with_scanNet_homologs{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}{debug_addition}.txt')
@@ -315,38 +318,54 @@ if __name__ == '__main__':
     cath_df = cath_utils.make_cath_df_new(os.path.join(paths.cath_path, "cath_b.20230204.txt"))
     seperate_addition = "_seperate" if plan_dict['partition_ubiqs'] == 'seperate' else ""
     bound_addition = f"_{str(plan_dict['weight_bound_for_ubiq_fold']).split('.')[1]}" if plan_dict['partition_ubiqs'] == 'scanNet' else ""
-    print(f"partitioning with params: {plan_dict}", flush=True)
-
+    print(f"Partitioning with params: {plan_dict}", flush=True)
+    
+    # Create weight dict if needed
     weight_dict_path = os.path.join(cath_intermidiate_helper_files_path, f'chain_weights{"_debug" if plan_dict["debug"] else ""}.pkl')
     if plan_dict['create_weight_table']:
-        create_weight_dict(scan_pssm, ubiq_pssm, cath_intermidiate_helper_files_path, plan_dict['debug'], 
-                         weight_dict_path)
-
+        create_weight_dict(scan_pssm, ubiq_pssm, cath_intermidiate_helper_files_path, plan_dict['debug'], weight_dict_path)
+    t1 = time.time()
+    print(f"Time after weight table creation (if applicable): {(t1 - start_time)/60:.2f} minutes", flush=True)
+    
     weight_dict = load_as_pickle(weight_dict_path)
-
-    # Cluster scanNet and split into weighted folds
-    scan_map, structs_scan = cluster_chains(scan_pssm,"louvain")
+    
+    # Cluster ScanNet chains and split into weighted folds
+    scan_map, structs_scan = cluster_chains(pssm_file=scan_pssm,clustring_algorithm="louvain",ubiq=False)
+    t2 = time.time()
+    print(f"Time after clustering ScanNet chains: {(t2 - t1)/60:.2f} minutes", flush=True)
     scan_folds, scan_weights = divide_clusters_by_weight(scan_map, weight_dict)
     
-    ubiq_map, structs_ubiq = cluster_chains(ubiq_pssm,"louvain")
-
+    # Cluster ubiq chains
+    ubiq_map, structs_ubiq = cluster_chains(pssm_file=ubiq_pssm, clustring_algorithm="louvain", ubiq=True)
+    t3 = time.time()
+    print(f"Time after clustering ubiq chains: {(t3 - t2)/60:.2f} minutes", flush=True)
+    
     if plan_dict['partition_ubiqs'] == 'seperate':
         ubiq_folds, ubiq_weights = divide_clusters_by_weight(ubiq_map, weight_dict)
-        ubiq_folds,cross_edged_weight_folds = folds_joining(scan_folds, ubiq_folds, structs_scan, structs_ubiq, weight_dict)
+        ubiq_folds, cross_edged_weight_folds = folds_joining(scan_folds, ubiq_folds, structs_scan, structs_ubiq, weight_dict)
     else:
         # Cluster & assign ScanNet (debug subset)
-        ubiq_folds,cross_edged_weight_folds = assign_ubiq_clusters(ubiq_map, scan_folds, structs_scan, structs_ubiq,weight_dict,plan_dict['weight_bound_for_ubiq_fold'])
-        # scan_assign = assign_scanNet_clusters(scan_map, ubiq_folds, structs_ubiq, structs_scan,weight_dict)
+        ubiq_folds, cross_edged_weight_folds = assign_ubiq_clusters(ubiq_map, scan_folds, structs_scan, structs_ubiq, weight_dict, plan_dict['weight_bound_for_ubiq_fold'])
+    t4 = time.time()
+    print(f"Time after assigning ubiq clusters: {(t4 - t3)/60:.2f} minutes", flush=True)
+    
     # Save partition summary
     out_json = os.path.join(cath_intermidiate_helper_files_path, f'partition_summary{seperate_addition}{bound_addition}{debug_addition}.json')
-    save_partition_info(scan_folds, ubiq_folds,cross_edged_weight_folds,weight_dict, out_json)
-
-    print('Debug partition complete. Summary at', out_json)
+    save_partition_info(scan_folds, ubiq_folds, cross_edged_weight_folds, weight_dict, out_json)
+    t5 = time.time()
+    print(f"Time after saving partition summary: {(t5 - t4)/60:.2f} minutes", flush=True)
+    
+    print(f'Debug partition complete. Summary at {out_json}', flush=True)
     folds = {}
     for f in ubiq_folds.keys():
-        folds[f] = copy.deepcopy(ubiq_folds[f])+ copy.deepcopy(scan_folds[f])
-
+        folds[f] = copy.deepcopy(ubiq_folds[f]) + copy.deepcopy(scan_folds[f])
+    
     propagated_pssm_file_path = os.path.join(PSSM_seq_id_folder, f'propagatedPssmFile_{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}{debug_addition}.txt')
-    for index,keys in folds.items():
+    for index, keys in folds.items():
         pssm_fold_path = os.path.join(PSSM_seq_id_folder, f'PSSM{seperate_addition}{bound_addition}_{index}{debug_addition}.txt')
         filter_pssm_using_keys(propagated_pssm_file_path, keys, pssm_fold_path)
+    t6 = time.time()
+    print(f"Time after filtering PSSM files: {(t6 - t5)/60:.2f} minutes", flush=True)
+    
+    total_time = time.time() - start_time
+    print(f"Total execution time: {total_time/60:.2f} minutes", flush=True)
