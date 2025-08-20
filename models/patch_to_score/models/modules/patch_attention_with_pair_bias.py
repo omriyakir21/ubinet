@@ -22,12 +22,12 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         self.head_dimension = self.attention_dimension // self.num_heads
         self.use_pair_bias = use_pair_bias
         
-        self.Wk = layers.Dense(self.attention_dimension, use_bias=False, name=f'Wk_{uuid.uuid4()}')
-        self.Wq = layers.Dense(self.attention_dimension, use_bias=False, name=f'Wq_{uuid.uuid4()}')
-        self.Wv = layers.Dense(self.attention_dimension, use_bias=False, name=f'Wv_{uuid.uuid4()}')
-        self.dense_gating = layers.Dense(self.attention_dimension, use_bias=True, name=f'dense_gating_{uuid.uuid4()}')
+        self.Wk = MaskedDense(self.attention_dimension, use_bias=False, name=f'Wk_{uuid.uuid4()}')
+        self.Wq = MaskedDense(self.attention_dimension, use_bias=False, name=f'Wq_{uuid.uuid4()}')
+        self.Wv = MaskedDense(self.attention_dimension, use_bias=False, name=f'Wv_{uuid.uuid4()}')
+        self.dense_gating = MaskedDense(self.attention_dimension, use_bias=True, name=f'dense_gating_{uuid.uuid4()}')
 
-        self.dense_output = layers.Dense(self.attention_dimension, use_bias=True, name=f'dense_output_{uuid.uuid4()}')
+        self.dense_output = MaskedDense(self.attention_dimension, use_bias=True, name=f'dense_output_{uuid.uuid4()}')
         self.features_layernorm = layers.LayerNormalization()
 
         if self.use_pair_bias:
