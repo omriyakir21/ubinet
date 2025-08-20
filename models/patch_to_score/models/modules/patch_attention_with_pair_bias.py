@@ -105,7 +105,7 @@ class PatchAttentionWithPairBias(tf.keras.layers.Layer):
         attention_output = tf.math.multiply(G_reshaped, attention_output)
         attention_output = self._concat_heads(attention_output)
         
-        O = self.dense_output(attention_output)
+        O = self.dense_output(attention_output, mask=features_mask)
         if features_mask is not None:
             O = O * tf.cast(features_mask[..., None], dtype=tf.float32)
         return O
