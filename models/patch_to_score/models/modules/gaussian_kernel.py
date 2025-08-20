@@ -96,7 +96,7 @@ class GaussianKernel(Layer):
 
     def get_config(self):
         config = {'N': self.N,
-                  'initial_values': keras.saving.serialize_keras_object(self.initial_values),
+                  'initial_values': self.initial_values,
                   'covariance_type': self.covariance_type}
         base_config = super(
             GaussianKernel, self).get_config()
