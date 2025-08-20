@@ -110,6 +110,7 @@ def patch_to_score(features: tf.Tensor, pairwise_distances: tf.Tensor,
     global_pooling_output = GlobalSumPooling(
         data_format='channels_last')(attention_mlp_output)
 
+    # from this point on, since we reduced the patch demension, there's no more masking (GlobalSumPooling didn't pass on the mask)
     output_mlp_output = apply_mlps(
         global_pooling_output, output_mlp_hidden_sizes, output_mlp_dropout_rate, activation)
     output = tf.keras.layers.Dense(1, activation='sigmoid')(output_mlp_output)
