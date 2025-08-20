@@ -102,12 +102,14 @@ class GaussianKernel(Layer):
             GaussianKernel, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    @classmethod
-    def from_config(cls, config):
-        initial_values_config = config.pop('initial_values')
-        initial_values = keras.saving.deserialize_keras_object(
-            initial_values_config)
-        return cls(initial_values=initial_values, **config)
+    # TODO: fix model loading
+    # @classmethod
+    # def from_config(cls, config):
+        # initial_values_config = config.pop('initial_values')
+        # initial_values = keras.saving.deserialize_keras_object(
+        #     initial_values_config)
+        # return cls(initial_values=initial_values, **config)
+        # return cls(**config)
 
 
 def inv_root_matrix(H):
