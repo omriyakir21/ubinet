@@ -1,6 +1,7 @@
 import uuid
 import tensorflow as tf
 from tensorflow.keras import layers
+from models.patch_to_score.models.modules import MaskedDense
 
 
 class TransformerEncoderMLP(tf.keras.layers.Layer):
@@ -12,16 +13,16 @@ class TransformerEncoderMLP(tf.keras.layers.Layer):
             activation: Activation function for the first dense layer.
         """
         super().__init__(**kwargs)
-        self.supports_masking = True  # Important! The pathces are masked
+        self.supports_masking = True
         assert len(hidden_units) == 2, "Provide two units: (first_dense_units, second_dense_units)"
         
         self.hidden_units = hidden_units
         self.dropout_rate = dropout_rate
         self.activation = activation
-        self.dense1 = layers.Dense(hidden_units[0])
+        self.dense1 = MaskedDense(hidden_units[0])
         self.activation_layer = layers.Activation(activation)
         self.dropout1 = layers.Dropout(dropout_rate)
-        self.dense2 = layers.Dense(hidden_units[1])
+        self.dense2 = MaskedDense(hidden_units[1])
         self.dropout2 = layers.Dropout(dropout_rate)
         self.layernorm = layers.LayerNormalization()
         
@@ -36,7 +37,7 @@ class TransformerEncoderMLP(tf.keras.layers.Layer):
         if input_dim != output_dim:
             print(f'initializing projection for skip connection: {input_dim} -> {output_dim}')
             random_id = str(uuid.uuid4().hex[:10])
-            self.skip_proj = layers.Dense(output_dim, name=f'skip_proj_{random_id}')  # patch for tensorflow name overlapping issue
+            self.skip_proj = MaskedDense(output_dim, name=f'skip_proj_{random_id}')  # patch for tensorflow name overlapping issue
 
         super().build(input_shape)
     
@@ -54,7 +55,3 @@ class TransformerEncoderMLP(tf.keras.layers.Layer):
         
         x = self.layernorm(x)
         return x
-
-    def compute_mask(self, inputs, mask=None):
-        # Just return the input mask unchanged
-        return mask
