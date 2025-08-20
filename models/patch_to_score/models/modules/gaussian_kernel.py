@@ -94,11 +94,6 @@ class GaussianKernel(Layer):
         output_shape = list(input_shape[:-1]) + [self.N]
         return tuple(output_shape)
 
-    def compute_mask(self, inputs, mask=None):
-        # Just pass the received mask from previous layer, to the next layer or
-        # manipulate it if this layer changes the shape of the input
-        return mask
-
     def get_config(self):
         config = {'N': self.N,
                   'initial_values': keras.saving.serialize_keras_object(self.initial_values),
