@@ -15,9 +15,10 @@ from data_preparation.patch_to_score.v0.data_development_utils import Protein
 
 
 # -- constants --
+date = '21_07'
 data_for_training_dir_path = 'datasets/patch_to_score/data_for_training'
-source_dataset_dir_path = f'{data_for_training_dir_path}/03_04_with_pesto'
-target_dataset_dir_path = f'{data_for_training_dir_path}/03_04_with_pesto_and_coord'
+source_dataset_dir_path = f'{data_for_training_dir_path}/{date}_with_pesto'
+target_dataset_dir_path = f'{data_for_training_dir_path}/{date}_with_pesto_and_coord'
 
 MAX_NUMBER_OF_COMPONENTS = 10
 
@@ -39,7 +40,7 @@ def extract_protein_data(proteins, max_number_of_components):
 # -- load --
 def load_data() -> Tuple[Dict[str, Protein], Dict[str, List[List[int]]]]:
     print('loading data')
-    with open('datasets/patch_to_score/patches_dicts/03_04_with_pesto/merged_protein_objects.pkl', 'rb') as f:
+    with open(f'datasets/patch_to_score/patches_dicts/{date}_with_pesto/merged_protein_objects.pkl', 'rb') as f:
         merged_protein_objects = pickle.load(f)
         
     data_set_res_indexes = {k: extract_protein_data([v], MAX_NUMBER_OF_COMPONENTS)[0] for k, v in merged_protein_objects.items()}

@@ -7,9 +7,10 @@ from utils import load_as_pickle, save_as_pickle
 from copy import deepcopy
 
 
+date = '21_07'
 data_for_training_dir_path = 'datasets/patch_to_score/data_for_training'
-source_dataset_dir_path = f'{data_for_training_dir_path}/03_04_with_pesto'
-target_dataset_dir_path = f'{data_for_training_dir_path}/03_04_with_pesto_and_coord'
+source_dataset_dir_path = f'{data_for_training_dir_path}/{date}_with_pesto'
+target_dataset_dir_path = f'{data_for_training_dir_path}/{date}_with_pesto_and_coord'
 
 
 def create_coordinates_matrix(uniprots: List[str], patches_ca_avg_coordinates: Dict[str, Union[np.ndarray, None]]) -> np.ndarray:
