@@ -41,7 +41,11 @@
             "attention_dimension": 64,
             "pairs_channel_dimension": 64,
             "num_heads": 1,
-            "use_pair_bias": false
+            "use_pair_bias": false,
+            "gaussian_xrange": [
+                0,
+                100
+            ]
         }
     },
     "compile": {
