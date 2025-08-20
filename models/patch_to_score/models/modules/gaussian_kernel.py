@@ -29,7 +29,7 @@ class ConstraintBetween(Constraint):
 class GaussianKernel(Layer):
     def __init__(self, N, initial_values, covariance_type='diag', eps=1e-1, **kwargs):
         super(GaussianKernel, self).__init__(**kwargs)
-        self.support_masking = True
+        self.supports_masking = True
         self.eps = eps
         self.N = N
         self.initial_values = initial_values
