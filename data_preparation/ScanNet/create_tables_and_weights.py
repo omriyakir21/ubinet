@@ -7,6 +7,7 @@ import subprocess, shutil
 import pandas as pd
 import paths
 import datetime
+import time
 
 def add_model_num_to_dataset(input_file, output_file):
     with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
@@ -66,7 +67,7 @@ def read_labels(input_file, nmax=np.inf, label_type='int'):
 
 
 def cluster_sequences(list_sequences, seqid=1.0, coverage=0.8, covmode='0', path2mmseqstmp=paths.tmp_path,
-                      path2mmseqs=paths.mmseqs_exec_path
+                      path2mmseqs=paths.mmseqs_exec_path,threads=8
                       ):
 
     rng = np.random.randint(0, high=int(1e6))
@@ -78,8 +79,8 @@ def cluster_sequences(list_sequences, seqid=1.0, coverage=0.8, covmode='0', path
             f.write('>%s\n' % k)
             f.write('%s\n' % sequence)
 
-    command = ('{mmseqs} easy-cluster {fasta} {result} {tmp} --min-seq-id %s -c %s --cov-mode %s' % (
-        seqid, coverage, covmode)).format(mmseqs=path2mmseqs, fasta=tmp_input, result=tmp_output, tmp=path2mmseqstmp)
+    command = ('{mmseqs} easy-cluster {fasta} {result} {tmp} --threads {threads} --min-seq-id %s -c %s --cov-mode %s' % (
+        seqid, coverage, covmode)).format(threads=threads, mmseqs=path2mmseqs, fasta=tmp_input, result=tmp_output, tmp=path2mmseqstmp)
     subprocess.run(command.split(' '))
 
     with open(tmp_output + '_rep_seq.fasta', 'r') as f:
@@ -284,7 +285,7 @@ def create_sample_datasets_and_table(with_scanNet_addition:bool,with_augmentatio
 
 if __name__ == '__main__':
     plan_dict = {
-        'name': "v2",
+        'name': "v4",
         'seq_id': "0.95",
         'ASA_THRESHOLD_VALUE': 0.1,
         'weight_bound_for_ubiq_fold':0.21,
@@ -297,26 +298,29 @@ if __name__ == '__main__':
 
     name = f'seq_id_{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}_bound_{plan_dict["weight_bound_for_ubiq_fold"]}'
     output_folder = os.path.join(dir_name,name)
-
+    os.makedirs(output_folder, exist_ok=True)
 
     PSSM_path = os.path.join(paths.PSSM_path, plan_dict['name'])
     PSSM_seq_id_folder = os.path.join(PSSM_path,f'seq_id_{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}')
     bound_addition = f"_{str(plan_dict['weight_bound_for_ubiq_fold']).split('.')[1]}"
-
+    time_1 = time.time()
     if plan_dict['add_model_num_to_dataset']:
         for i in range(5):
             input_file = os.path.join(PSSM_seq_id_folder,f'PSSM{bound_addition}_{i}_with_augmentations.txt' )
-            output_deletion_file = os.path.join(output_folder,f'PSSM{bound_addition}_{i}_with_augmentations_deleted_short_chains.txt')
-            delete_short_chains(input_file, output_deletion_file, 15)
+            # output_deletion_file = os.path.join(output_folder,f'PSSM{bound_addition}_{i}_with_augmentations_deleted_short_chains.txt')
+            # delete_short_chains(input_file, output_deletion_file, 15)
             output_file = os.path.join(output_folder, f'labels_fold{i+1}.txt')
-            add_model_num_to_dataset(output_deletion_file, output_file)
-
-    #ONLY FOR REPLICATION 
+            add_model_num_to_dataset(input_file, output_file)
+    time_2 = time.time()
+    print(f"Time taken for adding model numbers to dataset: {(time_2 - time_1)/60:.2f} minutes", flush=True)
+    #ONLY FOR REPLICATION
     # for i in range(5):
     #     remove_keys(os.path.join(output_folder, f'labels_fold{i+1}.txt'))
     
     if plan_dict['create_table']:
         create_table(output_folder,output_folder)
+    time_3 = time.time()
+    print(f"Time taken for creating tables: {(time_3 - time_2)/60:.2f} minutes", flush=True)
     # create_sample_datasets_and_table(with_augmentations_addition = with_augmentations_addition,
     #     with_scanNet_addition=with_scanNet_addition,datasets_dir = output_folder)
     
