@@ -638,13 +638,13 @@ def propagate_for_duplicate_sequences(PSSM_file:str,asa_file:str,output_PSSM_fil
         if len(chain_names) > 1:
             # If there are multiple chains with the same sequence, propagate labels
             chain_name = chain_names[0]
+            new_labels = chain_dict[chain_name]['labels']
             for new_chain_name in chain_names[1:]:
-                chain_labels = chain_dict[chain_name]['labels']
                 add_labels = chain_dict[new_chain_name]['labels']
-                new_labels = propagate_labels_of_chain(chain_labels, add_labels)
+                new_labels = propagate_labels_of_chain(new_labels, add_labels)
+            for chain_name in chain_names:
                 chain_dict[chain_name]['labels'] = new_labels
-                del chain_dict[new_chain_name]
-                del chain_dict_asa[new_chain_name]
+
     recreate_PSSM_file_from_dict(chain_dict, PSSM_file, output_PSSM_file)
     recreate_PSSM_file_from_dict(chain_dict_asa, asa_file, output_asa_file)
 

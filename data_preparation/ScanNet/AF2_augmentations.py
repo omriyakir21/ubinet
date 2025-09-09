@@ -611,7 +611,7 @@ def create_label_files_for_folder(folder_path,chain_dict,asa_thereshold,quantile
                                         if normalized_asa_values[uniprot_aa_index] > min(asa_thereshold,0.75*float(original_sequence_normalized_asa_values[original_sequence_index])):
                                             label = original_sequence_labels[original_sequence_index]
                                         else:
-                                            label = 0
+                                            label = '10101010101010'
                                         aa_index = str(chain_aa[uniprot_aa_index].get_id()[1])
                                         aa_letter = chain_sequence[uniprot_aa_index]
                                         original_sequence_index += 1
@@ -900,7 +900,7 @@ def integrate_predictions(input_folder, predictions_folder):
 
 if __name__ == '__main__':
     plan_dict = {
-        'name' : 'v2',
+        'name' : 'v4',
         'seq_id' : '0.95',
         'ASA_THRESHOLD_VALUE' : 0.1,
         'weight_bound_for_ubiq_fold':0.21,
@@ -910,7 +910,7 @@ if __name__ == '__main__':
         'divide_msa': False,
         'integrate_predictions': False,
         'fetch_AF2_structures': False,
-        'create_label_files': False,
+        'create_label_files': True,
         'merge_pssm_with_augmentations': True,
         'create_cutted_augmentations_folder': True,
         }

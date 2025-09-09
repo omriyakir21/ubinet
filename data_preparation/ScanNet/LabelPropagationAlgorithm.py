@@ -20,9 +20,9 @@ if __name__ == "__main__":
                  'unite_scanNet_parts':False,
                  'normalize_asa':False,
                  'remove_non_valid_chains':False,
-                 'debug':False,
-                 'create_debug':False,
-                 'propagate_duplicates':False,
+                 'debug':True,
+                 'create_debug':True,
+                 'propagate_duplicates':True,
                  'run_algorithm':True,
                  'divide_to_different_files':True}
     
@@ -160,22 +160,29 @@ if __name__ == "__main__":
                                                                     coverage=0.9, covmode='0',
                                                                     path2mmseqstmp=paths.tmp_path,
                                                                     path2mmseqs=paths.mmseqs_exec_path)
-        # save_as_pickle(chains_sequences, os.path.join(helper_algorithm_folder, 'chains_sequences.pkl'))
-        # save_as_pickle(cluster_indices, cluster_indices_path)
-        cluster_indices = load_as_pickle(cluster_indices_path)
-        # clusters_participants_list = utils.create_cluster_participants_indexes(cluster_indices)
-        # save_as_pickle(clusters_participants_list,clusters_participants_list_path)
-        clusters_participants_list = load_as_pickle(clusters_participants_list_path)
-        # clusters_dict = utils.apply_mafft_for_all_clusters(chains_sequences, clusters_participants_list,
-                                                        # paths.mafft_exec_path)
-        # save_as_pickle(clusters_dict, clusters_dict_path)
-        clusters_participants_list = load_as_pickle(clusters_participants_list_path)
-        clusters_dict = load_as_pickle(clusters_dict_path)
+        save_as_pickle(chains_sequences, os.path.join(helper_algorithm_folder, 'chains_sequences.pkl'))
+        save_as_pickle(cluster_indices, cluster_indices_path)
+        # cluster_indices = load_as_pickle(cluster_indices_path)
+        clusters_participants_list = utils.create_cluster_participants_indexes(cluster_indices)
+        save_as_pickle(clusters_participants_list,clusters_participants_list_path)
+        # clusters_participants_list = load_as_pickle(clusters_participants_list_path)
+        clusters_dict = utils.apply_mafft_for_all_clusters(chains_sequences, clusters_participants_list,
+                                                        paths.mafft_exec_path)
+        save_as_pickle(clusters_dict, clusters_dict_path)
+        # clusters_participants_list = load_as_pickle(clusters_participants_list_path)
+        # clusters_dict = load_as_pickle(clusters_dict_path)
+        utils.create_propagated_pssm_file(
+            clusters_dict,
+            splited_data['chains_labels'],
+            clusters_participants_list,
+            splited_data['chains_sequences'],
+            splited_data['chain_names'],
+            splited_data['lines'],
+            chains_asa_values,
+            propagated_pssm_file_path,
+            plan_dict['ASA_THRESHOLD_VALUE']
+        )
 
-        utils.create_propagated_pssm_file(clusters_dict, splited_data['chains_labels'], clusters_participants_list, splited_data['chains_sequences'],
-                                        splited_data['chain_names'], splited_data['lines'],
-                                        chains_asa_values, propagated_pssm_file_path,
-                                        plan_dict['ASA_THRESHOLD_VALUE'])
         
     if plan_dict['divide_to_different_files']:       
         propagated_pssm_only_ubiq_file_path = os.path.join(PSSM_seq_id_folder, f'propagatedPssmFile_only_ubiq_{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}{debug_addition}.txt')

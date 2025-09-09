@@ -5,12 +5,13 @@ import os.path
 import numpy as np
 import pandas as pd
 from Bio import pairwise2
-from scipy.sparse import csr_matrix
+from scipy.sparse import lil_matrix, csr_matrix
 from scipy.sparse.csgraph import connected_components
 import pickle
 import paths
 import concurrent.futures
 from create_tables_and_weights import cluster_sequences
+import time
 
 
 list_scanNet_datasets = [
@@ -228,47 +229,58 @@ def is_similiar_chains(structure_dict1:dict, structure_dict2:dict,with_indentity
     return connected
 
 
-def neighbor_mat(structuers_dictionaries:dict,ubiq:bool):
+
+def neighbor_mat(structuers_dictionaries: dict, ubiq: bool):
     """
-    :param df: cath data frame as it return from the func make_cath_df
-    :param lst: list of chains
-    :param columns_number: the number of columns to consider with the cath classification not include the cath domain name
-    :return: matrix. mat[i][j] == 1 if there is connection between chain i and chain j
+    :param structuers_dictionaries: Dictionary of structures
+    :param ubiq: Boolean indicating whether to include identity-based connections
+    :return: Sparse boolean matrix. mat[i][j] == True if there is a connection between chain i and chain j
     """
-    # generate the graph using CATH.
+    # Generate the graph using CATH.
+    start_time = time.time()
     n = len(structuers_dictionaries)
     print(n)
     structuers_dictionaries_values = [structuers_dictionaries[key] for key in structuers_dictionaries.keys()]
-    mat = np.zeros((n, n))
+    
+    # Use a sparse matrix in LIL format for efficient row-wise construction
+    mat = lil_matrix((n, n), dtype=bool)
+    
     for i in range(n):
         for j in range(i, n):
             structureDict1 = structuers_dictionaries_values[i]
             structureDict2 = structuers_dictionaries_values[j]
             if is_similiar_chains(structure_dict1=structureDict1, structure_dict2=structureDict2, with_indentity=ubiq):
-                mat[i][j] = mat[j][i] = 1
-    if ubiq:
-        return mat
+                mat[i, j] = mat[j, i] = True
     
-    print("finished cath based, staring sequence based",flush=True)
+    if ubiq:
+        # Convert to CSR format for efficient operations
+        return mat.tocsr()
+
+    cath_time = time.time() - start_time
+    print(f"finished cath based in {cath_time/60:.2f}s, starting sequence based", flush=True)
     seqs = []
     for struct in structuers_dictionaries_values:
         assert len(struct['sequenceList']) == 1, f"Each structure should have exactly one sequence.\n struct = {struct}"
         seqs.append(struct['sequenceList'][0])
+    
     cluster_indices, _ = cluster_sequences(seqs,
-                                                                    seqid=0.5,
-                                                                    coverage=0.9, covmode='0',
-                                                                    path2mmseqstmp=paths.tmp_path,
-                                                                    path2mmseqs=paths.mmseqs_exec_path)
+                                           seqid=0.5,
+                                           coverage=0.9, covmode='0',
+                                           path2mmseqstmp=paths.tmp_path,
+                                           path2mmseqs=paths.mmseqs_exec_path)
+
+    seq_time = time.time() - start_time
+    print(f"finished sequence based clustering in {seq_time/60:.2f}s", flush=True)
     clusters = np.unique(cluster_indices)
     for cluster in clusters:
         indices = np.where(cluster_indices == cluster)[0]
         for i in indices:
             for j in indices:
                 if i != j:
-                    mat[i, j] = mat[j, i] = 1
+                    mat[i, j] = mat[j, i] = True
 
-    return mat
-
+    # Convert to CSR format before returning
+    return mat.tocsr()
 
 def create_related_chainslist(number_of_components, labels):
     """

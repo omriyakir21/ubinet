@@ -63,23 +63,26 @@ def chain_to_cluster_dict(labels, full_names):
     return chain_to_cluster
     
 
-def cluster_chains(pssm_file:str,clustring_algorithm:str,ubiq:bool):
+def cluster_chains(pssm_file: str, clustring_algorithm: str, ubiq: bool):
     names, sizes, seqs, full_names, pdb_with_chains = list_creation(pssm_file)
     structuresDicts = cath_utils.create_dictionaries(names, sizes, seqs, full_names, pdb_with_chains)
     cath_utils.find_chains_in_cath(cath_df, structuresDicts)
     cath_utils.add_classifications_for_dict(cath_df, structuresDicts, 4)
-    mat = cath_utils.neighbor_mat(structuers_dictionaries=structuresDicts,ubiq=ubiq)
+    mat = cath_utils.neighbor_mat(structuers_dictionaries=structuresDicts, ubiq=ubiq)
+    
     if clustring_algorithm == "louvain":
-        G = nx.from_numpy_array(mat)
+        # Convert sparse matrix to NetworkX graph
+        G = nx.from_scipy_sparse_array(mat)
         components, labels = louvain_clustering(G)
     elif clustring_algorithm == "connected":
-        G = cath_utils.csr_matrix(mat)
-        components, labels = connected_components_clustering(G)
+        # Use the sparse matrix directly
+        components, labels = connected_components_clustering(mat)
     elif clustring_algorithm == "spectral":
-        G = cath_utils.csr_matrix(mat)
-        components, labels = spectral_clustering(G)
+        # Use the sparse matrix directly
+        components, labels = spectral_clustering(mat)
     else:
         raise ValueError(f"Unknown clustering algorithm: {clustring_algorithm}")
+    
     chain_to_cluster = chain_to_cluster_dict(labels, full_names)
     return chain_to_cluster, structuresDicts
 
@@ -331,6 +334,8 @@ if __name__ == '__main__':
     
     # Cluster ScanNet chains and split into weighted folds
     scan_map, structs_scan = cluster_chains(pssm_file=scan_pssm,clustring_algorithm="louvain",ubiq=False)
+    save_as_pickle(scan_map, os.path.join(cath_intermidiate_helper_files_path, f'scan_map{"_debug" if plan_dict["debug"] else ""}.pkl'))
+    save_as_pickle(structs_scan, os.path.join(cath_intermidiate_helper_files_path, f'structs_scan{"_debug" if plan_dict["debug"] else ""}.pkl'))
     t2 = time.time()
     print(f"Time after clustering ScanNet chains: {(t2 - t1)/60:.2f} minutes", flush=True)
     scan_folds, scan_weights = divide_clusters_by_weight(scan_map, weight_dict)
