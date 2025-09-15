@@ -1,0 +1,171 @@
+import os
+from typing import List, Dict
+from tqdm import tqdm
+from Bio.PDB import PDBParser
+from Bio.PDB.Structure import Structure
+from Bio.PDB.Residue import Residue
+import numpy as np
+from utils import save_as_pickle
+from data_preparation.ScanNet.db_creation_scanNet_utils import aa_out_of_chain, get_str_seq_of_chain
+from data_preparation.patch_to_score.v1.schema.base import PatchToScoreAminoAcid, PatchToScoreProteinChain
+from data_preparation.patch_to_score.v1.create_protein_chains.graph_utils import create_graph
+from data_preparation.patch_to_score.v1.create_protein_chains.patch_utils import create_patches
+
+
+NEGATIVE_SOURCES = set(['Yeast proteome', 'Human proteome',
+                       'Ecoli proteome', 'Celegans proteome', 'Arabidopsis proteome'])
+POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
+parser = PDBParser()
+
+
+def get_chain_predictions(uniprot_name: str, all_predictions: dict, with_pesto: bool) -> Dict[str, np.array]:
+    predictions_dict = dict()
+    predictions_dict['scanNet_ubiquitin'] = np.array(
+        all_predictions['dict_predictions_ubiquitin'][uniprot_name])
+    predictions_dict['scanNet_protein'] = np.array(
+        all_predictions['dict_predictions_interface'][uniprot_name])
+    if with_pesto:
+        predictions_dict['pesto_protein'] = np.array(
+            all_predictions['pesto_protein'][uniprot_name])
+        predictions_dict['pesto_dna_rna'] = np.array(
+            all_predictions['pesto_dna_rna'][uniprot_name])
+        predictions_dict['pesto_ion'] = np.array(
+            all_predictions['pesto_ion'][uniprot_name])
+        predictions_dict['pesto_ligand'] = np.array(
+            all_predictions['pesto_ligand'][uniprot_name])
+        predictions_dict['pesto_lipid'] = np.array(
+            all_predictions['pesto_lipid'][uniprot_name])
+    return predictions_dict
+
+
+def get_source_dir_path(source: str, sources_path: str) -> str:
+    if source in NEGATIVE_SOURCES:
+        source_dir_path = os.path.join(f'{sources_path}/AFDB',
+                                       source.split(" ")[0])  # the name of the AFDB dirs doesnt end with proteome thats the reason of the split
+    else:
+        source_dir_path = os.path.join(f'{sources_path}/GO',
+                                       source)
+    return source_dir_path
+
+
+def get_structure_path(uniprot_name: str, source: str, sources_path: str) -> str:
+    source_dir_path = get_source_dir_path(source, sources_path)
+    structure_path = os.path.join(source_dir_path, uniprot_name + '.pdb')
+    return structure_path
+
+
+def get_structure(uniprot_name: str, source: str, sources_path: str) -> Structure:
+    structure_path = get_structure_path(uniprot_name, source, sources_path)
+    if not os.path.exists(structure_path):
+        raise Exception("path does not exist")
+    structure = parser.get_structure(uniprot_name, structure_path)
+    return structure
+
+
+def get_sequence(structure: Structure) -> str:
+    model = structure.child_list[0]
+    assert (len(model) == 1)
+    for chain in model:
+        seq = get_str_seq_of_chain(chain)
+    return seq
+
+
+def get_plddt_values(structure: Structure):
+    model = structure.child_list[0]
+    assert (len(model) == 1)
+    for chain in model:
+        residues = aa_out_of_chain(chain)
+        return np.array([residues[i].child_list[0].bfactor for i in range(len(residues))])
+
+
+def create_amino_acid(residue: Residue, plddt_values: np.array, index_in_chain: int,
+                      chain_predictions: dict, with_pesto: bool) -> PatchToScoreAminoAcid:
+    # TODO : better handling of with_pesto
+    amino_acid = PatchToScoreAminoAcid(residue=residue,
+                                       plddt=plddt_values[index_in_chain],
+                                       scannet_protein_score=chain_predictions['scanNet_protein'][index_in_chain],
+                                       scannet_ubiquitin_score=chain_predictions[
+                                           'scanNet_ubiquitin'][index_in_chain],
+                                       pesto_protein_score=chain_predictions['pesto_protein'][
+                                           index_in_chain] if with_pesto else None,
+                                       pesto_dna_rna_score=chain_predictions['pesto_dna_rna'][
+                                           index_in_chain] if with_pesto else None,
+                                       pesto_ion_score=chain_predictions['pesto_ion'][
+                                           index_in_chain] if with_pesto else None,
+                                       pesto_ligand_score=chain_predictions['pesto_ligand'][
+                                           index_in_chain] if with_pesto else None,
+                                       pesto_lipid_score=chain_predictions['pesto_lipid'][index_in_chain] if with_pesto else None)
+
+    return amino_acid
+
+
+def create_amino_acids(with_pesto, chain_predictions, amino_acids, plddt_values) -> List[PatchToScoreAminoAcid]:
+    pts_amino_acids = []
+    for i, residue in enumerate(amino_acids):
+        amino_acid = create_amino_acid(
+            residue, plddt_values, i, chain_predictions, with_pesto)
+        pts_amino_acids.append(amino_acid)
+    return pts_amino_acids
+
+
+def create_protein_chain(uniprot_name: str, all_predictions: dict,
+                         with_pesto: bool, sources_path: str,
+                         percentile_90: float, plddt_threshold: float, source: str) -> PatchToScoreProteinChain:
+    chain_predictions: dict = get_chain_predictions(
+        uniprot_name, all_predictions, with_pesto)
+    structure = get_structure(uniprot_name, source, sources_path)
+    residues = aa_out_of_chain(structure)
+    sequence = get_sequence(structure)
+    plddt_values = get_plddt_values(structure)
+    pts_amino_acids = create_amino_acids(
+        with_pesto, chain_predictions, residues, plddt_values)
+
+    graph = create_graph(chain_predictions['scanNet_ubiquitin'],
+                         plddt_threshold, percentile_90, structure)
+    patches = create_patches(graph, pts_amino_acids)
+
+    protein_chain = PatchToScoreProteinChain(uniprot_name=uniprot_name,
+                                             source=source,
+                                             sequence=sequence,
+                                             amino_acids=pts_amino_acids,
+                                             label=(
+                                                 source in POSITIVE_SOURCES),
+                                             graph=graph,
+                                             patches=patches)
+    return protein_chain
+
+
+def main(all_predictions: str,
+         save_dir_path: str,
+         sources_path: str,
+         uniprot_names: List[str],
+         with_pesto: bool,
+         percentile_90: float,
+         plddt_threshold: float,
+         should_override: bool) -> List[PatchToScoreProteinChain]:
+    """
+    Create protein objects.
+
+   :param str all_predictions: all model predictions over all proteins
+   :param str save_dir_path: path to a directory where the protein objects will be saved
+   :param str sources_path: path to a directory where the source .pdb files are saved
+   :param list uniprot_names: list of unitprot names to create protein objects for
+   :param bool with_pesto: should use pesto predictions
+   :param float percentile_90: the 90th percentile of the scannet ubiquitin binding score
+   :param float plddt_threshold: the AF2 pLDDT threshold for filtering residues
+   :param bool should_override: should override existing protein objects
+   :return: None
+   :rtype: None
+    """
+    protein_chains = []
+    for uniprot_name in tqdm(uniprot_names):
+        source = all_predictions['dict_sources'][uniprot_name]
+        chain_save_path = os.path.join(get_source_dir_path(
+            source, save_dir_path), uniprot_name + '.pkl')
+        if os.path.exists(chain_save_path) and (not should_override):
+            continue
+        protein_chain = create_protein_chain(
+            uniprot_name, all_predictions, with_pesto, sources_path, percentile_90, plddt_threshold, source)
+        protein_chains.append(protein_chain)
+        save_as_pickle(protein_chain, chain_save_path)
+    return protein_chains

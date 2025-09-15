@@ -1,0 +1,77 @@
+{
+    "hypothesis": "pts_deep_encoder_mlps",
+    "experiment": "hidden_sizes_mlp_a_4_2048-512_hidden_sizes_mlp_c_4_2048-512",
+    "data": {
+        "path": "/home/iscb/wolfson/doririmon/home/order/ubinet/repo/ubinet/datasets/patch_to_score/data_for_training/03_04_with_pesto/folds_training_dicts.pkl",
+        "use_pesto": true,
+        "ablation_string": "111111111",
+        "max_folds": null
+    },
+    "model": {
+        "name": "pts_transformer_encoder_mlp",
+        "kwargs": {
+            "hidden_sizes_mlp_a": [
+                [
+                    2048,
+                    512
+                ],
+                [
+                    2048,
+                    512
+                ],
+                [
+                    2048,
+                    512
+                ],
+                [
+                    2048,
+                    512
+                ]
+            ],
+            "mlp_a_dropout_rate": 0.2,
+            "hidden_sizes_mlp_c": [
+                [
+                    2048,
+                    512
+                ],
+                [
+                    2048,
+                    512
+                ],
+                [
+                    2048,
+                    512
+                ],
+                [
+                    2048,
+                    512
+                ]
+            ],
+            "mlp_c_dropout_rate": 0.1,
+            "activation": "relu",
+            "input_shape": [
+                10,
+                9
+            ],
+            "max_number_of_patches": 10
+        }
+    },
+    "compile": {
+        "optimizer": {
+            "name": "adamw",
+            "kwargs": {
+                "learning_rate": 0.001
+            }
+        },
+        "loss": {
+            "name": "binary_cross_entropy",
+            "kwargs": {}
+        }
+    },
+    "fit": {
+        "epochs": 200,
+        "batch_size": 256,
+        "verbose": 1,
+        "n_early_stopping_epochs": 12
+    }
+}

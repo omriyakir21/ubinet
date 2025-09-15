@@ -4,16 +4,14 @@
 *.pyc
 *.save
 *.pkl
-*.txt
-*.png
 *.csv
 datasets/
 .conda/
 results/AF3_predictions/
+results/patch_to_score/
 *.keras
 *.v2
 *.npy
-*.json
 *.bibtex
 *.a3m
 *.gz
@@ -22,8 +20,8 @@ models/AF2_multimer/
 tmp/
 chainsaw/
 models/structural_aligners/dali_aligner/
+.vscode/
 .tcshrc
 data_preparation/ScanNet/ImerFiles/
 models/structural_aligners/files_from_colab_fold/
 models/structural_aligners/missing_uniprots_fasta_files/
-results/patch_to_score/all_predictions/
