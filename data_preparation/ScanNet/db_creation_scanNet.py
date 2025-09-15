@@ -18,27 +18,27 @@ import paths
 UBIQ_LIST_PATH = os.path.join(paths.blast_search_path, "ubiquitin_containing_pdb_entries.txt")
 
 
-def download_assemblies_and_assymetrics(PDB_names_list):
+def download_assemblies_and_assymetrics(PDB_names_list,pdbs_path, assemblies_path):
     '''
     :param UBIQ_LIST_PATH: path to the file containing the list of PDB names
     :return: list of PDB names
     '''
     # download the asymetric files
     pdb_list_object = PDBList()
-    asymetricPaths = db_utils.download_asymetric_files(pdb_list_object, PDB_names_list, paths.pdbs_path)
+    asymetricPaths = db_utils.download_asymetric_files(pdb_list_object, PDB_names_list, pdbs_path)
     # download the assemblies
-    assemblyPathsLists = db_utils.download_assembly_files(PDB_names_list, pdb_list_object, paths.assemblies_path)
-    db_utils.download_assembly_files(PDB_names_list, pdb_list_object, paths.assemblies_path)
+    assemblyPathsLists = db_utils.download_assembly_files(PDB_names_list, pdb_list_object, assemblies_path)
+    # db_utils.download_assembly_files(PDB_names_list, pdb_list_object, paths.assemblies_path)
     return
 
 
-def create_save_list_of_entry_dicts():
+def create_save_list_of_entry_dicts(pdbs_path,assemblies_path,entry_dicts_path):
     '''
     :param listOfPDBNames: list of PDB names
     :return:
     '''
-    asymetric_paths, assembly_paths_lists, pdb_names_list = db_utils.order_paths_lists(paths.pdbs_path,
-                                                                                       paths.assemblies_path)
+    asymetric_paths, assembly_paths_lists, pdb_names_list = db_utils.order_paths_lists(pdbs_path,
+                                                                                       assemblies_path)
 
     parser = db_utils.parser  # create parser object
     structures = [parser.get_structure(pdb_names_list[i], asymetric_paths[i]) for i in
@@ -48,12 +48,12 @@ def create_save_list_of_entry_dicts():
     validAssemblyPathsLists = db_utils.keep_valid_assemblies(valid_PDB_names, assembly_paths_lists)
     list_of_entry_dicts = db_utils.create_list_of_entry_dicts(parser, valid_UBD_candidates, valid_PDB_names,
                                                               validAssemblyPathsLists)
-    db_utils.save_as_pickle(list_of_entry_dicts, os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts.pkl'))
+    db_utils.save_as_pickle(list_of_entry_dicts, os.path.join(entry_dicts_path, 'list_of_entry_dicts.pkl'))
 
 
-def run_create_db_with_user_argv(chosen_assemblies_path, num_sublists):
+def run_create_db_with_user_argv(pdbs_path,chosen_assemblies_path, num_sublists,ImerFiles_path, ASA_path):
     # retrive the list of PDB names
-    ubiq_path = os.path.join(paths.pdbs_path, '1fxt.cif')
+    ubiq_path = os.path.join(pdbs_path, '1fxt.cif')
     ubiq_structure = db_utils.parser.get_structure('1FXT', ubiq_path)
     ubiq_chain = ubiq_structure[0]['B']
     ubiq_amino_acids = db_utils.aa_out_of_chain(ubiq_chain)
@@ -66,8 +66,7 @@ def run_create_db_with_user_argv(chosen_assemblies_path, num_sublists):
     chosen_assemblies = db_utils.load_as_pickle(chosen_assemblies_path)
     chosenAssembliesListOfSublists = db_utils.split_list(chosen_assemblies, num_sublists)
     items = [(chosenAssembliesListOfSublists[i], i) for i in range(num_sublists)]
-    db_utils.create_data_base(items[int(sys.argv[1])], ubiq_residues_list)  # download
-    # db_utils.create_data_base(items[12], ubiq_residues_list)
+    db_utils.create_data_base(items[int(sys.argv[1])], ubiq_residues_list,ImerFiles_path,ASA_path)  # download
 
 def integrate_checkchains_per_batch(batch_dir, prefix_batch, prefix_file, num_sublists):
     for i in range(num_sublists):
@@ -107,16 +106,71 @@ def integrate_all_batches_summarylog(batch_dir, output_file, num_sublists):
     with open(output_file, 'w') as output:
         output.write(integrated_content)
 
-def integrate_all_files(num_sublists):
-    integrate_checkchains_per_batch(paths.ImerFiles_path, 'Batch', 'Checkchains', num_sublists)
-    integrate_checkchains_per_batch(paths.ASA_path, 'asaBatch', 'Checkchains_asa', num_sublists)
-    integrate_all_batches_checkchains(paths.ImerFiles_path,
-                                      os.path.join(paths.ImerFiles_path, 'Integrated_Checkchains_mer.txt'), 'Batch',
+def integrate_all_files(num_sublists,ImerFiles_path,ASA_path):
+    integrate_checkchains_per_batch(ImerFiles_path, 'Batch', 'Checkchains', num_sublists)
+    integrate_checkchains_per_batch(ASA_path, 'asaBatch', 'Checkchains_asa', num_sublists)
+    integrate_all_batches_checkchains(ImerFiles_path,
+                                      os.path.join(ImerFiles_path, 'Integrated_Checkchains_mer.txt'), 'Batch',
                                       'Checkchains', num_sublists)
-    integrate_all_batches_checkchains(paths.ASA_path,
-                                      os.path.join(paths.ASA_path, 'Integrated_Checkchains_asa_mer.txt'), 'asaBatch',
+    integrate_all_batches_checkchains(ASA_path,
+                                      os.path.join(ASA_path, 'Integrated_Checkchains_asa_mer.txt'), 'asaBatch',
                                       'Checkchains_asa', num_sublists)
-    integrate_all_batches_summarylog(paths.ImerFiles_path, os.path.join(paths.ImerFiles_path, 'Integrated_summaryLog.txt'), num_sublists)
+    integrate_all_batches_summarylog(ImerFiles_path, os.path.join(ImerFiles_path, 'Integrated_summaryLog.txt'), num_sublists)
+
+
+def remove_short_chains(infile: str, outfile: str, min_length: int,log_path:str):
+    with open(infile) as f:
+        lines = f.readlines()
+
+    out_lines = []
+    with open(log_path, 'w') as log_f:
+        i = 0
+        while i < len(lines):
+            if lines[i].startswith('>'):
+                header = lines[i].strip()
+                # split header into ID and segments
+                pdb_id, seg_str = header[1:].split('_', 1)
+                segments = seg_str.split('+')
+
+                # count lines per chain until next header
+                j = i + 1
+                chain_counts = {}
+                while j < len(lines) and not lines[j].startswith('>'):
+                    parts = lines[j].split()
+                    if parts:
+                        chain = parts[0]
+                        chain_counts[chain] = chain_counts.get(chain, 0) + 1
+                    j += 1
+
+                all_chains = set(chain_counts.keys())
+                keep = {ch for ch, cnt in chain_counts.items() if cnt >= min_length}
+                removed = all_chains - keep
+
+                # log any removed chains for this record
+                if removed:
+                    for ch in sorted(removed):
+                        log_f.write(f"{pdb_id}: removed chain {ch} (length={chain_counts[ch]})\n")
+
+                # if at least one chain survives, write header + data
+                if keep:
+                    kept_segs = [seg for seg in segments if seg[2:] in keep]
+                    new_header = f">{pdb_id}_{'+'.join(kept_segs)}\n"
+                    out_lines.append(new_header)
+                    for k in range(i+1, j):
+                        parts = lines[k].split()
+                        if parts and parts[0] in keep:
+                            out_lines.append(lines[k])
+                # else: drop entire record
+
+                i = j
+            else:
+                # stray line before a header
+                out_lines.append(lines[i])
+                i += 1
+
+        # write filtered output
+        with open(outfile, 'w') as fw:
+            fw.writelines(out_lines)
 
 
 def copy_files_to_new_folder(file_paths, new_folder_path):
@@ -126,9 +180,6 @@ def copy_files_to_new_folder(file_paths, new_folder_path):
     :param file_paths: List of file paths to be copied.
     :param new_folder_path: Path to the new folder where files will be copied.
     """
-    # Create the new folder if it doesn't exist
-    if not os.path.exists(new_folder_path):
-        os.makedirs(new_folder_path)
 
     # Copy each file to the new folder
     for file_path in file_paths:
@@ -157,18 +208,65 @@ def rename_cif_files(folder_path):
 
 
 if __name__ == "__main__":
+    name = 'v4'
+    plan_dict = {
+        'download_assemblies_and_assymetrics': False,
+        'create_save_list_of_entry_dicts': False,
+        'unpack_queen_data': False,
+        'run_create_db_with_user_argv': False,
+        'integrate_all_files': True,
+        'remove_short_chains': True,
+        'copy_files_to_new_folder': False,
+    }
     # retrive the list of PDB names
-    # PDB_names_list = db_utils.read_PDB_names_from_file(UBIQ_LIST_PATH)
+    PDB_names_list = db_utils.read_PDB_names_from_file(UBIQ_LIST_PATH)
     # download the assemblies and assymetrics files
-    # download_assemblies_and_assymetrics(PDB_names_list)
-    # create_save_list_of_entry_dicts()
-    # chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
-    #     os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
+    pdbs_path = os.path.join(paths.pdbs_path, 'v2')
+    assemblies_path = os.path.join(paths.assemblies_path, 'v2')
+    entry_dicts_path = os.path.join(paths.entry_dicts_path, 'v2')
+    os.makedirs(pdbs_path, exist_ok=True)
+    os.makedirs(assemblies_path, exist_ok=True)
+    os.makedirs(entry_dicts_path, exist_ok=True)
+    
+    if plan_dict['download_assemblies_and_assymetrics']:
+        download_assemblies_and_assymetrics(PDB_names_list, pdbs_path, assemblies_path)
+    
+    if plan_dict['create_save_list_of_entry_dicts']:
+        create_save_list_of_entry_dicts(pdbs_path, assemblies_path, entry_dicts_path)
+    # use queen before this step
+    if plan_dict['unpack_queen_data']:
+
+        chosen_assemblies = db_utils.from_pickle_to_choose_assemblies(
+            os.path.join(entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'), assemblies_path)
+    
+    # use this step with user argv
     NUM_SUBLISTS = 40
-    chosen_assemblies = db_utils.load_as_pickle(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
-    print(len(chosen_assemblies))
-    run_create_db_with_user_argv(os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'), NUM_SUBLISTS)
-    integrate_all_files(NUM_SUBLISTS)  
-    # copy_files_to_new_folder(chosen_assemblies, paths.chosen_assemblies_path)
-    # rename_cif_files(paths.chosen_assemblies_path)
-    integrate_all_batches_summarylog(paths.ImerFiles_path, os.path.join(paths.ImerFiles_path, 'Integrated_summaryLog2.txt'), NUM_SUBLISTS)
+    chosen_assemblies_path = os.path.join(assemblies_path, 'chosen_assemblies.pkl')
+    ImerFiles_path = os.path.join(paths.ImerFiles_path, name)
+    os.makedirs(ImerFiles_path, exist_ok=True)
+    ASA_path = os.path.join(paths.ASA_path, name)
+    os.makedirs(ASA_path, exist_ok=True)
+    
+    if plan_dict['run_create_db_with_user_argv']:
+        run_create_db_with_user_argv(pdbs_path, chosen_assemblies_path, NUM_SUBLISTS, ImerFiles_path, ASA_path)
+
+    if plan_dict['integrate_all_files']:
+        integrate_all_files(NUM_SUBLISTS,ImerFiles_path,ASA_path)
+    
+    if plan_dict['remove_short_chains']:
+        MIN_LENGTH = 15 
+        
+        remove_short_chains(os.path.join(ImerFiles_path, 'Integrated_Checkchains_mer.txt'),
+                            os.path.join(ImerFiles_path, 'Integrated_Checkchains_mer_filtered.txt'),
+                            MIN_LENGTH,
+                            os.path.join(ImerFiles_path, 'remove_short_chains_log.txt'))
+        remove_short_chains(os.path.join(ASA_path, 'Integrated_Checkchains_asa_mer.txt'),
+                            os.path.join(ASA_path, 'Integrated_Checkchains_asa_mer_filtered.txt'),
+                            MIN_LENGTH,
+                            os.path.join(ASA_path, 'remove_short_chains_asa_log.txt'))
+    if plan_dict['copy_files_to_new_folder']:    
+        chosen_assemblies_dir = os.path.join(paths.chosen_assemblies_path, name) 
+        os.makedirs(chosen_assemblies_dir, exist_ok=True)
+        chosen_assemblies = db_utils.load_as_pickle(chosen_assemblies_path)
+        copy_files_to_new_folder(chosen_assemblies, chosen_assemblies_dir)
+        rename_cif_files(chosen_assemblies_dir)

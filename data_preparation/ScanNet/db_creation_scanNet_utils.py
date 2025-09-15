@@ -123,6 +123,9 @@ def create_assembly_paths_lists(assemblies_dir_path):
     assembly_paths_lists = []
     assembly_names = []
     for pdbDir in os.listdir(assemblies_dir_path):
+        #make sure its a directory
+        if not os.path.isdir(os.path.join(assemblies_dir_path, pdbDir)):
+            continue
         assembly_names.append(pdbDir.lower())
         assembly_paths_list = []
         pdb_dir_path = os.path.join(assemblies_dir_path, pdbDir)
@@ -164,13 +167,16 @@ def order_paths_lists(pdbs_path, assemblies_path):
 def aa_out_of_chain(chain):
     """
     :param chain: chain object
-    :return: list of aa (not HOH molecule)
+    :return: list of aa (not HOH molecule and not HETATM residues)
     """
     my_list = []
     amino_acids = chain.get_residues()
     for aa in amino_acids:
+        # Check that the residue is a standard residue (not a hetero/residue, such as HETATM)
+        if aa.get_id()[0] != " ":
+            continue
         name = str(aa.get_resname())
-        if name in THREE_LETTERS_TO_SINGLE_AA_DICT.keys():  # amino acid and not other molecule
+        if name in THREE_LETTERS_TO_SINGLE_AA_DICT.keys():
             my_list.append(aa)
     return my_list
 
@@ -508,13 +514,19 @@ def choose_assembly(entry_assembly_dict, probabilities, ambiguous_file, not_vali
                              + reference_copy_number_string + " and respective propbabilities are :" + ' '.join(
             map(str, predictions)) + "\n the total probabilities are: " + probabilities_string
                              + "\n")
+    
+    sorted_indexes = sorted(range(len(predictions)), key=lambda k: predictions[k], reverse=True)
+    for i in range(len(sorted_indexes)):
+        assemblyPath = entry_assembly_dict['assemblyPathsList'][sorted_indexes[i]]
+        structure = parser.get_structure(entry_assembly_dict['entry'], assemblyPath)
+        candidate = UBD_candidate(structure)
+        if len(candidate.models) > 0:
+            return assemblyPath
 
-    maxPrediction = max(predictions)
-    maxIndex = predictions.index(maxPrediction)
-    count = entry_assembly_dict['referenceCopyNumber'][maxIndex]
-    assemblyNum = entry_assembly_dict['assemblies'][maxIndex]
-    assemblyPath = entry_assembly_dict['assemblyPathsList'][maxIndex]
-    return assemblyPath
+    not_valid_file.write("didnt find ubiq chain in any of the assemblies for " + entry_assembly_dict['entry'] +
+                         "\n longestNonUbiqFromAsymetric: " + entry_assembly_dict['reference_sequence'])
+    return None  # no valid assembly found
+
 
 
 def choose_assemblies(listOfEntryDicts, listOfProbabillities, ambiguousFile, notValidFile):
@@ -527,14 +539,14 @@ def choose_assemblies(listOfEntryDicts, listOfProbabillities, ambiguousFile, not
     return chosenAssembliesList
 
 
-def from_pickle_to_choose_assemblies(entry_dicts_with_probabilities_path):
+def from_pickle_to_choose_assemblies(entry_dicts_with_probabilities_path,assemblies_dir):
     entry_dicts_with_probabilities = load_as_pickle(entry_dicts_with_probabilities_path)
     all_probabilities = [entry['probabilities'] for entry in entry_dicts_with_probabilities]
-    not_valid_file = open(os.path.join(paths.assemblies_path, "notValidAssembliesFileNew.txt"), "w")
-    ambiguous_file = open(os.path.join(paths.assemblies_path, 'ambiguousFileNew.txt'), "w")
+    not_valid_file = open(os.path.join(assemblies_dir, "notValidAssembliesFileNew.txt"), "w")
+    ambiguous_file = open(os.path.join(assemblies_dir, 'ambiguousFileNew.txt'), "w")
     chosen_assemblies = choose_assemblies(entry_dicts_with_probabilities, all_probabilities, ambiguous_file,
                                           not_valid_file)
-    save_as_pickle(chosen_assemblies, os.path.join(paths.assemblies_path, 'chosen_assemblies.pkl'))
+    save_as_pickle(chosen_assemblies, os.path.join(assemblies_dir, 'chosen_assemblies.pkl'))
     not_valid_file.close()
     ambiguous_file.close()
     print(chosen_assemblies)
@@ -891,18 +903,16 @@ def create_receptor_summary(candidate, model, ubiq_neighbors, ith_component_inde
 import pdb
 
 
-def create_data_base(tuple, ubiq_residus_list):
+def create_data_base(tuple, ubiq_residus_list,ImerFiles_path,ASA_path):
     chosen_assemblies, index = tuple[0], tuple[1]
     try:
         index_string = str(index)
         assemblies_names = [chosen_assemblies[i].split("/")[-2].lower() for i in range(len(chosen_assemblies))]
         structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in
                       range(len(chosen_assemblies))]
-        # structures = [parser.get_structure(assemblies_names[i], chosen_assemblies[i]) for i in range(len(chosen_assemblies)) if
-        #               '6oa9' in assemblies_names[i]]
         UBD_candidates = [UBD_candidate(structure) for structure in structures]
-        dirName = os.path.join(paths.ImerFiles_path, f"Batch{index_string}")
-        asa_dir_name = os.path.join(paths.ASA_path, f"asaBatch{index_string}")
+        dirName = os.path.join(ImerFiles_path, f"Batch{index_string}")
+        asa_dir_name = os.path.join(ASA_path, f"asaBatch{index_string}")
         print("\n\n\n creating dirs")
         if not os.path.exists(dirName):
             os.makedirs(dirName)
@@ -965,7 +975,7 @@ def create_data_base(tuple, ubiq_residus_list):
         for file in asa_files_list:
             file.close()
     except Exception as e:
-        log_file = open(os.path.join(paths.ImerFiles_path, f"Batch{str(index)}_log"), "w")
+        log_file = open(os.path.join(ImerFiles_path, f"Batch{str(index)}_log"), "w")
         log_file.write(f"An error occurred: {str(e)}\n")
         log_file.write(traceback.format_exc())
         log_file.close()
