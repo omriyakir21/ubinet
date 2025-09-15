@@ -10,6 +10,7 @@ import scipy.sparse as sp
 from scipy.sparse import csr_matrix
 from sklearn.cluster import SpectralClustering, AffinityPropagation
 from community import community_louvain  # Louvain
+# import community as community_louvain  # Louvain
 from leidenalg import find_partition, ModularityVertexPartition  # Leiden
 import igraph as ig
 from scipy.sparse.csgraph import connected_components
@@ -29,7 +30,7 @@ def reorder_labels_by_cluster_size(labels):
         new_labels[labels == old_label] = new_label
     return new_labels
 
-def plot_cluster_sizes(labels, title):
+def plot_cluster_sizes(labels, title,clusters_folder, with_scanNet_addition):
     unique, counts = np.unique(labels, return_counts=True)
     plt.figure(figsize=(8, 5))
     plt.bar(unique, counts, alpha=0.7)
@@ -105,12 +106,13 @@ def create_components_for_algorithm(algorithm_name,graph,graph_homologous):
         return louvain_clustering(graph)
     elif algorithm_name == "leiden":
         return leiden_clustering(graph)
-    elif algorithm_name == "spectral":
-        return spectral_clustering(graph_homologous)
     elif algorithm_name == "affinity":
         return affinity_propagation(graph_homologous)
     elif algorithm_name == "connected":
         return connected_components_clustering(graph_homologous)
+    elif algorithm_name.startswith("spectral"):
+        n_clusters = int(algorithm_name.split('_')[1])  # Extract the number of
+        return spectral_clustering(graph_homologous,n_clusters)
     else:
         raise ValueError(f"Unknown algorithm name: {algorithm_name}")
 

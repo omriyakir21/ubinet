@@ -7,6 +7,7 @@ import subprocess, shutil
 import pandas as pd
 import paths
 import datetime
+import time
 
 def add_model_num_to_dataset(input_file, output_file):
     with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
@@ -66,7 +67,7 @@ def read_labels(input_file, nmax=np.inf, label_type='int'):
 
 
 def cluster_sequences(list_sequences, seqid=1.0, coverage=0.8, covmode='0', path2mmseqstmp=paths.tmp_path,
-                      path2mmseqs=paths.mmseqs_exec_path
+                      path2mmseqs=paths.mmseqs_exec_path,threads=8
                       ):
 
     rng = np.random.randint(0, high=int(1e6))
@@ -78,8 +79,8 @@ def cluster_sequences(list_sequences, seqid=1.0, coverage=0.8, covmode='0', path
             f.write('>%s\n' % k)
             f.write('%s\n' % sequence)
 
-    command = ('{mmseqs} easy-cluster {fasta} {result} {tmp} --min-seq-id %s -c %s --cov-mode %s' % (
-        seqid, coverage, covmode)).format(mmseqs=path2mmseqs, fasta=tmp_input, result=tmp_output, tmp=path2mmseqstmp)
+    command = ('{mmseqs} easy-cluster {fasta} {result} {tmp} --threads {threads} --min-seq-id %s -c %s --cov-mode %s' % (
+        seqid, coverage, covmode)).format(threads=threads, mmseqs=path2mmseqs, fasta=tmp_input, result=tmp_output, tmp=path2mmseqstmp)
     subprocess.run(command.split(' '))
 
     with open(tmp_output + '_rep_seq.fasta', 'r') as f:
@@ -191,13 +192,13 @@ def delete_short_chains(input_file,out_file,min_number_of_residues):
                 out_file.writelines(chain_lines)
     # ! that can be a unique special case where couple of chains are under the min_number_of_residues but are toghether under the same header"
 
-def create_table(dataset_folder,output_folder,with_augmentations_addition,with_scanNet_addition):
+def create_table(dataset_folder,output_folder):
     all_origins = []
     all_folds = []
     all_weights = []
     all_sequences = []
     for k in range(1, 6):
-        dataset_file = os.path.join(dataset_folder, f'labels_fold{k}{with_scanNet_addition}{with_augmentations_addition}.txt' )
+        dataset_file = os.path.join(dataset_folder, f'labels_fold{k}.txt' )
         list_origins, list_sequences, list_resids, list_labels = read_labels(dataset_file)
         all_origins += list(list_origins)
         all_folds += ['Fold %s' % k] * len(list_origins)
@@ -221,8 +222,8 @@ def create_table(dataset_folder,output_folder,with_augmentations_addition,with_s
         'Sample weight flat95': all_weights_v2,
         'Sample weight flat70': all_weights_v3,
     })
-    table.to_csv(os.path.join(output_folder, f'table{with_scanNet_addition}{with_augmentations_addition}.csv'))
-    print(f' the table was created in {os.path.join(output_folder, f"table{with_scanNet_addition}{with_augmentations_addition}.csv")}')
+    table.to_csv(os.path.join(output_folder, f'table.csv'))
+    print(f' the table was created in {os.path.join(output_folder, f"table.csv")}')
 
 # %%
 
@@ -251,44 +252,78 @@ def remove_keys(file_path):
     with open(file_path, 'w') as file:
         file.write(''.join(new_content))
 
+def create_sample_datasets_and_table(with_scanNet_addition:bool,with_augmentations_addition:bool,datasets_dir:str):
+    for i in range(5):
+        fold_file = os.path.join(datasets_dir, f'labels_fold{i+1}{with_scanNet_addition}{with_augmentations_addition}.txt')
+        sample_file = fold_file.split('.txt')[0] + '_sample.txt'
+        sample_examples = {}  # keys: 1 (contains '|'), 2 (contains '+' only), 3 (others)
 
+        # Read all lines and split into examples
+        with open(fold_file, 'r') as f:
+            all_examples = f.read().split(">")
+
+        for example in all_examples:
+            header = example.split('\n')[0]
+            if header == '':
+                continue
+            if '|' in header:
+                type_key = 1
+            elif '+' in header:
+                type_key = 2
+            else:
+                type_key = 3
+            if type_key not in sample_examples:
+                sample_examples[type_key] = example
+
+        fold_examples = list(sample_examples.values())
+        sample_fold_info = ">"+">".join(fold_examples)
+
+        with open(sample_file,'w') as f:
+            f.write(sample_fold_info)
+
+    create_table(datasets_dir, datasets_dir, with_augmentations_addition, with_scanNet_addition, '_sample')
 
 if __name__ == '__main__':
-    # # Get the current date
-    # current_date = datetime.datetime.now()
-    # day = current_date.day
-    # month = current_date.month
-    with_augmentations = True
-    with_scanNet = True
-    seq_id = "0.95"
-    ASA_THRESHOLD = 0.2
-    with_augmentations_addition = '_with_augmentations' if with_augmentations else ''
-    aith_augmentations_additionnNet = True
-    with_scanNet_addition = '_with_scanNet_' if with_scanNet else ''
-    # # Create the directory name
-    directory_name = os.path.join(f"{8}_{9}_dataset",f'seq_id_{seq_id}_asaThreshold_{ASA_THRESHOLD}')
-    # directory_name = 'replacting_checks'
-
-    # # Create the full path
-    output_folder = os.path.join(paths.scanNet_data_for_training_path, directory_name)
-
-    # Check if the directory exists, if not, create it
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
+    plan_dict = {
+        'name': "v4",
+        'seq_id': "0.95",
+        'ASA_THRESHOLD_VALUE': 0.1,
+        'weight_bound_for_ubiq_fold':0.21,
+        'add_model_num_to_dataset': True,
+        'create_table': True,
+        }
     
-    for i in range(5):
-        input_file = os.path.join(paths.PSSM_path,'PSSM_8_9',f'seq_id_{seq_id}_asaThreshold_{ASA_THRESHOLD}', f'PSSM{i}{with_scanNet_addition}{with_augmentations_addition}.txt')
-        output_deletion_file = os.path.join(paths.PSSM_path,'PSSM_8_9',f'seq_id_{seq_id}_asaThreshold_{ASA_THRESHOLD}', f'PSSM{i}{with_scanNet_addition}{with_augmentations_addition}_deleted_short_chains.txt')
-        delete_short_chains(input_file, output_deletion_file, 15)
-        output_file = os.path.join(output_folder, f'labels_fold{i+1}{with_scanNet_addition}{with_augmentations_addition}.txt')
-        add_model_num_to_dataset(output_deletion_file, output_file)
+    dir_name = os.path.join(paths.scanNet_data_for_training_path,plan_dict['name'])
+    os.makedirs(dir_name, exist_ok=True)
 
-    #ONLY FOR REPLICATION 
+    name = f'seq_id_{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}_bound_{plan_dict["weight_bound_for_ubiq_fold"]}'
+    output_folder = os.path.join(dir_name,name)
+    os.makedirs(output_folder, exist_ok=True)
+
+    PSSM_path = os.path.join(paths.PSSM_path, plan_dict['name'])
+    PSSM_seq_id_folder = os.path.join(PSSM_path,f'seq_id_{plan_dict["seq_id"]}_asaThreshold_{plan_dict["ASA_THRESHOLD_VALUE"]}')
+    bound_addition = f"_{str(plan_dict['weight_bound_for_ubiq_fold']).split('.')[1]}"
+    time_1 = time.time()
+    if plan_dict['add_model_num_to_dataset']:
+        for i in range(5):
+            input_file = os.path.join(PSSM_seq_id_folder,f'PSSM{bound_addition}_{i}_with_augmentations.txt' )
+            # output_deletion_file = os.path.join(output_folder,f'PSSM{bound_addition}_{i}_with_augmentations_deleted_short_chains.txt')
+            # delete_short_chains(input_file, output_deletion_file, 15)
+            output_file = os.path.join(output_folder, f'labels_fold{i+1}.txt')
+            add_model_num_to_dataset(input_file, output_file)
+    time_2 = time.time()
+    print(f"Time taken for adding model numbers to dataset: {(time_2 - time_1)/60:.2f} minutes", flush=True)
+    #ONLY FOR REPLICATION
     # for i in range(5):
     #     remove_keys(os.path.join(output_folder, f'labels_fold{i+1}.txt'))
     
+    if plan_dict['create_table']:
+        create_table(output_folder,output_folder)
+    time_3 = time.time()
+    print(f"Time taken for creating tables: {(time_3 - time_2)/60:.2f} minutes", flush=True)
+    # create_sample_datasets_and_table(with_augmentations_addition = with_augmentations_addition,
+    #     with_scanNet_addition=with_scanNet_addition,datasets_dir = output_folder)
     
-    create_table(output_folder,output_folder,with_augmentations_addition,with_scanNet_addition)
     # manual_fixes(output_folder)
 
     #try delete short chains
