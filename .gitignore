@@ -21,3 +21,7 @@ tmp/
 chainsaw/
 models/structural_aligners/dali_aligner/
 .vscode/
+.tcshrc
+data_preparation/ScanNet/ImerFiles/
+models/structural_aligners/files_from_colab_fold/
+models/structural_aligners/missing_uniprots_fasta_files/

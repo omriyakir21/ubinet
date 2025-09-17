@@ -16,7 +16,7 @@ mafft_path = os.path.join(ScanNet_data_preparation_path, 'mafft')
 ASA_path = os.path.join(ScanNet_data_preparation_path, 'ASA')
 ImerFiles_path = os.path.join(ScanNet_data_preparation_path, 'ImerFiles')
 cath_intermediate_files_path = os.path.join(ScanNet_data_preparation_path, 'cath_intermediate_files')
-
+data_preperation_helper_path = os.path.join(ScanNet_data_preparation_path, 'helper')
 
 # datasets paths
 datasets_path = os.path.join(current_dir, 'datasets')

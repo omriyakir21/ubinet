@@ -44,7 +44,7 @@ def split_list(original_list, num_sublists):
 
 
 if __name__ == "__main__":
-
+    name = 'v4'
     tokenizer = EsmTokenizer.from_pretrained("facebook/esm2_t6_8M_UR50D")
     model = EsmForSequenceClassification.from_pretrained("facebook/esm2_t6_8M_UR50D",
                                                          problem_type="multi_label_classification")
@@ -60,8 +60,11 @@ if __name__ == "__main__":
     batch_converter = alphabet.get_batch_converter()
     model.eval()  # disables dropout for deterministic results
 
-    entryDicts = load_as_pickle(os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts.pkl'))
+    entry_dicts_path = os.path.join(paths.entry_dicts_path,name)
+    os.makedirs(entry_dicts_path, exist_ok=True)
+    entryDicts = load_as_pickle(os.path.join(entry_dicts_path, 'list_of_entry_dicts.pkl'))
     data = [(entry['entry'], entry['reference_sequence']) for entry in entryDicts]
+    print(f"Number of entries: {len(data)}")
     batch_size = 100
     # Split data into batches
     batches = split_list(data, len(data) // batch_size + (1 if len(data) % batch_size != 0 else 0))
@@ -101,5 +104,5 @@ if __name__ == "__main__":
     for entry, prob in zip(entryDicts, all_probabilities):
         entry['probabilities'] = prob
 
-    save_as_pickle(entryDicts, os.path.join(paths.entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
+    save_as_pickle(entryDicts, os.path.join(entry_dicts_path, 'list_of_entry_dicts_with_probabilities.pkl'))
 
