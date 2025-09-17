@@ -88,7 +88,9 @@ class GaussianKernel(Layer):
                               tf.math.reduce_sum(intermediate2**2, axis=-2))
 
         # zero out masked values
-        return activity * tf.cast(mask[..., None], activity.dtype)
+        if mask is not None:
+            activity = activity * tf.cast(mask[..., None], activity.dtype)
+        return activity
 
     def compute_output_shape(self, input_shape):
         output_shape = list(input_shape[:-1]) + [self.N]
@@ -159,9 +161,14 @@ def initialize_GaussianKernelRandom(xlims, N, covariance_type):
     return initial_values
 
 
-def initialize_gaussian_kernel_uniform(xrange: Tuple[float, float], N: int) -> GaussianKernel:
+def initialize_gaussian_kernel_uniform(xrange: Tuple[float, float], N: int, covariance_type='diag') -> GaussianKernel:
     centers = np.linspace(xrange[0], xrange[1], N)
     widths = [((xrange[1] - xrange[0]) / (N / 4)) for _ in range(N)]
     initial_values = [np.array([centers]), np.array([widths])]
-    kernel = GaussianKernel(N, initial_values, 'diag')
+    kernel = GaussianKernel(N, initial_values, covariance_type)
     return kernel
+
+
+def initialize_gaussian_kernel_fit(points: np.array, n_init: int, N: int, covariance_type='diag') -> GaussianKernel:
+    initial_values = initialize_GaussianKernel(points, N, covariance_type=covariance_type, n_init=n_init)
+    return GaussianKernel(N, initial_values, covariance_type)
