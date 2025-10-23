@@ -25,3 +25,7 @@ models/structural_aligners/dali_aligner/
 data_preparation/ScanNet/ImerFiles/
 models/structural_aligners/files_from_colab_fold/
 models/structural_aligners/missing_uniprots_fasta_files/
+*.txt
+data_preparation/ScanNet/cath_intermediate_files/
+inference/non_patch_analysis.ipynb
+ubinet-gpu-env.yml

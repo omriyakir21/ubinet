@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import precision_recall_curve, auc
 import numpy as np
-from models.patch_to_score.patch_to_score_MLP_utils import k_computation, prediction_function_using_bayes_factor_computation
+# from models.patch_to_score.patch_to_score_MLP_utils import k_computation, prediction_function_using_bayes_factor_computation
 
 import math
 import requests

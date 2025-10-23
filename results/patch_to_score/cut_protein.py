@@ -1,5 +1,7 @@
 import os
 import sys
+import subprocess
+from unittest import result
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from Bio import PDB
 from data_preparation.ScanNet.db_creation_scanNet_utils import THREE_LETTERS_TO_SINGLE_AA_DICT
@@ -9,9 +11,9 @@ import argparse
 import pandas as pd
 
 class PatchSelect(PDB.Select):
-    def __init__(self, patch_dict,structure,structure_path,all_predictions_ubiq, chain_id=None):
+    def __init__(self, patch_dict,structure,structure_path,all_predictions_ubiq,output_dir, chain_id=None):
         self.patch_dict = patch_dict
-        self.min_res_num, self.max_res_num = self.calculate_residue_range(structure, patch_dict, chain_id,structure_path)
+        self.min_res_num, self.max_res_num = self.calculate_residue_range(structure, patch_dict, chain_id,structure_path,output_dir)
         chain = structure[0].child_list[0] if chain_id is None else structure[0][chain_id]
         def color_chain(chain,all_predictions_ubiq):
             residues = [residue for residue in chain.get_residues()]
@@ -25,19 +27,54 @@ class PatchSelect(PDB.Select):
 
 
     
-    def calculate_residue_range(self, structure, patch_dict, chain_id,structure_path):
+    def calculate_residue_range(self, structure, patch_dict, chain_id, structure_path, output_dir):
         chain = structure[0].child_list[0] if chain_id is None else structure[0][chain_id]
-        patch_indices =sorted( [residue.get_id()[1] for residue in chain.get_residues() if residue.get_id()[1] in patch_dict])
+        patch_indices = sorted([residue.get_id()[1] for residue in chain.get_residues() if residue.get_id()[1] in patch_dict])
         min_patch_index = patch_indices[0]
         max_patch_index = patch_indices[-1]
-        chainsaw_output_path = os.path.join(paths.chainsaw_results_path,structure_path.split('/')[-1].split('.')[0] + '_chainsaw.tsv')
-        old_cwd = os.getcwd()
+
+        print(f"structure_path: {structure_path}")
+
+        # Paths to your Chainsaw install/env
+        CHAINSAW_REPO = "/home/iscb/wolfson/omriyakir/chainsaw"
+        CHAINSAW_PY   = "/home/iscb/wolfson/omriyakir/anaconda3/envs/chainsaw_env/bin/python"
+
+        # Ensure output path exists and use absolute structure path since we set cwd for subprocess
+        os.makedirs(output_dir, exist_ok=True)
+        chainsaw_output_path = os.path.join(
+            output_dir,
+            os.path.splitext(os.path.basename(structure_path))[0] + "_chainsaw.tsv"
+        )
+        structure_abs = os.path.abspath(structure_path)
+
         if not os.path.exists(chainsaw_output_path):
+            cmd = [
+                CHAINSAW_PY, "get_predictions.py",
+                "--structure_file", structure_abs,
+                "--output", chainsaw_output_path,
+            ]
+            # Clean, isolated env for subprocess (no user-site leakage)
+            env = os.environ.copy()
+            env["PYTHONNOUSERSITE"] = "1"
+            env.pop("PYTHONPATH", None)
+            # Optional: pick GPU or force CPU
+            # env["CUDA_VISIBLE_DEVICES"] = "0"   # pick GPU 0
+            # env["CUDA_VISIBLE_DEVICES"] = ""    # force CPU
+
+            print(f"[chainsaw] cwd={CHAINSAW_REPO}")
+            print(f"[chainsaw] exec: {' '.join(cmd)}")
+
             try:
-                os.chdir('/home/iscb/wolfson/omriyakir/chainsaw')
-                os.system(f'python get_predictions.py --structure_file {structure_path} --output {chainsaw_output_path}')
-            finally:
-                os.chdir(old_cwd)
+                result = subprocess.run(
+                    cmd, cwd=CHAINSAW_REPO, env=env,
+                    capture_output=True, text=True, check=True
+                )
+                print(f"[chainsaw] stdout:\n{result.stdout}")
+                print(f"[chainsaw] stderr:\n{result.stderr}")
+            except subprocess.CalledProcessError as e:
+                print(f"[chainsaw] stdout:\n{e.stdout}")
+                print(f"[chainsaw] stderr:\n{e.stderr}")
+                raise RuntimeError(f"chainsaw get_predictions failed (rc={e.returncode})") from e
         chainsaw_output = pd.read_csv(chainsaw_output_path, sep='\t')
         print(f'chainsaw_output: {chainsaw_output}')
         print(f'chainsaw_output[chopping]: {chainsaw_output["chopping"]}')
@@ -73,19 +110,19 @@ class PatchSelect(PDB.Select):
         return False
 
 
-def extract_patch_from_pdb(id, patch, patch_number, input_file, output_dir,all_predictions_ubiq, chain_id=None):
+def extract_patch_from_pdb(id:str, patch:str, input_file:str, output_dir:str,
+                           all_predictions_ubiq:list, chain_id:str=None):
     patch_list = patch.split(',')
     patch_dict = {int(item[1:]): item[0] for item in patch_list}
-    file_name = f"{id}_patch{str(patch_number)}.pdb"
+    file_name = f"{id}.pdb"
     output_file = os.path.join(output_dir, file_name)
     parser = PDB.PDBParser(QUIET=True)
     structure = parser.get_structure(id, input_file)
-
+    chainsaw_output_dir = os.path.join(output_dir, 'chainsaw_outputs')
+    os.makedirs(chainsaw_output_dir, exist_ok=True)
     io = PDB.PDBIO()
     io.set_structure(structure)
-    output_file = os.path.join(output_dir, f"{id}_patch{str(patch_number)}.pdb")
-    # Count the number of residues in the substructure
-    substructure = PatchSelect(patch_dict, structure,input_file,all_predictions_ubiq, chain_id)
+    substructure = PatchSelect(patch_dict, structure,input_file,all_predictions_ubiq,chainsaw_output_dir, chain_id)
     io.save(output_file, substructure) 
     residue_count = substructure.max_res_num - substructure.min_res_num + 1
     return residue_count

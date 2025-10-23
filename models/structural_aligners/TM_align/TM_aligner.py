@@ -11,7 +11,7 @@ from Bio import PDB
 import numpy as np
 from data_preparation.ScanNet.db_creation_scanNet_utils import get_str_seq_of_chain
 import ast
-from data_preparation.patch_to_score.protein_level_db_creation_utils import download_alphafold_model
+from data_preparation.patch_to_score.v0.protein_level_db_creation_utils import download_alphafold_model
 from numpy.linalg import inv
 from Bio.PDB import MMCIFParser, PDBIO
 from tmtools.io import get_residue_data, get_structure
@@ -36,101 +36,125 @@ def calculate_weighted_score(tm_score,seq_identity):
     return tm_score + 0.5 *seq_identity
 
 
-def align_uniprots_with_target(target_pdb, pdb_chain_table_path, output_dir_path,structure_dir):
-    print(f'target_pdb: {target_pdb}')
-    mobile_struct = get_structure(target_pdb)
-    mobile_coords, mobile_seq = get_residue_data(next(mobile_struct.get_chains()))
-    mobile_name = os.path.splitext(os.path.basename(target_pdb))[0]
-    with open(pdb_chain_table_path, 'r') as file:
-        reader = csv.DictReader(file)
-        rows = list(reader)
-    # Define the classes
-    classes = ['e1', 'e2', 'e3|e4', 'deubiquitylase','other']
-    
-    # Dictionary to store the top TM score, corresponding uniprot, and alignment for each class
-    top_scores = {class_name: {'score':0.0,'tm_score':0.0,'pdb_id':None} for class_name in classes}
-    
-    # Iterate over each class
-    for class_name in classes:
-        # Filter rows where the class column is True
-        filtered_rows = [row for row in rows if row[class_name] == 'True']
-        print(f'class name is {class_name},len filtered_rows: {len(filtered_rows)}')
-        
-        # Align each uniprot with the target_pdb and find the top TM score
-        for row in filtered_rows:
-            pdb_id = row['PDB_ID']
-            chain_id = row['CHAIN_ID']
-            if len(chain_id) > 1:
-                continue
-            pdb_id = f'{pdb_id}_{chain_id}'     
-            if pdb_id == '7mex_D':
-                continue
-            pdb_path = os.path.join(paths.binding_chains_pdbs_without_ubiqs_path, f'{pdb_id}.pdb')
-            if not os.path.exists(pdb_path):
-                continue
-            guide_struct = get_structure(pdb_path)
-            print(f'pdb_id: {pdb_id}')
-            try:
-                guide_coords, guide_seq = get_residue_data(next(guide_struct.get_chains()))
-            except Exception as e:
-                print(f'Error in {pdb_id}, {e}')
-                continue
-            res = tm_align(mobile_coords, guide_coords, mobile_seq, guide_seq)
-            tm_score = res.tm_norm_chain1  # Adjust based on result format
-            rmsd = res.rmsd
-            seq_identity = calculate_sequence_identity_between_aligned_seqs(res.seqxA,res.seqyA)
-            score = calculate_weighted_score(tm_score,seq_identity)
-            # Update the top score if the current score is higher
-            if score > top_scores[class_name]['score']:
-                top_scores[class_name]['score'] = score
-                top_scores[class_name]['tm_score'] = tm_score
-                top_scores[class_name]['pdb_id'] = pdb_id
-                top_scores[class_name]['res'] = res
-                top_scores[class_name]['rmsd'] = rmsd 
-                top_scores[class_name]['seq_identity'] = seq_identity
-                print(f'{class_name} {pdb_id} tm_score: {tm_score:.3f} rmsd: {rmsd:.3f}')
-    
-    mobile_folder = os.path.join(output_dir_path, mobile_name)
-    if not os.path.exists(mobile_folder):
-        os.mkdir(mobile_folder)
-    # Save the top scores and correspondence to a CSV file
-    output_csv_path = os.path.join(mobile_folder,f'{mobile_name}_top_scores.csv')
-    with open(output_csv_path, 'w', newline='') as csvfile:
-        fieldnames = ['class','pdb_id','tm_score','rmsd','seq_identity','score']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for class_name, score_data in top_scores.items():            
-            writer.writerow({
-                'class': class_name,
-                'pdb_id': score_data['pdb_id'],
-                'tm_score': score_data['tm_score'],
-                'rmsd': score_data['rmsd'],
-                'seq_identity' : score_data['seq_identity'],
-                'score': score_data['score']
+def align_uniprots_with_target(target_pdb:str, pdb_chain_table_path:str, output_dir_path:str
+                               ,structures_with_ubiqs_dir:str,structures_without_ubiqs_dir:str):
+    try:
+        short = False
+        print(f'target_pdb: {target_pdb}')
+        mobile_struct = get_structure(target_pdb)
+        mobile_coords, mobile_seq = get_residue_data(next(mobile_struct.get_chains()))
+        mobile_name = os.path.splitext(os.path.basename(target_pdb))[0]
 
+        mobile_folder = os.path.join(output_dir_path, mobile_name)
+        os.makedirs(mobile_folder, exist_ok=True)
+        output_csv_path = os.path.join(mobile_folder,f'{mobile_name}_top_scores.csv')
+        if os.path.exists(output_csv_path):
+            print(f'Skipping {mobile_name} because output_csv_path already exists')
+            return
+
+        with open(pdb_chain_table_path, 'r') as file:
+            reader = csv.DictReader(file)
+            rows = list(reader)
+        # Define the classes
+        classes = ['e1', 'e2', 'e3|e4', 'deubiquitylase','other']
+        
+        # Dictionary to store the top TM score, corresponding uniprot, and alignment for each class
+        top_scores = {class_name: {'score':0.0,'tm_score':0.0,'pdb_id':None} for class_name in classes}
+        
+        # Iterate over each class
+        for class_name in classes:
+            # Filter rows where the class column is True
+            filtered_rows = [row for row in rows if row[class_name] == 'True']
+            print(f'class name is {class_name},len filtered_rows: {len(filtered_rows)}')
+            
+            # Align each uniprot with the target_pdb and find the top TM score
+            for row in filtered_rows:
+                pdb_id = row['PDB_ID']
+                chain_id = row['CHAIN_ID']
+                if len(chain_id) > 1:
+                    continue
+                pdb_id = f'{pdb_id}_{chain_id}'     
+                if pdb_id == '7mex_D':
+                    continue
+                pdb_path = os.path.join(structures_without_ubiqs_dir, f'{pdb_id}.pdb')
+                if not os.path.exists(pdb_path):
+                    continue
+                guide_struct = get_structure(pdb_path)
+                # print(f'pdb_id: {pdb_id}')
+                try:
+                    guide_coords, guide_seq = get_residue_data(next(guide_struct.get_chains()))
+                except Exception as e:
+                    print(f'Error in {pdb_id}, {e}')
+                    continue
+                if len(mobile_seq)<10:
+                    top_scores[class_name]['score'] = -1
+                    top_scores[class_name]['tm_score'] = -1
+                    top_scores[class_name]['pdb_id'] = -1
+                    top_scores[class_name]['res'] = None
+                    top_scores[class_name]['rmsd'] = -1
+                    top_scores[class_name]['seq_identity'] = -1
+                    short = True
+                    print(f'Skipping {pdb_id} because mobile_coords has less than 3 residues')
+                    break
+                if guide_coords.shape[0]<3:
+                    continue
+                res = tm_align(mobile_coords, guide_coords, mobile_seq, guide_seq)
+                tm_score = res.tm_norm_chain1  # Adjust based on result format
+                rmsd = res.rmsd
+                seq_identity = calculate_sequence_identity_between_aligned_seqs(res.seqxA,res.seqyA)
+                score = calculate_weighted_score(tm_score,seq_identity)
+                # Update the top score if the current score is higher
+                if score > top_scores[class_name]['score']:
+                    top_scores[class_name]['score'] = score
+                    top_scores[class_name]['tm_score'] = tm_score
+                    top_scores[class_name]['pdb_id'] = pdb_id
+                    top_scores[class_name]['res'] = res
+                    top_scores[class_name]['rmsd'] = rmsd 
+                    top_scores[class_name]['seq_identity'] = seq_identity
+                    print(f'{class_name} {pdb_id} tm_score: {tm_score:.3f} rmsd: {rmsd:.3f}')
+        
+        # Save the top scores and correspondence to a CSV file
+        with open(output_csv_path, 'w', newline='') as csvfile:
+            fieldnames = ['class','pdb_id','tm_score','rmsd','seq_identity','score']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for class_name, score_data in top_scores.items():            
+                writer.writerow({
+                    'class': class_name,
+                    'pdb_id': score_data['pdb_id'],
+                    'tm_score': score_data['tm_score'],
+                    'rmsd': score_data['rmsd'],
+                    'seq_identity' : score_data['seq_identity'],
+                    'score': score_data['score']
+
+                    
+                })
+                if short:
+                    print(f'Skipping alignment output for {class_name} because guide_coords has less than 3 residues')
+                    break
                 
-            })
-            guide_name = score_data['pdb_id']
-            tm_score = f"{score_data['tm_score']:.3f}"
-            rmsd = f"{score_data['rmsd']:.3f}"
-            seq_identity = f"{score_data['seq_identity']:.3f}"
-            aligned_folder = os.path.join(mobile_folder,f"{class_name}_tm_score_{tm_score}_rmsd_{rmsd}_seq_identity_{seq_identity}")
-            if not os.path.exists(aligned_folder):
-                os.mkdir(aligned_folder)
-            res = score_data['res']
-            aligned_mobile_struct = transform_structure(mobile_struct, res)
-            io = PDBIO()
-            io.set_structure(aligned_mobile_struct)
- 
-            io.save(os.path.join(aligned_folder, f'{mobile_name}_to_{guide_name}_{tm_score}_{rmsd}.pdb'))
-            translation = res.t
-            rotation = res.u
-            np.save(os.path.join(aligned_folder, f'{mobile_name}_to_{guide_name}_translation.npy'), translation)
-            np.save(os.path.join(aligned_folder, f'{mobile_name}_to_{guide_name}_rotation_.npy'), rotation)
-            correspondences = {'mobile_aligned_seq':res.seqxA,'guide_aligned_seq':res.seqyA}
-            save_as_pickle(correspondences,os.path.join(aligned_folder, f'{mobile_name}_to_{guide_name}_correspondences.pkl'))
-            shutil.copy(os.path.join(paths.binding_chains_pdbs_with_ubiqs_path, f'{guide_name}_with_ubiqs.pdb'), aligned_folder)
-            create_chimera_script(aligned_folder)
+                guide_name = score_data['pdb_id']
+                tm_score = f"{score_data['tm_score']:.3f}"
+                rmsd = f"{score_data['rmsd']:.3f}"
+                seq_identity = f"{score_data['seq_identity']:.3f}"
+                aligned_folder = os.path.join(mobile_folder,f"{class_name}_tm_score_{tm_score}_rmsd_{rmsd}_seq_identity_{seq_identity}")
+                os.makedirs(aligned_folder, exist_ok=True)
+                res = score_data['res']
+                aligned_mobile_struct = transform_structure(mobile_struct, res)
+                io = PDBIO()
+                io.set_structure(aligned_mobile_struct)
+    
+                io.save(os.path.join(aligned_folder, f'{mobile_name}_to_{guide_name}_{tm_score}_{rmsd}.pdb'))
+                translation = res.t
+                rotation = res.u
+                np.save(os.path.join(aligned_folder, f'{mobile_name}_to_{guide_name}_translation.npy'), translation)
+                np.save(os.path.join(aligned_folder, f'{mobile_name}_to_{guide_name}_rotation_.npy'), rotation)
+                correspondences = {'mobile_aligned_seq':res.seqxA,'guide_aligned_seq':res.seqyA}
+                save_as_pickle(correspondences,os.path.join(aligned_folder, f'{mobile_name}_to_{guide_name}_correspondences.pkl'))
+                shutil.copy(os.path.join(structures_with_ubiqs_dir, f'{guide_name}_with_ubiqs.pdb'), aligned_folder)
+                create_chimera_script(aligned_folder)
+    except Exception as e:
+        print(f'Error processing {target_pdb}: {e}')
 
     return top_scores
 
@@ -182,10 +206,9 @@ if __name__ == '__main__':
     output_dir_path = paths.TM_aligner_aligned_pdbs_path
     
     # uniprots = ['O95793','Q8IYS0','Q86VN1','Q9NQL2','P07900','P53061']
-    uniprots = ['Q9BYJ4']
-    for uniprot in uniprots:
-        target_pdb =os.path.join(paths.AFDB_source_patch_to_score_path,'Human',f'{uniprot}.pdb') 
-        top_scores = align_uniprots_with_target(target_pdb, pdb_chain_table_path,output_dir_path)
+    # for uniprot in uniprots:
+    #     target_pdb =os.path.join(paths.AFDB_source_patch_to_score_path,'Human',f'{uniprot}.pdb') 
+    #     top_scores = align_uniprots_with_target(target_pdb, pdb_chain_table_path,output_dir_path)
     
     # pdb_transform(target_pdb, matrix, output_path)
     # # download_alphafold_model('P02185','/home/iscb/wolfson/omriyakir/ubinet/models/structural_aligners/TM-align/aligment_examples')
