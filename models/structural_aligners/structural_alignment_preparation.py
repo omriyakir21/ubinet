@@ -11,6 +11,7 @@ from data_preparation.patch_to_score.v0.protein_level_db_creation_utils import d
 from Bio.PDB.MMCIFParser import MMCIFParser
 from data_preparation.ScanNet.db_creation_scanNet_utils import get_str_seq_of_chain,is_ubiquitin
 from Bio import PDB
+import subprocess
 
 
 def find_class_for_chain(uniprot_id):
@@ -175,13 +176,36 @@ def extract_chains(input_path, chain_id, output_path, include_ubiquitin=False, i
 
     io.save(output_path, ChainSelect())
 
+def create_db_list_for_foldseek(GO_folder_path: str, output_list_path: str):
+    """
+    Writes one absolute path per line (no headers, no tabs).
+    Supports .pdb/.pdb.gz/.cif/.cif.gz.
+    """
+    subfolder_names = ['DUB', 'E1', 'E2', 'E3', 'ubiquitinBinding']
+    exts = ('.pdb', '.pdb.gz', '.cif', '.cif.gz')
+    n = 0
+    with open(output_list_path, 'w', newline='\n') as out:
+        for sub in subfolder_names:
+            subdir = os.path.join(GO_folder_path, sub)
+            if not os.path.isdir(subdir):
+                print(f"Warning: {subdir} does not exist or is not a directory.")
+                continue
+            for fname in sorted(os.listdir(subdir)):
+                if fname.lower().endswith(exts):
+                    abs_path = os.path.abspath(os.path.join(subdir, fname))
+                    out.write(abs_path + '\n')
+                    n += 1
+    if n == 0:
+        raise RuntimeError(f"No structure files found under {GO_folder_path}")
+    print(f"Wrote {n} paths to {output_list_path}")
 
 if __name__ == '__main__':
     plan_dict = {'version':'v4',
                  'seq_id_threshold' : '0.95',
                  'update_csv_with_classes': False,
                  'replace_nan_with_pdb_chain': False,
-                 'create_substructures_for_all_chains': True,
+                 'create_substructures_for_all_chains': False,
+                 'create_foldseek_patch2score_positives_db':True
                }
 
     pdb_chain_table_path = f'datasets/scanNet/AF2_augmentations/pdbs_with_augmentations_{plan_dict["seq_id_threshold"]}/{plan_dict["version"]}/pdb_chain_table_0.95.csv'
@@ -196,6 +220,10 @@ if __name__ == '__main__':
     
     folder_with_ubiqs = os.path.join(paths.binding_chains_pdbs_with_ubiqs_path, plan_dict['version'])
     folder_without_ubiqs = os.path.join(paths.binding_chains_pdbs_without_ubiqs_path, plan_dict['version'])
+    foldseek_path = os.path.join(paths.patch_to_score_dataset_path, 'foldseek')
+    foldseek_db_paths_list = os.path.join(foldseek_path, 'positives_paths.tsv')
+    foldseek_db_file = os.path.join(foldseek_path, 'positives_db')
+
 
     if plan_dict['update_csv_with_classes']:
         print('Updating csv with classes')
@@ -209,6 +237,27 @@ if __name__ == '__main__':
         print('Creating substructures for all chains')
         create_substructures_for_all_chains(input_folder=structures_folder, chains_info_csv=pdb_chain_uniprot_classes_table,
                                            output_path_with_ubiqs=folder_with_ubiqs, output_path_without_ubiqs=folder_without_ubiqs)
-    # download_all_un
 
+    if plan_dict['create_foldseek_patch2score_positives_db']:
+        print('Creating foldseek patch2score positives db')
+        os.makedirs(foldseek_path, exist_ok=True)
+
+        create_db_list_for_foldseek(
+            GO_folder_path=paths.GO_source_patch_to_score_path,
+            output_list_path=foldseek_db_paths_list
+        )
+
+        try:
+            res = subprocess.run(
+                ["foldseek", "createdb", foldseek_db_paths_list, foldseek_db_file],
+                check=True, capture_output=True, text=True
+            )
+            print("STDOUT:\n", res.stdout)
+            if res.stderr:
+                print("STDERR:\n", res.stderr)
+        except subprocess.CalledProcessError as e:
+            print("STDOUT:\n", e.stdout)
+            print("STDERR:\n", e.stderr)
+            raise
+                    
 

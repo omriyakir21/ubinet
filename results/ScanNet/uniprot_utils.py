@@ -1,5 +1,6 @@
 import requests
 from xml.etree.ElementTree import fromstring
+import csv
 
 # pdb_mapping_url = 'http://www.rcsb.org/pdb/rest/das/pdb_uniprot_mapping/alignment'
 #
@@ -68,10 +69,54 @@ def get_uniprot_organism(uniprot_id):
     return name, ecnumber, organism, lineage
 
 
-def get_chain_organism(pdb, chain):
-    uniprot_id = get_uniprot_id(pdb,chain)
+def get_chain_organism(uniprot_id):
     name, ecnumber, organism, lineage = get_uniprot_organism(uniprot_id)
     return (uniprot_id, name, ecnumber, organism, lineage)
+
+def map_pdb_chains_to_uniprot(input_csv, output_csv="pdb_to_uniprot.csv"):
+    """
+    Reads input CSV with PDB_ID,CHAIN_ID columns and writes output CSV with UniProt accession.
+
+    Args:
+        input_csv (str): Path to input CSV with columns [PDB_ID, CHAIN_ID]
+        output_csv (str): Path to save results [PDB_ID, CHAIN_ID, uniprot]
+    """
+    base_url = "https://www.ebi.ac.uk/pdbe/api/mappings/uniprot/{}"
+    rows_out = []
+
+    with open(input_csv, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            pdb_id = row["PDB_ID"].strip()
+            chain = row["CHAIN_ID"].strip()
+            uniprot_acc = ""
+
+            try:
+                url = base_url.format(pdb_id.lower())
+                resp = requests.get(url, timeout=30)
+                if resp.status_code == 200:
+                    data = resp.json().get(pdb_id.lower(), {}).get("UniProt", {})
+                    for acc, info in data.items():
+                        for mapping in info.get("mappings", []):
+                            if mapping.get("chain_id") == chain:
+                                uniprot_acc = acc
+                                break
+                        if uniprot_acc:
+                            break
+                else:
+                    print(f"Failed for {pdb_id}: HTTP {resp.status_code}")
+            except Exception as e:
+                print(f"Error with {pdb_id} chain {chain}: {e}")
+
+            rows_out.append([pdb_id, chain, uniprot_acc])
+
+    # Write results
+    with open(output_csv, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["PDB_ID", "CHAIN_ID", "uniprot"])
+        writer.writerows(rows_out)
+
+    print(f"Saved {len(rows_out)} rows to {output_csv}")
 
 
 if __name__ == '__main__':

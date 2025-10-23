@@ -14,7 +14,7 @@ from typing import Dict, List, Tuple, Optional
 from data_preparation.patch_to_score.v0.data_development_utils import Protein, MAX_NUMBER_OF_COMPONENTS
 import pandas as pd
 from results.patch_to_score.cut_protein import extract_patch_from_pdb
-
+from concurrent.futures import ThreadPoolExecutor
 
 
 def batch_k_computation(predictions, training_ub_ratio, with_class_weights=False):
@@ -50,11 +50,11 @@ def str_patch_from_list_indexes(protein, list_locations):
     strPatch = ','.join(myList)
     return strPatch
 
-def create_training_ub_ratio(all_predictions_path:str, ub_ratios_dir:str):
-    all_predictions = load_as_pickle(all_predictions_path)
+def create_training_ub_ratio(folds_training_dicts_path:str, ub_ratios_dir:str):
+    folds_training_dicts = load_as_pickle(folds_training_dicts_path)
     labels = []
-    for fold_index in range(len(all_predictions)):
-        fold = all_predictions[fold_index]  
+    for fold_index in range(len(folds_training_dicts)):
+        fold = folds_training_dicts[fold_index]
         labels = fold['labels_train']
         positives_ratio = np.sum(labels == 1) / len(labels)
         ub_ratio_fold_path = os.path.join(ub_ratios_dir, f'ub_ratio_fold_{fold_index}.pkl')
@@ -106,8 +106,28 @@ def get_top_patches_indices(protein):
                           sorted_components[:min(MAX_NUMBER_OF_COMPONENTS, len(components))]]
     return top_component_sets
 
-def create_str_patches_and_Significances(all_predictions_path: str, model_dir: str, protein_locations_path: str,ub_ratios_dir: str) -> Dict[str, np.ndarray]:
-    all_predictions = load_as_pickle(all_predictions_path)
+def create_sub_fold_training_dicts_test(folds_training_dicts:list,uniprot:str):
+    for fold in folds_training_dicts:
+        if uniprot in fold['uniprots_test']:
+            components = fold['components_test']
+            sizes = fold['sizes_test']
+            num_patches = fold['num_patches_test']
+            labels = fold['labels_test']
+            uniprots = fold['uniprots_test']
+            index = list(uniprots).index(uniprot)
+            return {
+                'components_test': components[index:index+1],
+                'sizes_test': sizes[index:index+1],
+                'num_patches_test': num_patches[index:index+1],
+                'labels_test': labels[index:index+1],
+                'uniprots_test': uniprots[index:index+1]
+            }
+    raise ValueError(f'Uniprot {uniprot} not found in any fold test sets')
+
+
+
+def create_str_patches_and_Significances(folds_training_dicts_path: str, model_dir: str, protein_locations_path: str,ub_ratios_dir: str) -> Dict[str, np.ndarray]:
+    folds_training_dicts = load_as_pickle(folds_training_dicts_path)
     proteins = load_as_pickle(protein_locations_path)
     with open(f'{model_dir}/configuration.json', 'rb') as f:
         configuration = json.load(f)
@@ -126,11 +146,17 @@ def create_str_patches_and_Significances(all_predictions_path: str, model_dir: s
         'all_labels': []
     }
 
+
     # Loop over folds
-    for fold_index in tqdm(range(len(all_predictions)), desc="Processing Folds"):
+    for fold_index in tqdm(range(len(folds_training_dicts)), desc="Processing Folds"):
         ub_ratio_path = os.path.join(ub_ratios_dir, f'ub_ratio_fold_{fold_index}.pkl')
         model.load_weights(f'{model_dir}/fold_{fold_index}/model.keras')
-        fold = all_predictions[fold_index]
+        fold = folds_training_dicts[fold_index]
+        #Debug for F4JIP6
+        # if 'F4JIP6' not in fold['uniprots_test']:
+        #     print(f'Uniprot F4JIP6 not found in fold {fold_index} test set, skipping this fold.')
+        #     continue
+        # fold = create_sub_fold_training_dicts_test(folds_training_dicts, 'F4JIP6')
         components_fold = fold['components_test']    # Tensor of shape (N, 10, feat_dim)
         num_patches_fold = fold['num_patches_test']     # Tensor of shape (N, ...)
         sizes_fold = fold['sizes_test']                 # Tensor of shape (N, ...)
@@ -158,6 +184,7 @@ def create_str_patches_and_Significances(all_predictions_path: str, model_dir: s
             uniprots_batch = batch[4].numpy()
             proteins_batch = [proteins[uniprot.decode('utf-8')] for uniprot in uniprots_batch]
             str_patches_batch = []
+            
 
             for i in range(len(proteins_batch)):
                 protein = proteins_batch[i]
@@ -175,7 +202,6 @@ def create_str_patches_and_Significances(all_predictions_path: str, model_dir: s
                 for j in range(len(sorted_component_sets)):
                     str_patches_protein.append(str_patch_from_list_indexes(protein, sorted_component_sets[j]))
                 str_patches_batch.append(str_patches_protein)
-
             data_dict['all_original_predictions'].extend(original_preds)
             data_dict['all_original_inference_predictions'].extend(original_inference_preds_batch)
             data_dict['all_original_K_values'].extend(original_K_values_batch)
@@ -214,23 +240,25 @@ def create_csv_add_sources_and_significance_ll(data_dict_path:str,proteins_path:
     rows = []
     for i in range(len(data_dict['all_str_patches'])):
         row = {'uniprot': all_uniprots[i].decode('utf-8'),
+               'predictions': float(data_dict['all_original_predictions'][i]),
                 'inference_prediction': float(data_dict['all_original_inference_predictions'][i]),
                 'source': sources[i]}
 
         str_patches = data_dict['all_str_patches'][i]
         significances = data_dict['all_significants'][i]
         cnt = 0
-        for j in range(len(str_patches)):
+        for j in range(MAX_NUMBER_OF_COMPONENTS):
             if significances[j] == 0:
                 continue
+                
             row[f'significance{cnt}'] = float(significances[j])
             row[f'significance_ll_{cnt}'] = calculate_log_likelihood_significance(
                 inference_prediction=float(data_dict['all_original_inference_predictions'][i]),
                 significance=float(significances[j]))
-            row[f'str_patch{cnt}'] = str_patches[j]
+            row[f'str_patch{cnt}'] = str_patches[cnt]
 
             cnt += 1
-        for j in range(cnt, 10):
+        for j in range(cnt, MAX_NUMBER_OF_COMPONENTS):
             row[f'significance{j}'] = ''
             row[f'str_patch{j}'] = ''
             row[f'significance_ll_{j}'] = ''
@@ -254,7 +282,7 @@ def calculate_log_likelihood_significance(inference_prediction:float, significan
 
 def create_substructures_for_filtered(csv_file:str,substructures_dir:str,all_predictions_ubiq:list,patch_number:int,source:str,output_path:str):
     os.makedirs(substructures_dir, exist_ok=True)
-    substructures_source_dir = os.path.join(substructures_dir, source)
+    substructures_source_dir = os.path.join(substructures_dir, source.split(" ")[0])
     os.makedirs(substructures_source_dir, exist_ok=True)
     # Read the CSV file
     df = pd.read_csv(csv_file)

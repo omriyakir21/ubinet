@@ -12,11 +12,11 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.metrics import auc
 from typing import Dict, List
-import pdb
-
+import subprocess
 from models.structural_aligners.TM_align.TM_aligner import align_uniprots_with_target
 import results.patch_to_score.chimera_script as chimera_script
 from inference.fetch_uniprot_data import uniprot_to_csv
+import models.structural_aligners.Foldseek.foldseek as foldseek
 
 
 def find_model_number(uniprot, uniprots_sets):
@@ -42,26 +42,6 @@ def filter_dicts_by_keys(data: Dict[str, Dict[str, any]], keys: List[str]) -> Di
         for outer_key, inner_dict in data.items()
     }
 
-
-# def calculate_significance_ll(input_csv, output_csv):
-#     # Read the CSV file into a DataFrame
-#     df = pd.read_csv(input_csv)
-    
-#     # Iterate through each significance column
-#     for i in range(1, 11):
-#         significance_col = f'significance{i}'
-        
-#         # Calculate significance_ll_{index} using the utility function
-#         df[f'significance_ll_{i}'] = df.apply(lambda row: calculate_log_likelihood_significance(row['inference_prediction'], row[significance_col]), axis=1)
-        
-#         # Insert the new column right after the respective significance column
-#         col_index = df.columns.get_loc(significance_col) + 1
-#         cols = df.columns.tolist()
-#         cols.insert(col_index, cols.pop(cols.index(f'significance_ll_{i}')))
-#         df = df[cols]
-    
-#     # Save the updated DataFrame to a new CSV file
-#     df.to_csv(output_csv, index=False)
 
 def filter_top_examples(input_csv, output_csv):
     # Read the CSV file into a DataFrame
@@ -108,7 +88,8 @@ def add_structure_info(input_folder:str, input_csv:str, output_csv:str, patch_nu
     # Loop through each uniprot ID
     for index, row in df.iterrows():
         uniprot = row['uniprot']
-        sub_folder = os.path.join(input_folder, f"{uniprot}_patch{patch_number}")
+        # sub_folder = os.path.join(input_folder, f"{uniprot}_patch{patch_number}")
+        sub_folder = os.path.join(input_folder, f"{uniprot}")
         structure_csv = os.path.join(sub_folder, f"{uniprot}_top_scores.csv")
         
         if os.path.exists(structure_csv):
@@ -124,6 +105,80 @@ def add_structure_info(input_folder:str, input_csv:str, output_csv:str, patch_nu
                     df.at[index, f'patch{patch_number}_seq_identity_{class_name}'] = class_row['seq_identity'].values[0]
         
     df.to_csv(output_csv, index=False)
+
+
+def run_two_pass(query_db: str,
+                 target_db: str,
+                 out_dir: str,
+                 threads: int = None,
+                 strict_cov: float = 0.80,
+                 strict_maxseqs: int = 10,
+                 relaxed_cov: float = 0.60,
+                 relaxed_maxseqs: int = 10,
+                 foldseek_bin: str = "foldseek"):
+    name = os.path.basename(query_db.split('_db')[0])
+    threads = threads or (os.cpu_count() or 1)
+    os.makedirs(out_dir, exist_ok=True)
+    tmp1 = os.path.join(out_dir, "tmp_pass1")
+    tmp2 = os.path.join(out_dir, "tmp_pass2")
+    
+    out1 = os.path.join(out_dir, f"search_pass1.tsv")
+    out2 = os.path.join(out_dir, "search_pass2.tsv")
+    out_csv = os.path.join(out_dir, "best_hits.csv")
+
+    if os.path.exists(out_csv):
+        df = pd.read_csv(out_csv)
+        if not df.empty:
+            print(f"Best hits CSV already exists and is non-empty: {out_csv}")
+            return out_csv
+
+
+
+    # All query IDs from the DB
+    all_query_ids = foldseek.read_lookup_ids(query_db)
+
+    # ---- Pass 1: strict
+    foldseek.run_foldseek_easy_search(
+        query_db=query_db, target_db=target_db,
+        out_tsv=out1, tmp_dir=tmp1,
+        cov=strict_cov, max_seqs=strict_maxseqs, threads=threads,
+        foldseek_bin=foldseek_bin
+    )
+    df1 = foldseek.parse_hits(out1)
+    print(f"Pass1: {len(df1)} total hits")
+    present = set(df1["query"].unique()) if not df1.empty else set()
+    missing_ids = sorted(set(all_query_ids) - {foldseek.base_id(q) for q in present})
+
+    print(f"\nPass1: {len(present)} queries with ≥1 hit, {len(missing_ids)} missing")
+
+    # Early exit if nothing is missing
+    if not missing_ids:
+        foldseek.write_best_csv([foldseek.base_id(x) for x in all_query_ids], df1, out_csv)
+        return
+
+    # ---- Pass 2: relaxed, only for missing queries
+    # Try createsubdb (best), else fallback to full query_db
+    sub_prefix = os.path.join(out_dir, "queries_missing_db")
+    used_subdb = foldseek.create_subdb_from_ids(foldseek_bin, query_db, missing_ids, sub_prefix)
+
+    query_for_pass2 = sub_prefix if used_subdb else query_db
+
+    foldseek.run_foldseek_easy_search(
+        query_db=query_for_pass2, target_db=target_db,
+        out_tsv=out2, tmp_dir=tmp2,
+        cov=relaxed_cov, max_seqs=relaxed_maxseqs, threads=threads,
+        foldseek_bin=foldseek_bin
+    )
+    df2 = foldseek.parse_hits(out2)
+
+    # If we had to rerun full DB in pass2, filter df2 to only missing IDs
+    if not used_subdb and not df2.empty:
+        df2 = df2[df2["uniprot"].isin(missing_ids)].copy()
+
+    # Merge passes and write best-per-query CSV
+    df_merged = pd.concat([df1, df2], ignore_index=True) if not df1.empty or not df2.empty else pd.DataFrame()
+    foldseek.write_best_csv([foldseek.base_id(x) for x in all_query_ids], df_merged, out_csv)
+    return out_csv
 
 
 def change_bfactor_single_chain_structure(structure, chain_id, new_bfactors):
@@ -151,8 +206,11 @@ if __name__ == '__main__':
         'fetch_uniprots_data_from_api':False,
         'create_substructures': False,
         'tm_align_substructures': False,
-        'add_structure_info': True,
-        'add_uniprots_data': True,
+        'add_structure_info': False,
+        'add_uniprots_data': False,
+        'create_foldseek_patch_dbs':False,
+        'run_foldseek_searches':False,
+        'add_foldseek_results_to_table':True
         
     }
     candidates_dir = os.path.join(plan_dict['model_results_dir_path'], 'candidates')
@@ -168,6 +226,8 @@ if __name__ == '__main__':
     structures_with_ubiqs_dir = os.path.join(paths.binding_chains_pdbs_with_ubiqs_path, plan_dict['version'])
     structures_without_ubiqs_dir = os.path.join(paths.binding_chains_pdbs_without_ubiqs_path, plan_dict['version'])
     aligment_candidates_dir = os.path.join(candidates_dir,'aligned_candidates')
+    foldseek_candidates_folder = os.path.join(candidates_dir,'foldseek')
+    foldseek_patch_db_dir = os.path.join(foldseek_candidates_folder,f'patch_{plan_dict["patch_number"]}')
     
     if plan_dict['create_ub_ratio']:
         print('Creating ub ratio...')
@@ -203,7 +263,7 @@ if __name__ == '__main__':
     if plan_dict['create_top_k_by_source']:
         print('Creating top k by source...')
         for source in sources:
-            psu.filter_folds_training_dicts_by_source(
+            psu.filter_all_predictions_by_source(
                 source=source,
                 input_csv_path=significances_csv_path,
                 top_k=500,
@@ -243,7 +303,7 @@ if __name__ == '__main__':
         os.makedirs(alignment_candidates_patchs_dir, exist_ok=True)
         for source in sources:
             print(f'Processing source: {source}')
-            substructures_dir_source = os.path.join(substructures_dir,source)
+            substructures_dir_source = os.path.join(substructures_dir,source.split(" ")[0])
             os.makedirs(substructures_dir_source, exist_ok=True)
             alignment_candidates_patchs_source_dir = os.path.join(alignment_candidates_patchs_dir, source)
             os.makedirs(alignment_candidates_patchs_source_dir, exist_ok=True)
@@ -259,14 +319,15 @@ if __name__ == '__main__':
         alignment_candidates_patchs_dir = os.path.join(aligment_candidates_dir,f'patch_{plan_dict["patch_number"]}')        
         for source in sources:
             print(f'Processing source: {source}')
-            substructures_dir_source = os.path.join(substructures_dir,source)
+            substructures_dir_source = os.path.join(substructures_dir, source.split(" ")[0])
             alignment_candidates_patchs_source_dir = os.path.join(alignment_candidates_patchs_dir, source)
             input_csv = os.path.join(candidates_dir, f'data_predictions_significances_filtered_{source}.csv')
             output_csv = os.path.join(candidates_dir,f"significance_table_top_500_{source}_aligments.csv")
             add_structure_info(input_folder=alignment_candidates_patchs_source_dir, input_csv=input_csv,
                                 output_csv=output_csv, patch_number=patch_number)
     
-    # ...existing code...
+
+    
     if plan_dict['add_uniprots_data']:
         print('Adding uniprot data to final table...')
         for source in sources:
@@ -287,5 +348,95 @@ if __name__ == '__main__':
             merged_df = merged_df.round(4)
             
             merged_df.to_csv(output_csv, index=False)
+        
+    if plan_dict['create_foldseek_patch_dbs']:
+        print('Creating foldseek databases for patches...')
+        os.makedirs(foldseek_candidates_folder, exist_ok=True)
+        os.makedirs(foldseek_patch_db_dir, exist_ok=True)        
+
+        for source in sources:
+            print(f'Processing source: {source}')
+            foldseek_patch_source_dir = os.path.join(foldseek_patch_db_dir, source.split(" ")[0])
+            os.makedirs(foldseek_patch_source_dir, exist_ok=True)
+            substructures_dir_source = os.path.join(substructures_dir, source.split(" ")[0])
+            substructures_paths_dir = os.path.join(foldseek_patch_source_dir, 'substructures_paths')
+            os.makedirs(substructures_paths_dir, exist_ok=True)
+            substructures_db_dir = os.path.join(foldseek_patch_source_dir, 'substructures_db')
+            os.makedirs(substructures_db_dir, exist_ok=True)
+            for file in os.listdir(substructures_dir_source):
+                if file.endswith('.pdb'):
+                    full_path = os.path.join(substructures_dir_source, file)
+                    pdb_name = file[:-4]
+                    path_file = os.path.join(substructures_paths_dir, f'{pdb_name}.txt')
+                    foldseek_db_file = os.path.join(substructures_db_dir, f'{pdb_name}_db')
+                    with open(path_file, 'w') as f:
+                        f.write(full_path)
+                    try:
+                        res = subprocess.run(
+                            ["foldseek", "createdb", full_path, foldseek_db_file],
+                            check=True, capture_output=True, text=True
+                        )
+                        print("STDOUT:\n", res.stdout)
+                        if res.stderr:
+                            print("STDERR:\n", res.stderr)
+                    except subprocess.CalledProcessError as e:
+                        print("STDOUT:\n", e.stdout)
+                        print("STDERR:\n", e.stderr)
+                        raise
+
+
+    if plan_dict['run_foldseek_searches']:
+        positives_db = os.path.join(paths.patch_to_score_dataset_path, 'foldseek', 'positives_db')
+        print('Running foldseek searches for patches...')
+        for source in sources:
+            print(f'Processing source: {source}')
+            foldseek_patch_source_dir = os.path.join(foldseek_patch_db_dir, source.split(" ")[0])
+            substructures_db_dir = os.path.join(foldseek_patch_source_dir, 'substructures_db')
+            foldseek_results_dir = os.path.join(foldseek_patch_source_dir, 'foldseek_results')
+            os.makedirs(foldseek_results_dir, exist_ok=True)
+            for file in os.listdir(substructures_db_dir):
+                if file.endswith('_db'):
+                    foldseek_db_file = os.path.join(substructures_db_dir, file)
+                    print(f'Running foldseek search for {foldseek_db_file}...')
+                    out_dir = os.path.join(foldseek_results_dir, file[:-3])
+                    os.makedirs(out_dir, exist_ok=True)
+                    out_csv = run_two_pass(
+                        query_db=foldseek_db_file,
+                        target_db=positives_db,
+                        out_dir=out_dir,
+                        threads=16,
+                        strict_cov=0.80,
+                        strict_maxseqs=10,
+                        relaxed_cov=0.60,
+                        relaxed_maxseqs=10,
+                        foldseek_bin="foldseek"
+                    )
+
+    if plan_dict['add_foldseek_results_to_table']:
+        print('Adding foldseek results to final table...')
+        patch_number = plan_dict['patch_number']
+        for source in sources:
+            add_dict = []
+            print(f'Processing source: {source}')
+            foldseek_patch_source_dir = os.path.join(foldseek_patch_db_dir, source.split(" ")[0])
+            foldseek_results_dir = os.path.join(foldseek_patch_source_dir, 'foldseek_results')
+            input_csv = os.path.join(candidates_dir, f"significance_table_top_500_{source}_final.csv")
+            output_csv = os.path.join(candidates_dir, f"significance_table_top_500_{source}_with_foldseek_final.csv")
+            for subdir in os.listdir(foldseek_results_dir):
+                most_similiar_csv = os.path.join(foldseek_results_dir, subdir, 'best_hits.csv')
+                df_foldseek = pd.read_csv(most_similiar_csv)
+                print(f' df: {df_foldseek}')
+                add_dict.append({'uniprot':subdir,'most_similar':df_foldseek['most_similar'].values[0] if not df_foldseek.empty else None,
+                                 'alntmscore':df_foldseek['alntmscore'].values[0] if not df_foldseek.empty else None,
+                                 'alnlen':df_foldseek['alnlen'].values[0] if not df_foldseek.empty else None})
+            add_df = pd.DataFrame(add_dict)
+            df = pd.read_csv(input_csv)
+            merged_df = pd.merge(df, add_df, on='uniprot', how='left')
+            merged_df.to_csv(output_csv, index=False)
+
+        
+                
+        
+
 
 

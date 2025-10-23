@@ -25,9 +25,6 @@ NEGATIVE_SOURCES = set(
 
 POSITIVE_SOURCES = set(['E1', 'E2', 'E3', 'ubiquitinBinding', 'DUB'])
 
-parser = PDBParser()
-parserMMcif = MMCIFParser()
-
 server_PDBs = True
 DISTANCE_THRESHOLD = 10
 
@@ -76,6 +73,7 @@ class Protein:
             return aa_out_of_chain(chain)
     
     def get_structure(self, path=None):
+        local_parser = PDBParser() if server_PDBs else MMCIFParser()
         if path is not None:
             structurePath = path
         else:
@@ -92,7 +90,7 @@ class Protein:
             # convert_cif_to_pdb(structurePath2, structurePath)
             # print(f"created new path in : {structurePath}")
             raise Exception("path does not exist")
-        structure = parser.get_structure(self.uniprot_name, structurePath)
+        structure = local_parser.get_structure(self.uniprot_name, structurePath)
         return structure
 
     def get_plddt_values(self):
